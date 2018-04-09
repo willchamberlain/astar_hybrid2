@@ -203,7 +203,7 @@ end
 % end: repeat the above, using   camera_extrinsics__iterate_epnp.m    
 %%   start: add reprojection error to determine inlier set 
 %   see   /mnt/nixbig/ownCloud/project_code/iterate_sample_cam_605_pnp_reproject_2.m
-% NOW
+% DONE - added to  
 %----  Make some random 3D points : note they're separate by minimum 0.1m  ----%
 num_datapoints = 20;  %  5mx3mx1.2m  
 points_3D_random = [    (randperm(51, num_datapoints)-1)/10  ;   (randi(31, [1,num_datapoints])-1)./10  ;  5+(randi(13, [1,num_datapoints])-1)/10  ;    ]    
