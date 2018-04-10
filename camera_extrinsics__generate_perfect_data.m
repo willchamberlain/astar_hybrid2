@@ -203,7 +203,10 @@ end
 % end: repeat the above, using   camera_extrinsics__iterate_epnp.m    
 %%   start: add reprojection error to determine inlier set 
 %   see   /mnt/nixbig/ownCloud/project_code/iterate_sample_cam_605_pnp_reproject_2.m
-% DONE - added to  
+% DONE - consensus size followed by reprojection error
+% DONE - added to https://github.com/willchamberlain/project_code 
+% NOW - add Gaussian to the 2D points
+% LATER - re-estimate from the consensus set
 %----  Make some random 3D points : note they're separate by minimum 0.1m  ----%
 num_datapoints = 20;  %  5mx3mx1.2m  
 points_3D_random = [    (randperm(51, num_datapoints)-1)/10  ;   (randi(31, [1,num_datapoints])-1)./10  ;  5+(randi(13, [1,num_datapoints])-1)/10  ;    ]    
@@ -235,17 +238,26 @@ for jj_ = 1:num_cam_poses
     cameras = [ cameras ; camera ];
     
     points_2D = camera.project(points_3D_random);
+    points_2D_without_noise = points_2D;
+    points_2D_noise = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) * 2, 5 , 0 , 1 )    ;
+    points_2D(1,:) = points_2D(1,:) + points_2D_noise(1,1:size(points_2D,2));    
+    points_2D(2,:) = points_2D(2,:) + points_2D_noise(1,1+size(points_2D,2):size(points_2D,2)*2);    
     
     for model_size = [4]  %model_size_range(1):model_size_range(2)
         
            points_2D_preconditioned = points_2D;
+           points_2D_preconditioned_without_noise = points_2D_without_noise;
            points_3D_random_preconditioned = points_3D_random;
            [ models , models_max_diff_SE3_element , models_extrinsic_estimate_as_local_to_world ] = ...  % , models_best_solution , models_solution_set ] = ...           
         camera_extrinsics__iterate_epnp  ( ...
             points_2D_preconditioned, points_3D_random_preconditioned, camera_K, ...
             num_RANSAC_iterations, model_size, ...
             camera.get_pose_transform);
-
+        
+        fig_2d_plot_points_2D_with_and_without_noise = figure('Name',sprintf('plot_points_2D_with_and_without_noise model errors-ish - model size %d',model_size)) ;
+        plot2_rows(points_2D_preconditioned_without_noise,'bd')
+        plot2_rows(points_2D_preconditioned,'rx')
+        
         fig_2d_plot_errors_handle = figure('Name',sprintf('model errors-ish - model size %d',model_size)) ;plot(models_max_diff_SE3_element );
 
         fig_3d_handle = figure('Name',sprintf( 'points_3D_random - model size %d' ,model_size) ); hold on; grid on; axis equal; xlabel('x'); ylabel('y'); zlabel('z')
@@ -274,7 +286,10 @@ for jj_ = 1:num_cam_poses
                 models_consensus_size(ii_) = sum(inlier_points_2D_estimated);
                 figure('Name', ...
                     sprintf( 'points_2D - model size %d, model %d, sum(err_sq)=%f' ,model_size, ii_,models_reprojected_errs_euc_sq_total(ii_))) ; 
-                    hold on;       plot2_rows(points_2D_preconditioned, 'rx') ;        plot2_rows(points_2D_estimated(1:2,:) , 'bs') ;
+                    hold on;       
+                        plot2_rows(points_2D_preconditioned, 'rx') ;        
+                        plot2_rows(points_2D_estimated(1:2,:) , 'bs') ;
+                        plot2_rows(points_2D_preconditioned_without_noise,'bd')
             catch 
                 display(sprintf('exception with ii_=%d',ii_))
                 models_exceptions(ii_) = 1;
