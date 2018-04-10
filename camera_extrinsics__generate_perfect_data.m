@@ -293,8 +293,8 @@ for jj_ = 1:num_cam_poses
                 reprojected_errs_euc_sq(:,ii_) = reprojected_errs_uv( 1 , : , ii_  ).^2 + reprojected_errs_uv( 2 , : , ii_  ).^2;            
                 reprojected_errs_euc(:,ii_) = reprojected_errs_euc_sq(:,ii_).^0.5;
                 models_reprojected_errs_euc_sq_total( ii_ ) = sum(reprojected_errs_euc_sq(:,ii_));
-                inlier_points_2D_estimated = reprojected_errs_euc(:,ii_)<= inlier_threshold_pixel_diff;
-                models_consensus_size(ii_) = sum(inlier_points_2D_estimated);
+                inlier_points_2D_estimated(:,ii_) = reprojected_errs_euc(:,ii_)<= inlier_threshold_pixel_diff;
+                models_consensus_size(ii_) = sum(inlier_points_2D_estimated(:,ii_));
                 figure('Name', ...
                     sprintf( 'points_2D - model size %d, model %d, sum(err_sq)=%f' ,model_size, ii_,models_reprojected_errs_euc_sq_total(ii_))) ; 
                     hold on;       axis equal;   plot([0 , 0 , 1024, 1024 , 0], [0 , 1024, 1024 , 0 , 0]) ;
@@ -303,7 +303,7 @@ for jj_ = 1:num_cam_poses
                         rx_handle = plot2_rows(points_2D_estimated(1:2,:) , 'rx') ;
                         bo_handle = plot2_rows(points_2D_preconditioned, 'bo') ;        
                         ro_handle = plot2_rows(points_2D_estimated(1:2,:) , 'ro') ;
-                        inlier_handle = plot2_rows(points_2D_estimated(1:2,inlier_points_2D_estimated>0) , 'ks', 'Linewidth',3 );
+                        inlier_handle = plot2_rows(points_2D_estimated(1:2,inlier_points_2D_estimated(:,ii_)>0) , 'ks', 'Linewidth',3 );
                         for iii_ = 1:20; text(points_2D_preconditioned(1,iii_)+10,points_2D_preconditioned(2,iii_)+10.,sprintf('%d',iii_));end
                         legend([kx_handle,bx_handle,rx_handle, inlier_handle], {'points 2D  zero noise',sprintf('points 2D with noise mag=%2.2f, mean=%2.2f',pts_2D_noise_magnitude,pts_2D_noise_mean),'reprojected', 'inliers'});
                         drawnow
@@ -313,10 +313,11 @@ for jj_ = 1:num_cam_poses
 %             end
             
             best_model_consensus_size = max(models_consensus_size);
-            models_best_model_candidates = models_consensus_size>=best_model_consensus_size;
-            models_best_by_consensus_size = find(models_consensus_size>=best_model_consensus_size);
+            models_best_model_candidates = models_consensus_size>=best_model_consensus_size-1;
+            models_best_by_consensus_size = find(models_best_model_candidates);
             models_best_model_candidates_data_points = models( : , models_best_by_consensus_size);
-            models_reprojected_errs_euc_sq_total(models_best_by_consensus_size);
+            models_best_by_consensus_size__min_reproj = min ( models_reprojected_errs_euc_sq_total(models_best_by_consensus_size) ) ;
+            models_best_by_consensus_size_and_reproj= models_reprojected_errs_euc_sq_total<=models_best_by_consensus_size__min_reproj ;
 
             %{
             % now  express the 3D points in the estimated camera model's frame
@@ -340,8 +341,43 @@ for jj_ = 1:num_cam_poses
                 reprojected_errs_euc_sq = reprojected_errs_uv( 1 , : , ii_  ).^2 + reprojected_errs_uv( 2 , : , ii_  ).^2;
                 models_reprojected_errs_euc_sq_total( ii_ ) = sum(reprojected_errs_euc_sq);
                 %}
-        end
-        pooled_model_datapoint_indices_of_best_models = unique(reshape(models(:,models_best_model_candidates), 1 , [] ));
+        end        
+                pooled_model_datapoint_indices_of_best_models = unique(reshape(models(:,models_best_model_candidates), 1 , [] ))  ;
+                sum( inlier_points_2D_estimated(:,models_best_model_candidates) , 2 )  ;
+        models_best_by_consensus_size_and_reproj
+        points_3D_inliers_of_best_model = points_3D_random_preconditioned(:,inlier_points_2D_estimated(:,models_best_by_consensus_size_and_reproj)>0)  ;
+        points_2D_inliers_of_best_model = points_2D_preconditioned(:,inlier_points_2D_estimated(:,models_best_by_consensus_size_and_reproj)>0)  ;
+        
+        num_RANSAC_iterations_1 = 1; model_size_1 = models_consensus_size(models_best_by_consensus_size_and_reproj);
+           [ models , models_max_diff_SE3_element , models_extrinsic_estimate_as_local_to_world_1 ] = ...  % , models_best_solution , models_solution_set ] = ...           
+        camera_extrinsics__iterate_epnp  ( ...
+            points_2D_inliers_of_best_model, points_3D_inliers_of_best_model, camera_K, ...
+            num_RANSAC_iterations_1, model_size_1, ...
+            camera.get_pose_transform);
+
+        
+                best_camera_estimated = CentralCamera('default');
+                best_camera_estimated = best_camera_estimated.move(models_extrinsic_estimate_as_local_to_world_1);
+                best_points_2D_estimated = best_camera_estimated.project(points_3D_random);
+                best_reprojected_errs_uv( : , : , 1  ) = points_2D_preconditioned - best_points_2D_estimated(1:2,:)  ;
+                best_reprojected_errs_euc_sq(:,1) = best_reprojected_errs_uv( 1 , : , 1  ).^2 + best_reprojected_errs_uv( 2 , : , 1  ).^2;            
+                best_reprojected_errs_euc(:,1) = best_reprojected_errs_euc_sq(:,1).^0.5;
+                best_models_reprojected_errs_euc_sq_total( 1 ) = sum(best_reprojected_errs_euc_sq(:,1));
+                best_inlier_points_2D_estimated(:,1) = best_reprojected_errs_euc(:,1)<= inlier_threshold_pixel_diff;
+                best_models_consensus_size(1) = sum(best_inlier_points_2D_estimated(:,1));
+                figure('Name', ...
+                    sprintf( 'BEST points_2D - model size %d, model %d, sum(err_sq)=%f' ,model_size, 1,best_models_reprojected_errs_euc_sq_total(1))) ; 
+                    hold on;       axis equal;   plot([0 , 0 , 1024, 1024 , 0], [0 , 1024, 1024 , 0 , 0]) ;
+                        kx_handle = plot2_rows(points_2D_preconditioned_without_noise,'kx');
+                        bx_handle = plot2_rows(points_2D_preconditioned, 'bx') ;        
+                        rx_handle = plot2_rows(best_points_2D_estimated(1:2,:) , 'rx') ;
+                        bo_handle = plot2_rows(points_2D_preconditioned, 'bo') ;        
+                        ro_handle = plot2_rows(best_points_2D_estimated(1:2,:) , 'ro') ;
+                        inlier_handle = plot2_rows(best_points_2D_estimated(1:2,best_inlier_points_2D_estimated(:,1)>0) , 'ks', 'Linewidth',3 );
+                        for iii_ = 1:20; text(points_2D_preconditioned(1,iii_)+10,points_2D_preconditioned(2,iii_)+10.,sprintf('%d',iii_));end
+                        legend([kx_handle,bx_handle,rx_handle, inlier_handle], {'points 2D  zero noise',sprintf('points 2D with noise mag=%2.2f, mean=%2.2f',pts_2D_noise_magnitude,pts_2D_noise_mean),'reprojected', 'inliers'});
+                        drawnow
+        
 %         check that world-to-local is the inverse of local-to-world (camera_extrinsics)
 %         for ii_ = 1:size(models_extrinsic_estimate_as_local_to_world,3)
 %             models_extrinsic_estimate_as_local_to_world(:,:,ii_)*models_extrinsic_estimate_as_world_to_local(:,:,ii_)
