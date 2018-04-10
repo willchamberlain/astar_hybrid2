@@ -239,7 +239,9 @@ for jj_ = 1:num_cam_poses
     
     points_2D = camera.project(points_3D_random);
     points_2D_without_noise = points_2D;
-    points_2D_noise = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) * 2, 5 , 0 , 1 )    ;
+    pts_2D_noise_magnitude = 10;
+    pts_2D_noise_mean = 0; 
+    points_2D_noise = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) * 2,  pts_2D_noise_magnitude ,  pts_2D_noise_mean , 1 )    ;
     points_2D(1,:) = points_2D(1,:) + points_2D_noise(1,1:size(points_2D,2));    
     points_2D(2,:) = points_2D(2,:) + points_2D_noise(1,1+size(points_2D,2):size(points_2D,2)*2);    
     
@@ -286,10 +288,14 @@ for jj_ = 1:num_cam_poses
                 models_consensus_size(ii_) = sum(inlier_points_2D_estimated);
                 figure('Name', ...
                     sprintf( 'points_2D - model size %d, model %d, sum(err_sq)=%f' ,model_size, ii_,models_reprojected_errs_euc_sq_total(ii_))) ; 
-                    hold on;       
-                        plot2_rows(points_2D_preconditioned, 'rx') ;        
-                        plot2_rows(points_2D_estimated(1:2,:) , 'bs') ;
-                        plot2_rows(points_2D_preconditioned_without_noise,'bd')
+                    hold on;       axis equal;
+                        kx_handle = plot2_rows(points_2D_preconditioned_without_noise,'kx');
+                        bx_handle = plot2_rows(points_2D_preconditioned, 'bx') ;        
+                        rx_handle = plot2_rows(points_2D_estimated(1:2,:) , 'rx') ;
+                        bo_handle = plot2_rows(points_2D_preconditioned, 'bo') ;        
+                        ro_handle = plot2_rows(points_2D_estimated(1:2,:) , 'ro') ;
+                        legend([kx_handle,bx_handle,rx_handle], {'points 2D  zero noise',sprintf('points 2D with noise mag=%2.2f, mean=%2.2f',pts_2D_noise_magnitude,pts_2D_noise_mean),'reprojected'});
+                        
             catch 
                 display(sprintf('exception with ii_=%d',ii_))
                 models_exceptions(ii_) = 1;
