@@ -208,8 +208,8 @@ end
 % NOW - add Gaussian to the 2D points
 % LATER - re-estimate from the consensus set
 %----  Make some random 3D points : note they're separate by minimum 0.1m  ----%
-num_datapoints = 30;  %  5mx3mx1.2m  
-points_3D_random = [    (randperm(51, num_datapoints)-1)/10  ;   (randi(31, [1,num_datapoints])-1)./10  ;  5+(randi(13, [1,num_datapoints])-1)/10  ;    ]   ;
+num_datapoints = 40;  %  5mx3mx1.2m  
+points_3D_random = [    (randperm(61, num_datapoints)-1)/10  ;   (randi(51, [1,num_datapoints])-1)./10  ;  5+(randi(13, [1,num_datapoints])-1)/10  ;    ]   ;
 %---- 
 %-- default camera : need this to get the camera_K at zero offset
 camera_default = CentralCamera('default');
@@ -222,9 +222,9 @@ model_size = 0;
 model_size_range=[4,8];
 model_size_range=[8,9];
 num_cam_poses = 1;                  %  HAVE TO change indexing if this is over 1  :  store models in vector along with parameters, or shift to objects/structures
-num_RANSAC_iterations = 10;   % otten 100-1000, but papers imply can be significantly less 
+num_RANSAC_iterations = 20;   % otten 100-1000, but papers imply can be significantly less 
 num_RANSAC_iterations = 5;
-inlier_threshold_pixel_diff = 20;
+inlier_threshold_pixel_diff = 6;
 models = zeros(model_size,num_RANSAC_iterations, 'uint32');
 models_max_diff_SE3_element = zeros(1,num_RANSAC_iterations);
 models_pose = zeros(4,4,num_RANSAC_iterations);
@@ -234,8 +234,10 @@ models_consensus_size = zeros(1,num_RANSAC_iterations, 'uint32');
 cameras = [];
 points_3D_random_hom = [ points_3D_random ; ones(1,size(points_3D_random,2)) ];
 for jj_ = 1:num_cam_poses
-    min_angle_degs=5; angle_range_degs=25; x_max=3; y_max=3; z_max=5; proportion_in_fov=1.0;    
+    
+    min_angle_degs=15; angle_range_degs=40; x_max=5; y_max=5; z_max=2; proportion_in_fov=1.0;    
     camera =  camera_extrinsics__place_camera_safely(min_angle_degs,angle_range_degs, x_max, y_max, z_max, points_3D_random, proportion_in_fov);
+    
     %[ camera_K , Focal_length , Principal_point ] = camera_extrinsics__camera_intrinsics_from_pctoolkit_camera(camera);
     cameras = [ cameras ; camera ];
     
@@ -247,7 +249,7 @@ for jj_ = 1:num_cam_poses
     points_2D(1,:) = points_2D(1,:) + points_2D_noise(1,1:size(points_2D,2));    
     points_2D(2,:) = points_2D(2,:) + points_2D_noise(1,1+size(points_2D,2):size(points_2D,2)*2);    
     
-    for model_size = [4,5,6]  %model_size_range(1):model_size_range(2)
+    for model_size = [8]  %model_size_range(1):model_size_range(2)
         
            points_2D_preconditioned = points_2D;
            points_2D_preconditioned_without_noise = points_2D_without_noise;
@@ -281,8 +283,8 @@ for jj_ = 1:num_cam_poses
         display('now reproject');
         
         best_model_consensus_size = 0;
-        for ii_ = 1:size(models_extrinsic_estimate_as_local_to_world,3)   
-            try
+        for ii_ = 1:num_RANSAC_iterations   
+%             try
                 % now  project the 3D to 2D - PC style
                 camera_estimated = CentralCamera('default');
                 camera_estimated = camera_estimated.move(models_extrinsic_estimate_as_local_to_world(:,:,ii_));
@@ -301,20 +303,20 @@ for jj_ = 1:num_cam_poses
                         rx_handle = plot2_rows(points_2D_estimated(1:2,:) , 'rx') ;
                         bo_handle = plot2_rows(points_2D_preconditioned, 'bo') ;        
                         ro_handle = plot2_rows(points_2D_estimated(1:2,:) , 'ro') ;
-                        inlier_handle = plot2_rows(points_2D_estimated(1:2,inlier_points_2D_estimated>0) , 'mo' );
+                        inlier_handle = plot2_rows(points_2D_estimated(1:2,inlier_points_2D_estimated>0) , 'ks', 'Linewidth',3 );
                         for iii_ = 1:20; text(points_2D_preconditioned(1,iii_)+10,points_2D_preconditioned(2,iii_)+10.,sprintf('%d',iii_));end
-                        legend([kx_handle,bx_handle,rx_handle, inlier_handle], {'points 2D  zero noise',sprintf('points 2D with noise mag=%2.2f, mean=%2.2f',pts_2D_noise_magnitude,pts_2D_noise_mean),'reprojected'});
+                        legend([kx_handle,bx_handle,rx_handle, inlier_handle], {'points 2D  zero noise',sprintf('points 2D with noise mag=%2.2f, mean=%2.2f',pts_2D_noise_magnitude,pts_2D_noise_mean),'reprojected', 'inliers'});
                         drawnow
-            catch 
-                display(sprintf('exception with ii_=%d',ii_))
-                models_exceptions(ii_) = 1;
-            end
+%             catch ME
+%                 display(sprintf('------------------------\nexception with ii_=%d : %s',ii_,ME.getReport()))
+%                 models_exceptions(ii_) = 1;
+%             end
             
             best_model_consensus_size = max(models_consensus_size);
             models_best_model_candidates = models_consensus_size>=best_model_consensus_size;
             models_best_by_consensus_size = find(models_consensus_size>=best_model_consensus_size);
-            models_best_model_candidates_data_points = models( : , models_best_by_consensus_size)
-            models_reprojected_errs_euc_sq_total(models_best_by_consensus_size)
+            models_best_model_candidates_data_points = models( : , models_best_by_consensus_size);
+            models_reprojected_errs_euc_sq_total(models_best_by_consensus_size);
 
             %{
             % now  express the 3D points in the estimated camera model's frame
@@ -339,6 +341,7 @@ for jj_ = 1:num_cam_poses
                 models_reprojected_errs_euc_sq_total( ii_ ) = sum(reprojected_errs_euc_sq);
                 %}
         end
+        pooled_model_datapoint_indices_of_best_models = unique(reshape(models(:,models_best_model_candidates), 1 , [] ));
 %         check that world-to-local is the inverse of local-to-world (camera_extrinsics)
 %         for ii_ = 1:size(models_extrinsic_estimate_as_local_to_world,3)
 %             models_extrinsic_estimate_as_local_to_world(:,:,ii_)*models_extrinsic_estimate_as_world_to_local(:,:,ii_)
