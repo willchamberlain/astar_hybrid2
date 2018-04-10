@@ -208,8 +208,8 @@ end
 % NOW - add Gaussian to the 2D points
 % LATER - re-estimate from the consensus set
 %----  Make some random 3D points : note they're separate by minimum 0.1m  ----%
-num_datapoints = 20;  %  5mx3mx1.2m  
-points_3D_random = [    (randperm(51, num_datapoints)-1)/10  ;   (randi(31, [1,num_datapoints])-1)./10  ;  5+(randi(13, [1,num_datapoints])-1)/10  ;    ]    
+num_datapoints = 30;  %  5mx3mx1.2m  
+points_3D_random = [    (randperm(51, num_datapoints)-1)/10  ;   (randi(31, [1,num_datapoints])-1)./10  ;  5+(randi(13, [1,num_datapoints])-1)/10  ;    ]   ;
 %---- 
 %-- default camera : need this to get the camera_K at zero offset
 camera_default = CentralCamera('default');
@@ -223,7 +223,8 @@ model_size_range=[4,8];
 model_size_range=[8,9];
 num_cam_poses = 1;                  %  HAVE TO change indexing if this is over 1  :  store models in vector along with parameters, or shift to objects/structures
 num_RANSAC_iterations = 10;   % otten 100-1000, but papers imply can be significantly less 
-num_RANSAC_iterations = 10;
+num_RANSAC_iterations = 5;
+inlier_threshold_pixel_diff = 20;
 models = zeros(model_size,num_RANSAC_iterations, 'uint32');
 models_max_diff_SE3_element = zeros(1,num_RANSAC_iterations);
 models_pose = zeros(4,4,num_RANSAC_iterations);
@@ -233,7 +234,8 @@ models_consensus_size = zeros(1,num_RANSAC_iterations, 'uint32');
 cameras = [];
 points_3D_random_hom = [ points_3D_random ; ones(1,size(points_3D_random,2)) ];
 for jj_ = 1:num_cam_poses
-    camera =  camera_extrinsics__place_camera_safely(10,35, points_3D_random, 0.8);
+    min_angle_degs=5; angle_range_degs=25; x_max=3; y_max=3; z_max=5; proportion_in_fov=1.0;    
+    camera =  camera_extrinsics__place_camera_safely(min_angle_degs,angle_range_degs, x_max, y_max, z_max, points_3D_random, proportion_in_fov);
     %[ camera_K , Focal_length , Principal_point ] = camera_extrinsics__camera_intrinsics_from_pctoolkit_camera(camera);
     cameras = [ cameras ; camera ];
     
@@ -245,7 +247,7 @@ for jj_ = 1:num_cam_poses
     points_2D(1,:) = points_2D(1,:) + points_2D_noise(1,1:size(points_2D,2));    
     points_2D(2,:) = points_2D(2,:) + points_2D_noise(1,1+size(points_2D,2):size(points_2D,2)*2);    
     
-    for model_size = [4]  %model_size_range(1):model_size_range(2)
+    for model_size = [4,5,6]  %model_size_range(1):model_size_range(2)
         
            points_2D_preconditioned = points_2D;
            points_2D_preconditioned_without_noise = points_2D_without_noise;
@@ -256,20 +258,26 @@ for jj_ = 1:num_cam_poses
             num_RANSAC_iterations, model_size, ...
             camera.get_pose_transform);
         
-        fig_2d_plot_points_2D_with_and_without_noise = figure('Name',sprintf('plot_points_2D_with_and_without_noise model errors-ish - model size %d',model_size)) ;
+        fig_2d_plot_points_2D_with_and_without_noise = figure('Name',sprintf('plot_points_2D_with_and_without_noise model errors-ish - model size %d',model_size)) ;hold on; grid on; axis equal; xlabel('x'); ylabel('y'); zlabel('z')
+        hold on; grid on; axis equal; xlabel('x'); ylabel('y'); zlabel('z');  plot([0 , 0 , 1024, 1024 , 0], [0 , 1024, 1024 , 0 , 0]) ;
         plot2_rows(points_2D_preconditioned_without_noise,'bd')
+        for iii_ = 1:20; text(points_2D_preconditioned_without_noise(1,iii_)+10,points_2D_preconditioned_without_noise(2,iii_)+10.,sprintf('%d',iii_),'Color','b');end
         plot2_rows(points_2D_preconditioned,'rx')
+        for iii_ = 1:20; text(points_2D_preconditioned(1,iii_)+10,points_2D_preconditioned(2,iii_)+10.,sprintf('%d',iii_),'Color','r');end
         
         fig_2d_plot_errors_handle = figure('Name',sprintf('model errors-ish - model size %d',model_size)) ;plot(models_max_diff_SE3_element );
 
         fig_3d_handle = figure('Name',sprintf( 'points_3D_random - model size %d' ,model_size) ); hold on; grid on; axis equal; xlabel('x'); ylabel('y'); zlabel('z')
 
         camera_extrinsics__plot_3d_point_3D_and_camera_pose(fig_3d_handle, points_3D_random,camera)    
+        for iii_ = 1:20; text(points_3D_random_preconditioned(1,iii_)+.05,points_3D_random_preconditioned(2,iii_)+.05,points_3D_random_preconditioned(3,iii_)+.05, sprintf('%d',iii_));end
+        drawnow
+
 
         camera_extrinsics__plot_3d_estimated_poses   (fig_3d_handle, models_extrinsic_estimate_as_local_to_world)
-
+        camera.plot_camera()
         drawnow
-        
+                
         display('now reproject');
         
         best_model_consensus_size = 0;
@@ -283,19 +291,20 @@ for jj_ = 1:num_cam_poses
                 reprojected_errs_euc_sq(:,ii_) = reprojected_errs_uv( 1 , : , ii_  ).^2 + reprojected_errs_uv( 2 , : , ii_  ).^2;            
                 reprojected_errs_euc(:,ii_) = reprojected_errs_euc_sq(:,ii_).^0.5;
                 models_reprojected_errs_euc_sq_total( ii_ ) = sum(reprojected_errs_euc_sq(:,ii_));
-                threshold_pixel_diff = 10;
-                inlier_points_2D_estimated = reprojected_errs_euc(:,ii_)<= threshold_pixel_diff;
+                inlier_points_2D_estimated = reprojected_errs_euc(:,ii_)<= inlier_threshold_pixel_diff;
                 models_consensus_size(ii_) = sum(inlier_points_2D_estimated);
                 figure('Name', ...
                     sprintf( 'points_2D - model size %d, model %d, sum(err_sq)=%f' ,model_size, ii_,models_reprojected_errs_euc_sq_total(ii_))) ; 
-                    hold on;       axis equal;
+                    hold on;       axis equal;   plot([0 , 0 , 1024, 1024 , 0], [0 , 1024, 1024 , 0 , 0]) ;
                         kx_handle = plot2_rows(points_2D_preconditioned_without_noise,'kx');
                         bx_handle = plot2_rows(points_2D_preconditioned, 'bx') ;        
                         rx_handle = plot2_rows(points_2D_estimated(1:2,:) , 'rx') ;
                         bo_handle = plot2_rows(points_2D_preconditioned, 'bo') ;        
                         ro_handle = plot2_rows(points_2D_estimated(1:2,:) , 'ro') ;
-                        legend([kx_handle,bx_handle,rx_handle], {'points 2D  zero noise',sprintf('points 2D with noise mag=%2.2f, mean=%2.2f',pts_2D_noise_magnitude,pts_2D_noise_mean),'reprojected'});
-                        
+                        inlier_handle = plot2_rows(points_2D_estimated(1:2,inlier_points_2D_estimated>0) , 'mo' );
+                        for iii_ = 1:20; text(points_2D_preconditioned(1,iii_)+10,points_2D_preconditioned(2,iii_)+10.,sprintf('%d',iii_));end
+                        legend([kx_handle,bx_handle,rx_handle, inlier_handle], {'points 2D  zero noise',sprintf('points 2D with noise mag=%2.2f, mean=%2.2f',pts_2D_noise_magnitude,pts_2D_noise_mean),'reprojected'});
+                        drawnow
             catch 
                 display(sprintf('exception with ii_=%d',ii_))
                 models_exceptions(ii_) = 1;
