@@ -216,25 +216,30 @@ for jj_ = 1:num_cam_poses
     data_point_volume_focus = [ 1.5 1.2 0.645 1]'  ;
     camera_position = [5 3 2 1]'  ;
     camera_position - data_point_volume_focus;
-    opp = camera_position(3) - data_point_volume_focus(3)
-    adj = sqrt(  sum(  (camera_position(1:2) - data_point_volume_focus(1:2)).^2  , 1)  )
+    opp = data_point_volume_focus(3) - camera_position(3)
+    adj = sqrt(  sum(  (data_point_volume_focus(1:2)-camera_position(1:2)).^2  , 1)  )
     pitch_down_rads = atan(opp/adj)
+    pitch_down_rads = atan2(opp,adj)
     pitch_down_degs = radtodeg(pitch_down_rads)    
-            figure;  plot( [ 0 0 3.935733730830886 0 ] , [ 0 1.35 1.35  0 ]  ) ; axis equal ; grid on; hold on;
-            plot( [ 0 0   3.935733730830886   0 ] , [ 0   3.935733730830886     3.935733730830886    0 ]  ) ; 
-            plot( [ 0 0   3.935733730830886   0 ] , [ 0   3.935733730830886/2   3.935733730830886/2  0 ]  ) ; 
-    forward = camera_position(1) - data_point_volume_focus(1)
-    left = camera_position(2) - data_point_volume_focus(2)
+%             figure;  plot( [ 0 0 3.935733730830886 0 ] , [ 0 1.35 1.35  0 ]  ) ; axis equal ; grid on; hold on;
+%             plot( [ 0 0   3.935733730830886   0 ] , [ 0   3.935733730830886     3.935733730830886    0 ]  ) ; 
+%             plot( [ 0 0   3.935733730830886   0 ] , [ 0   3.935733730830886/2   3.935733730830886/2  0 ]  ) ; 
+    forward = data_point_volume_focus(1) - camera_position(1)
+    left =  data_point_volume_focus(2) - camera_position(2)
     yaw_left_rads = atan(left/forward)
+    yaw_left_rads = atan2(left,forward)
     yaw_left_degs = radtodeg(yaw_left_rads)
-            figure;  plot( [ 0 0 -left 0 ] , [ 0 forward forward  0 ]  ) ; axis equal ; grid on; hold on;
-            plot( [ 0 0 -left 0 ] , [ 0 left  left  0 ]  ) ;    
-            plot( [ 0 0 -left 0 ] , [ 0 left/2  left/2  0 ]  ) ; 
+%             figure;  plot( [ 0 0 -left 0 ] , [ 0 forward forward  0 ]  ) ; axis equal ; grid on; hold on;
+%             plot( [ 0 0 -left 0 ] , [ 0 left  left  0 ]  ) ;    
+%             plot( [ 0 0 -left 0 ] , [ 0 left/2  left/2  0 ]  ) ; 
     camera_pose = [ [ rotz(0) * roty(pitch_down_rads) * rotz(yaw_left_rads)  ; 0 0 0 ] , [ 0 0 0 1 ]' ] *  [  [ rotz(0) * roty(0) * rotz(0) ; 0 0 0 ] , camera_position ]
-    figure('Name','plot camera'); hold on;
+    camera_pose = [ [ rotz(0) * roty(pitch_down_rads) * rotz(yaw_left_rads)  ; 0 0 0 ] , camera_position ]
+%     camera_pose = [ [ rotz(0) * roty(0) * rotz(yaw_left_rads)  ; 0 0 0 ] , camera_position ]
+    figure('Name','plot camera'); hold on; xlabel('x'); ylabel('y'); zlabel('z')'
     plot3_rows(camera_position,'bs'); plot3_rows(data_point_volume_focus,'rx');
     axis equal ; grid on; hold on;
-    draw_axes_direct(t2r(camera_pose), ,'',0.5)
+    draw_axes_direct(geom__transform_to_rotation_SO3(camera_pose), geom__transform_to_translation(camera_pose), 'a',0.5);
+    draw_axes_direct_c(geom__transform_to_rotation_SO3(camera_pose), geom__transform_to_translation(camera_pose), 'a',adj,'m');
 
     
 end
