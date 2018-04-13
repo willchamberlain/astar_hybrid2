@@ -23,7 +23,8 @@ CentralCamera
 % LATER - re-estimate from the consensus set
 %----  Make some random 3D points : note they're separate by minimum 0.1m  ----%
 num_datapoints = 43;  %  5mx3mx1.2m  
-points_3D_random = [    (randperm(61, num_datapoints)-1)/10  ;   (randi(51, [1,num_datapoints])-1)./10  ;  5+(randi(13, [1,num_datapoints])-1)/10  ;    ]   ;
+points_volume_dimensions = [6 5 1], points_volume_offsets = [ 0 0 0];
+[ points_3D_random , points_3D_random_hom] = camera_extrinsics__generate_random_3D_data(num_datapoints, points_volume_dimensions, points_volume_offsets);
 %---- 
 %-- default camera : need this to get the camera_K at zero offset
 camera_default = CentralCamera('default');
@@ -46,7 +47,6 @@ models_best_model_candidates = zeros(1,num_RANSAC_iterations, 'uint32');
 models_exceptions = zeros(1,num_RANSAC_iterations, 'uint32');
 models_consensus_size = zeros(1,num_RANSAC_iterations, 'uint32');
 cameras = [];
-points_3D_random_hom = [ points_3D_random ; ones(1,size(points_3D_random,2)) ];
 for jj_ = 1:num_cam_poses
     
     min_angle_degs=15; angle_range_degs=40; x_max=5; y_max=5; z_max=2; proportion_in_fov=1.0;    
@@ -213,34 +213,80 @@ for jj_ = 1:num_cam_poses
         camera_K_hom_RDF = [ camera_K_default , [ 0 0 0 ]'  ] ;
     end    
     
-    data_point_volume_focus = [ 1.5 1.2 0.645 1]'  ;
+    %camera_target_point = [ 1.5 1.2 0.645 1]'  ;
+    target_point_indices = randperm(num_datapoints,2)
+    camera_target_point = mean(points_3D_random_hom(:,target_point_indices),2)
+    
     camera_position = [5 3 2 1]'  ;
-    camera_position - data_point_volume_focus;
-    opp = data_point_volume_focus(3) - camera_position(3)
-    adj = sqrt(  sum(  (data_point_volume_focus(1:2)-camera_position(1:2)).^2  , 1)  )
+    camera_target_point - camera_position;
+    opp = camera_target_point(3) - camera_position(3)
+    adj = sqrt(  sum(  (camera_target_point(1:2)-camera_position(1:2)).^2  , 1)  )
     pitch_down_rads = atan(opp/adj)
     pitch_down_rads = atan2(opp,adj)
     pitch_down_degs = radtodeg(pitch_down_rads)    
 %             figure;  plot( [ 0 0 3.935733730830886 0 ] , [ 0 1.35 1.35  0 ]  ) ; axis equal ; grid on; hold on;
 %             plot( [ 0 0   3.935733730830886   0 ] , [ 0   3.935733730830886     3.935733730830886    0 ]  ) ; 
 %             plot( [ 0 0   3.935733730830886   0 ] , [ 0   3.935733730830886/2   3.935733730830886/2  0 ]  ) ; 
-    forward = data_point_volume_focus(1) - camera_position(1)
-    left =  data_point_volume_focus(2) - camera_position(2)
+    forward = camera_target_point(1) - camera_position(1)
+    left =  camera_target_point(2) - camera_position(2)
     yaw_left_rads = atan(left/forward)
     yaw_left_rads = atan2(left,forward)
     yaw_left_degs = radtodeg(yaw_left_rads)
 %             figure;  plot( [ 0 0 -left 0 ] , [ 0 forward forward  0 ]  ) ; axis equal ; grid on; hold on;
 %             plot( [ 0 0 -left 0 ] , [ 0 left  left  0 ]  ) ;    
 %             plot( [ 0 0 -left 0 ] , [ 0 left/2  left/2  0 ]  ) ; 
-    camera_pose = [ [ rotz(0) * roty(pitch_down_rads) * rotz(yaw_left_rads)  ; 0 0 0 ] , [ 0 0 0 1 ]' ] *  [  [ rotz(0) * roty(0) * rotz(0) ; 0 0 0 ] , camera_position ]
-    camera_pose = [ [ rotz(0) * roty(pitch_down_rads) * rotz(yaw_left_rads)  ; 0 0 0 ] , camera_position ]
+    camera_pose = [ [ rotz(yaw_left_rads) * roty(pitch_down_rads) * rotz(0)  ; 0 0 0 ] , [ 0 0 0 1 ]' ] *  [  [ rotz(0) * roty(0) * rotz(0) ; 0 0 0 ] , camera_position ]
+    camera_pose = [ [ rotz(yaw_left_rads) ; 0 0 0 ] , camera_position ]
+    camera_pose = [ [ roty(pitch_down_rads) ; 0 0 0 ] , [ 0 0 0 1 ]' ]    * camera_pose
+%     camera_pose = [ [ rotz(yaw_left_rads) * roty(pitch_down_rads) * rotz(0)  ; 0 0 0 ] , camera_position ]
 %     camera_pose = [ [ rotz(0) * roty(0) * rotz(yaw_left_rads)  ; 0 0 0 ] , camera_position ]
-    figure('Name','plot camera'); hold on; xlabel('x'); ylabel('y'); zlabel('z')'
-    plot3_rows(camera_position,'bs'); plot3_rows(data_point_volume_focus,'rx');
+    figure('Name','plot camera'); hold on; xlabel('x'); ylabel('y'); zlabel('z')'; hold on;
+    plot3_rows(camera_position,'bs'); plot3_rows(camera_target_point,'rx');
     axis equal ; grid on; hold on;
-    draw_axes_direct(geom__transform_to_rotation_SO3(camera_pose), geom__transform_to_translation(camera_pose), 'a',0.5);
+    
+    %suspect 
     draw_axes_direct_c(geom__transform_to_rotation_SO3(camera_pose), geom__transform_to_translation(camera_pose), 'a',adj,'m');
+    draw_axes_direct(geom__transform_to_rotation_SO3(camera_pose), geom__transform_to_translation(camera_pose), 'a',0.75*adj);
+%     end_pt = camera_pose(1:3,1:3)* ( eye(3) * adj )
+%     plot3_rows( end_pt(:,1) , 'ks')
 
+    % yaw is OK
+    camera_pose = [ [ rotz(yaw_left_rads) ; 0 0 0 ] , camera_position ]  % = rt2tr(rotz(yaw_left_rads),h2e(camera_position))
+    end_pt_2 = camera_pose *  geo__euclidean_3D_to_hom(adj*eye(3))
+    plot3_rows( end_pt_2(:,1) , 'bd', 'Linewidth',3)
+    draw_axes_direct_c(camera_pose(1:3,1:3), camera_pose(1:3,4), {'cam_position not rot','yaw only','yaw only','yaw only'},adj,'c');
+    draw_axes_direct(camera_pose(1:3,1:3), camera_pose(1:3,4), 'cam_position not rot', 0.75*adj);
+    
+    % pitch is OK
+    camera_pose = [ [ roty(pitch_down_rads*-1) ; 0 0 0 ] , camera_position ]  % = rt2tr(rotz(yaw_left_rads),h2e(camera_position))
+%     end_pt_3 = rotm2tform(roty(pitch_down_rads)) * (camera_pose  *  geo__euclidean_3D_to_hom(adj*eye(3)) )
+    end_pt_3 = camera_pose *  geo__euclidean_3D_to_hom(adj*eye(3))     
+    plot3_rows( end_pt_3(:,1) , 'gd', 'Linewidth',3)
+    draw_axes_direct_c(camera_pose(1:3,1:3), camera_pose(1:3,4), 'cam_position not rot',adj,'c');
+    draw_axes_direct(camera_pose(1:3,1:3), camera_pose(1:3,4), 'cam_position not rot', 0.75*adj);
+    
+%     end_pt_pitch_only_transform = rt2tr(roty(pitch_down_rads),h2e(camera_position))
+%     end_pt_pitch_only = end_pt_pitch_only_temp * geo__euclidean_3D_to_hom(adj*eye(3))
+%     plot3_rows( end_pt_pitch_only(:,1) , 'mo', 'Linewidth',1)   % check the angle up
+    
+     camera_pose = [ [ roty(pitch_down_rads*-1) * rotz(yaw_left_rads) ; 0 0 0 ] , camera_position ] 
+     end_pt_yaw_then_pitch = camera_pose *  geo__euclidean_3D_to_hom(adj*eye(3))    
+    plot3_rows( end_pt_3(:,1) , 'md', 'Linewidth',3)
+    draw_axes_direct_c(camera_pose(1:3,1:3), camera_pose(1:3,4), 'cam_position not rot',adj,'c');
+    draw_axes_direct(camera_pose(1:3,1:3), camera_pose(1:3,4), 'cam_position not rot', 0.75*adj);
+    
+    
+%     end_pt_yaw_then_pitch_rotation =  (roty(pitch_down_rads)) * rotz(yaw_left_rads)
+%     end_pt_yaw_then_pitch_transform = [ [ end_pt_yaw_then_pitch_rotation ; 0 0 0 ] , camera_position ] 
+%     end_pt_yaw_then_pitch = end_pt_yaw_then_pitch_transform * geo__euclidean_3D_to_hom(adj*eye(3))
+%     plot3_rows( end_pt_yaw_then_pitch(:,1) , 'co', 'Linewidth',3)   % check the angle up
+%     draw_axes_direct_c(end_pt_yaw_then_pitch(3), camera_position(1:3), 'cam_position not rot',adj,'c');
+%     draw_axes_direct(end_pt_yaw_then_pitch(3), camera_position(1:3), 'cam_position not rot', 0.75*adj);
+
+    % camera position, with axes aligned with world coordinate frame:  
+    plot3_rows( camera_position , 'ms', 'Linewidth',3)
+    draw_axes_direct_c(eye(3), camera_position(1:3), 'cam_position not rot',adj,'c');
+    draw_axes_direct(eye(3), camera_position(1:3), 'cam_position not rot', 0.75*adj);
     
 end
 
