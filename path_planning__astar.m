@@ -43,6 +43,7 @@ function [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_
                 open_set(open_set_index,:) = []    ;
                 closed_set( size( closed_set,1)+1 , : ) = current_node    ;
                 
+                
                 for ii_row_ = current_node(1)-1:current_node(1)+1  
                     for jj_col_ = current_node(2)-1:current_node(2)+1  %     for each neighbor of current
                         if ii_row_ < 1 || ii_row_ >= size(map,1) || jj_col_ < 1 || jj_col_ >= size(map,2) ;  continue  ;   end 
