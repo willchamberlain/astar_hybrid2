@@ -23,10 +23,24 @@ CentralCamera
 % LATER - re-estimate from the consensus set
 %----  Make some random 3D points : note they're separate by minimum 0.1m  ----%
 num_datapoints = 43;  %  5mx3mx1.2m  
-points_volume_dimensions = [6 5 1], points_volume_offsets = [ 0 0 0];
-[ points_3D_random , points_3D_random_hom] = camera_extrinsics__generate_random_3D_data(num_datapoints, points_volume_dimensions, points_volume_offsets);
-tracks_starts=[  0 0  ]'  ; tracks_ends=[  3 6 ]'  ;  , tracks_heights = [ 0.265  0.645 ];
-[ points_3D_random , points_3D_random_hom] = camera_extrinsics__generate_path_3D_data(num_datapoints, tracks_starts, tracks_ends, tracks_heights)
+type_points_3d='linear'; if strcmpi(type_points_3d, 'random')
+    points_volume_dimensions = [6 5 1], points_volume_offsets = [ 0 0 0];
+    [ points_3D_random , points_3D_random_hom] = camera_extrinsics__generate_random_3D_data(num_datapoints, points_volume_dimensions, points_volume_offsets);
+elseif strcmpi(type_points_3d, 'linear')
+    tracks_starts=[  0 0  ;  -1 0 ]'  ; tracks_ends=[  3 6 ; 2 6 ]'  ;  tracks_heights = [ 0.265  0.645 ;  0.265  0.645  ];
+    [ points_3D_track_1 , points_3D__track_1_hom] = camera_extrinsics__generate_path_3D_data(num_datapoints, tracks_starts(:,1), tracks_ends(:,1), tracks_heights(:,1))  ;
+    [ points_3D_track_2 , points_3D__track_2_hom] = camera_extrinsics__generate_path_3D_data(num_datapoints, tracks_starts(:,2), tracks_ends(:,2), tracks_heights(:,2))  ;    
+    camera_extrinsics__latency_between_track_points_as_ratio()
+    camera_extrinsics__latency_between_track_points_as_ratio()
+    points_3D_with_latency_1 = camera_extrinsics__latency_between_track_points_as_ratio(points_3D_track_1 , tracks_heights(1,:) , 0.01);
+    points_3D_with_latency_2 = camera_extrinsics__latency_between_track_points_as_ratio(points_3D_track_2 , tracks_heights(2,:) , 0.01);
+    points_3D = horzcat(points_3D_with_latency_1,points_3D_with_latency_2);
+else
+    [ points_3D , points_3D_hom] = camera_extrinsics__generate_path_3D_data_sinusoid( 11 , 4 , [ 1 0.5 ] , [10 7] ,  [ 0.5  0.75  1.1 ] )
+end
+
+
+
 %---- 
 %-- default camera : need this to get the camera_K at zero offset
 camera_default = CentralCamera('default');

@@ -30,19 +30,18 @@ function [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_
                 f_score_lowest = inf;    open_set_index = -1;
                 for ii_ = 1:size(open_set,1)
                     if f_score(open_set(ii_,1), open_set(ii_,2)) < f_score_lowest
-                        open_set_index = ii_    
-                        f_score_lowest = f_score(open_set(ii_,1), open_set(ii_,2))
+                        open_set_index = ii_    ;
+                        f_score_lowest = f_score(open_set(ii_,1), open_set(ii_,2))    ;
                     end
                 end
                 current_node = [ open_set(open_set_index,1), open_set(open_set_index,2) ]    ;
                 current_row_ = open_set(open_set_index,1)    ;    current_col_ = open_set(open_set_index,2)    ; 
                 if current_node == goal 
                     disp( 'current_node == goal' )
-                    pause
                     return
                 end
                 open_set(open_set_index,:) = []    ;
-                closed_set( size( closed_set,1)+1 , : ) = current_node
+                closed_set( size( closed_set,1)+1 , : ) = current_node    ;
                 
                 for ii_row_ = current_node(1)-1:current_node(1)+1  
                     for jj_col_ = current_node(2)-1:current_node(2)+1  %     for each neighbor of current
@@ -52,7 +51,10 @@ function [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_
                         if sum ( open_set (  : , 1 ) == ii_row_  &  open_set (  : , 2 ) == jj_col_ )  < 1;          %  if neighbor not in openSet	
                             open_set( size(open_set,1)+1 , : ) = [ ii_row_ , jj_col_ ] ;                            
                         end
-                        tentative_gScore = g_score( current_node(1) , current_node(2) )  + 1 ;   %  tentative_gScore := gScore[current] + dist_between(current, neighbor)
+                        tentative_gScore ...
+                            = g_score( current_node(1) , current_node(2) )  ... 
+                            + 1 ....
+                            + cost_map_( ii_row_ , jj_col_ )   ;   %  tentative_gScore := gScore[current] + dist_between(current, neighbor)
                         %tentative_gScore = tentative_gScore + path_planning__manhattan_distance(current_node , [ ii_row_, jj_col_] )    ;
                         if tentative_gScore > g_score( ii_row_, jj_col_ )  ;    continue  ;   end      
                         
