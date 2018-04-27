@@ -66,7 +66,11 @@ idisp( map_2 )   ;  hold on ;  plot2_rows(start_2','rx')    ;  plot2_rows(goal_2
 
 [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_planning__astar(map_2, start_2, goal_2)    ;
 [ total_path_goal_to_start__  , total_path_start_to_goal__ ] = path_planning__reconstruct_path(came_from, goal_2)    ;
-path_planning__draw_came_from(came_from)    ;  
-path_planning__draw_path( total_path_goal_to_start__ )    ;
+path_planning__draw_came_from(came_from)    ;    
+path_planning__draw_path( total_path_start_to_goal__ )    ;
+total_path_smoothed__ = path_planning__smooth_path_lineofsight( total_path_start_to_goal__ , map_2 )    ;
+path_planning__draw_path( total_path_smoothed__ )    ;
+% path_planning__draw_path( total_path_start_to_goal__ , 'pause' )    ;
+% path_planning__draw_path( total_path_goal_to_start__ , 'pause' )    ;
 
 
