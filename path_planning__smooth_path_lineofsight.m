@@ -14,9 +14,12 @@ currentPoint = currentPoint->next
 %}
 function total_path_smoothed__ = path_planning__smooth_path_lineofsight(total_path_start_to_goal_, cost_map_, varargin)    
     threshold_ = Inf    ;
+    skip_ = 1    ;
     for ii_ = 1:max(max(size(varargin)))
         if strcmpi( varargin{ii_} , 'threshold' )
             threshold_ = varargin{ii_+1}    
+        elseif    strcmpi( varargin{ii_} , 'skip' )
+            skip_ = varargin{ii_+1}            
         end
     end
     total_path_smoothed__ = total_path_start_to_goal_    ;
@@ -49,7 +52,7 @@ function total_path_smoothed__ = path_planning__smooth_path_lineofsight(total_pa
             total_path_smoothed__(:,currentPointIndex) = []    ;
         else
             checkPointIndex = currentPointIndex    ;
-            currentPointIndex =  checkPointIndex + 1    ;
+            currentPointIndex =  checkPointIndex + skip_    ;
         end
     end
 end
