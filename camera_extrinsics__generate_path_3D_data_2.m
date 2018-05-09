@@ -23,8 +23,8 @@ Image.getTimeStamp() :  https://developer.android.com/reference/android/media/Im
 
     
 start_posn = [6 1 0]  ;
-via_posns = [ 6,1,0; 6,4,0; 7,2,0; 4,5,0 ]  ;  %  via points
-via_posns = [ 6,2,0; 6,4,0; 7,2,0; 4,3,0 ]  ;  %  via points
+via_posns = [ 6,2,0; 6,4,0; 7,2,0; 4,3,0 ]  ;  %  via points - testing
+via_posns = [ 4,3,0 ]  ;  %  via points  - single line of points 
 axis_speed_limits = [0.3 0.3 0.3]  ;
 time_under_acc = 5  ;
 time_step = 0.005;
@@ -130,8 +130,10 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
    
     %-- Camera 
     %-- Camera pose setup - place a camera at a random pose 
-%     min_angle_degs=45; angle_range_degs=40; x_max=3; y_max=1; z_max=2; proportion_in_fov=1.0;    
-    min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    
+%     min_angle_degs=45; angle_range_degs=40; x_max=3; y_max=1; z_max=2; proportion_in_fov=1.0;    - pre-testing
+%     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  testing
+%     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  0001
+    min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0002 
     camera =  camera_extrinsics__place_camera_safely_2( ...
         min_angle_degs,angle_range_degs, ...
         x_max, y_max, z_max, [ 2 2 1 ]' ,  ...   [ 0.5 0.5 0.1]' , ... 
@@ -163,10 +165,7 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
         
  
         fig_handle_2D_no_latency = figure('Name',sprintf('2D latency_time_steps = %f',latency_time_steps));  grid on; hold on;
-        plot2_rows(points_2D_preconditioned, 'rx')  ;
-        plot2_rows(reshape(camera.limits,2,2),'bo')  ;
-        plot2_rows(reshape(camera.limits,2,2)','bo')  ;
-        plot2_rows( [1024 0]' ,'bo')  ;
+        plot2_rows( [1024 0]' ,'bo')  ;  plot2_rows(points_2D_preconditioned, 'rx')  ; plot2_rows(reshape(camera.limits,2,2),'bo')  ; plot2_rows(reshape(camera.limits,2,2)','bo')  ;        
         axis equal
         for ii_ = 1:size(points_2D_preconditioned,2) ; text(points_2D_preconditioned(1,ii_),points_2D_preconditioned(2,ii_),num2str(ii_));  end
         
@@ -183,35 +182,81 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
         estimated_position_diffs(:,ii_) =  estimated_positions(:,ii_) - camera_position   ;
     end
     fig_handle_position_error = figure;  fig_handle_position_error.Name='Estimated position errors'  ; grid on; xlabel('estimatenumber'); ylabel('euclidean distance from true camera position');
-    for ii_ = 1:num_RANSAC_iterations
-        plot(norm(estimated_position_diffs(:,ii_) ),'rx'); 
-    end
-    axis equal; 
+    eucidean_distance_error = norm_2( estimated_position_diffs, 1)  ;
+    hold on; plot(eucidean_distance_error,'bx')  ;
+    plot( estimated_position_diffs(1,:) , 'rs' )  ; plot( estimated_position_diffs(2,:) , 'gs' )  ;plot( estimated_position_diffs(3,:) , 'bs' )  ;
+    figure('Name','position errors plotted as 3D points: looking for clusters')  ;  grid on  ;  hold on  ;  
+    plot3_rows(estimated_position_diffs, 'rx')  ;     
+    figure('Name','Euclidean distance of position errors as hist/density')  ;  grid on  ;  hold on  ; 
+    hist(eucidean_distance_error,100)  ;    
     
+    % { 
+    %-- compare the orientations  --  not sure that this is useful  
+    model_1_quat = Quaternion( squeeze( models_extrinsic_estimate_as_local_to_world(1:3,1:3,1) ))
+    camera.get_pose_rotation
+    camera_pose_rotation_quat = Quaternion(camera.get_pose_rotation)
+    model_pose_rotation_quat = Quaternion( squeeze( models_extrinsic_estimate_as_local_to_world(1:3,1:3, 99 )) )
+    minus(model_pose_rotation_quat,camera_pose_rotation_quat)
+    model_pose_rotation_quat * camera_pose_rotation_quat
+    model_pose_rotation_quat.inv() * camera_pose_rotation_quat
+    diff_quat = model_pose_rotation_quat.inv() * camera_pose_rotation_quat
+    % } 
+    
+    %--  QUESTION: does reprojection error always correspond to Euclidean error? 
+    % -- reprojection error  --  is the default that everyone will reach for, and the one that would 
+    %       be used for  RANSAC , but _may_ not be the best for trying to understand the/any 
+    %       systematic  effects of  noise. latency, etc, on the camera pose estimate. 
+    %       Can also exclude the poses precluded by the floorplan. 
+    
+    points_2D_reprojected = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 3xnum_datapointsxnum_RANSAC_iterations      
+    reprojection_difference = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 3xnum_datapointsxnum_RANSAC_iterations  
+    reprojection_Euclidean = zeros( [ 1 size(points_2D,2) num_RANSAC_iterations ] )  ;  %  1xnum_datapointsxnum_RANSAC_iterations
+    reprojection_Euclidean_total = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+    for ii_ = 1:num_RANSAC_iterations
+        pose_estimate = squeeze( models_extrinsic_estimate_as_local_to_world(:,:, ii_) )  ; 
+        cam_reproject = CentralCamera('default')  ;  cam_reproject.T = pose_estimate  ;  
+        points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned )  ;
+        reprojection_difference(:,:,ii_) = points_2D_reprojected(:,:,ii_) - points_2D  ;
+        reprojection_Euclidean(:,:,ii_) = norm_2(reprojection_difference(:,:,ii_),1)  ;
+        reprojection_Euclidean_total(ii_) = sum(reprojection_Euclidean(:,:,ii_))  ;
+    end
+    figure('Name','reprojection_Euclidean_total per RANSAC iteration');  
+    semilogy(reprojection_Euclidean_total, 'rx') ;
+    semilogy(reprojection_Euclidean_total.*(reprojection_Euclidean_total>1), 'rs') ;  % higlight the high-magnitude errors 
+    hold on; xlabel('iteration'); ylabel('reprojection_Euclidean_total'); hold on; grid on;    
+    
+    figure('Name','pose posn error vs reprojection_Euclidean_total');  
+    semilogy( eucidean_distance_error , ...
+        reprojection_Euclidean_total, 'rx') ;
+    hold on; xlabel('eucidean_distance_error'); ylabel('reprojection_Euclidean_total'); hold on; grid on; 
+    
+    figure('Name','pose posn error vs reprojection_Euclidean_total');  
+    loglog( eucidean_distance_error , ...
+        reprojection_Euclidean_total, 'rx') ;
+    hold on; xlabel('eucidean_distance_error'); ylabel('reprojection_Euclidean_total'); hold on; grid on; 
 
         
         %%
-    %--   Test camera aiming process :  generate one camera pointing at each of the datapoints, project the 3D->2D 
+    %--   Works:  Test camera aiming process :  generate one camera pointing at each of the datapoints, project the 3D->2D 
 
     fig_3d_handle = figure; axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
     plot3_rows(points_3D_f1,'rx')  ;  plot3_rows(points_3D_f2,'bx')  ;
     plot3_rows(points_3D_f1_latency,'ro')  ;  plot3_rows(points_3D_f2_latency,'bo')  ;
     plot3_rows(qb','m')  ;   axis equal   ;     
     
-    dummy_cam = CentralCamera('Default')  ;
-    clear 'cam_array'
+    dummy_cam = CentralCamera('Default')  ; 
     cam_array = [dummy_cam]  ;
     
     camera_spatial_distribution_width = 4  ;
     cam_position_offset = mean(points_3D_preconditioned,2) ; 
     for ii_ = 1:num_points
         target_point = points_3D_preconditioned(:,ii_) ;
-        cam_position_y = cam_position_offset(2) + (  mod(ii_,camera_spatial_distribution_width)  ) - (  mod(num_points,camera_spatial_distribution_width)  ) ; 
-        cam_position_x = cam_position_offset(1) + (  round(ii_/camera_spatial_distribution_width)  )  - (  round(num_points/camera_spatial_distribution_width)  );
-        cam_position_z = cam_position_offset(3) + (  2.5  ) ;
-        cam_position = [ cam_position_x ; cam_position_y ; cam_position_z ]  ;
+            cam_position_y = cam_position_offset(2) + (  mod(ii_,camera_spatial_distribution_width)  ) - (  mod(num_points,camera_spatial_distribution_width)  ) ; 
+            cam_position_x = cam_position_offset(1) + (  round(ii_/camera_spatial_distribution_width)  )  - (  round(num_points/camera_spatial_distribution_width)  );
+            cam_position_z = cam_position_offset(3) + (  2.5  ) ;
+            cam_position = [ cam_position_x ; cam_position_y ; cam_position_z ]  ;
         cam_direction_vector = target_point - cam_position ;
-        cam_array = [ cam_array CentralCamera('Default') ] ;
+            cam_array = [ cam_array CentralCamera('Default') ] ;
             %   camera_rdf_coordinate_system__ = camera_rdf_coordinate_system( vector_along_x_axis_ , vector_in_z_axis_plane_ )
             %       see example in /mnt/nixbig/ownCloud/project_code/camera_rdf_coordinate_system.m 
         camera_rdf_coord_sys = camera_rdf_coordinate_system( cam_direction_vector, [ cam_direction_vector(1:2) ; cam_direction_vector(3)+2 ] )  ;
@@ -221,9 +266,6 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
         drawnow  ; 
         pause 
     end
-        
-       
-
          
         
         
