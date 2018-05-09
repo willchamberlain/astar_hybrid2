@@ -23,38 +23,39 @@ CentralCamera
 % LATER - re-estimate from the consensus set
 %----  Make some random 3D points : note they're separate by minimum 0.1m  ----%
 num_datapoints = 43;  %  5mx3mx1.2m  
-type_points_3d='linear'; if strcmpi(type_points_3d, 'random')
+type_points_3d='random'; if strcmpi(type_points_3d, 'random')
     points_volume_dimensions = [6 5 1], points_volume_offsets = [ 0 0 0];
     [ points_3D_random , points_3D_random_hom] = camera_extrinsics__generate_random_3D_data(num_datapoints, points_volume_dimensions, points_volume_offsets);
 elseif strcmpi(type_points_3d, 'linear')
     tracks_starts=[  0 0  ;  -1 0 ]'  ; tracks_ends=[  3 6 ; 2 6 ]'  ;  tracks_heights = [ 0.265  0.645 ;  0.265  0.645  ];
     [ points_3D_track_1 , points_3D__track_1_hom] = camera_extrinsics__generate_path_3D_data(num_datapoints, tracks_starts(:,1), tracks_ends(:,1), tracks_heights(:,1))  ;
     [ points_3D_track_2 , points_3D__track_2_hom] = camera_extrinsics__generate_path_3D_data(num_datapoints, tracks_starts(:,2), tracks_ends(:,2), tracks_heights(:,2))  ;    
-    camera_extrinsics__latency_between_track_points_as_ratio()
-    camera_extrinsics__latency_between_track_points_as_ratio()
     points_3D_with_latency_1 = camera_extrinsics__latency_between_track_points_as_ratio(points_3D_track_1 , tracks_heights(1,:) , 0.01);
     points_3D_with_latency_2 = camera_extrinsics__latency_between_track_points_as_ratio(points_3D_track_2 , tracks_heights(2,:) , 0.01);
     points_3D = horzcat(points_3D_with_latency_1,points_3D_with_latency_2);
-else
-    [ points_3D , points_3D_hom] = camera_extrinsics__generate_path_3D_data_sinusoid( 11 , 4 , [ 1 0.5 ] , [10 7] ,  [ 0.5  0.75  1.1 ] )
+elseif strcmpi(type_points_3d, 'sinusoid')
+    [ points_3D , points_3D_hom] = camera_extrinsics__generate_path_3D_data_sinusoid( 11 , 4 , [ 1 0.5 ] , [10 7] ,  [ 0.5  0.75  1.1 ] )   ;
 end
+%{
+     figure('Name','3D'); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
+     plot3_rows(points_3D_random,'rx')
+     axis equal
+%}
 
-
-
-%---- 
-%-- default camera : need this to get the camera_K at zero offset
+%-- camera parameters / intrinsics :  need this to get the camera_K at zero offset, because moving the camera alters these intrinsics for
+%some reason
 camera_default = CentralCamera('default');
 move_trans_x = [ 0 0 0]';
 camera_default = camera_default.move(  [   [ eye(3), move_trans_x ] ; [ 0 0 0 1 ]   ]  );  % :-- move in world coordinate system ( FLU ) : camera is aligned to 
 [ camera_K_default , Focal_length_default , Principal_point_default ] = camera_extrinsics__camera_intrinsics_from_pctoolkit_camera(camera_default);
-%----
+
+%-- set parameters 
 num_cam_poses = 3;
 model_size = 0;
 model_size_range=[4,8];
 model_size_range=[8,9];
 num_cam_poses = 1;                  %  HAVE TO change indexing if this is over 1  :  store models in vector along with parameters, or shift to objects/structures
 num_RANSAC_iterations = 40;   % otten 100-1000, but papers imply can be significantly less 
-num_RANSAC_iterations = 400;
 inlier_threshold_pixel_diff = 6;
 models = zeros(model_size,num_RANSAC_iterations, 'uint32');
 models_max_diff_SE3_element = zeros(1,num_RANSAC_iterations);
@@ -63,19 +64,25 @@ models_best_model_candidates = zeros(1,num_RANSAC_iterations, 'uint32');
 models_exceptions = zeros(1,num_RANSAC_iterations, 'uint32');
 models_consensus_size = zeros(1,num_RANSAC_iterations, 'uint32');
 cameras = [];
+
+%--  for each camera pose...
 for jj_ = 1:num_cam_poses
     
-    min_angle_degs=15; angle_range_degs=40; x_max=5; y_max=5; z_max=2; proportion_in_fov=1.0;    
+    %-- place a camera at a random pose 
+    min_angle_degs=15; angle_range_degs=40; x_max=5; y_max=5; z_max=2; proportion_in_fov=1.0;  
+    min_angle_degs=5; angle_range_degs=25; x_max=3; y_max=2.5; z_max=5; proportion_in_fov=1.0;
     camera =  camera_extrinsics__place_camera_safely(min_angle_degs,angle_range_degs, x_max, y_max, z_max, points_3D_random, proportion_in_fov);
-    
-    %[ camera_K , Focal_length , Principal_point ] = camera_extrinsics__camera_intrinsics_from_pctoolkit_camera(camera);
+    %   draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, '5', 1.1  , 'r' )   % draw the camera pose 
+    %   draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '5', 1.2 )   % draw the camera pose      
+    % if have variation in camera intrinsics-  [ camera_K , Focal_length , Principal_point ] = camera_extrinsics__camera_intrinsics_from_pctoolkit_camera(camera);
     cameras = [ cameras ; camera ];
     
+    %--   3D --> 2D  
     points_2D = camera.project(points_3D_random);
     points_2D_without_noise = points_2D;
     pts_2D_noise_magnitude = 10;
     pts_2D_noise_mean = 0; 
-    pixel_noise_type = 'None'
+    pixel_noise_type = 'Gaussian'   %  'None'
     if strcmpi(pixel_noise_type,'Gaussian' )
         points_2D_noise = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) * 2,  pts_2D_noise_magnitude ,  pts_2D_noise_mean , 1 )    ;
         points_2D(1,:) = points_2D(1,:) + points_2D_noise(1,1:size(points_2D,2));    
@@ -83,9 +90,12 @@ for jj_ = 1:num_cam_poses
     else
         points_2D_noise = zeros(size(points_2D));
         points_2D = points_2D + points_2D_noise;
+    end
     
-    for model_size = [4]  %model_size_range(1):model_size_range(2)
+    %-- for each model size - the minimum needed for the hypothesis  :-  this is  to test the effectiveness of model size   
+    for model_size = [4 , 5 , 6 , 7 , 8]  %model_size_range(1):model_size_range(2)
         
+           %--   RUN EPNP 
            points_2D_preconditioned = points_2D;
            points_2D_preconditioned_without_noise = points_2D_without_noise;
            points_3D_random_preconditioned = points_3D_random;
@@ -95,6 +105,8 @@ for jj_ = 1:num_cam_poses
             num_RANSAC_iterations, model_size, ...
             camera.get_pose_transform);
         
+        %--  Draw the 2D projected points; draw the 3D points and camera poses; set up 2D figure for error chart
+        % plot 2D points
         fig_2d_plot_points_2D_with_and_without_noise = figure('Name',sprintf('plot_points_2D_with_and_without_noise model errors-ish - model size %d',model_size)) ;hold on; grid on; axis equal; xlabel('x'); ylabel('y'); zlabel('z')
         hold on; grid on; axis equal; xlabel('x'); ylabel('y'); zlabel('z');  plot([0 , 0 , 1024, 1024 , 0], [0 , 1024, 1024 , 0 , 0]) ;
         plot2_rows(points_2D_preconditioned_without_noise,'bd')
@@ -102,18 +114,21 @@ for jj_ = 1:num_cam_poses
         plot2_rows(points_2D_preconditioned,'rx')
         for iii_ = 1:20; text(points_2D_preconditioned(1,iii_)+10,points_2D_preconditioned(2,iii_)+10.,sprintf('%d',iii_),'Color','r');end
         
+        % prepare 2D plot for error chart
         fig_2d_plot_errors_handle = figure('Name',sprintf('model errors-ish - model size %d',model_size)) ;plot(models_max_diff_SE3_element );
-        % plot 3D
+        
+        % plot 3D points and camera poses
         fig_3d_handle = figure('Name',sprintf( 'points_3D_random - model size %d' ,model_size) ); hold on; grid on; axis equal; xlabel('x'); ylabel('y'); zlabel('z')
         camera_extrinsics__plot_3d_point_3D_and_camera_pose(fig_3d_handle, points_3D_random,camera)    
         for iii_ = 1:20; text(points_3D_random_preconditioned(1,iii_)+.05,points_3D_random_preconditioned(2,iii_)+.05,points_3D_random_preconditioned(3,iii_)+.05, sprintf('%d',iii_));end
         drawnow
         camera_extrinsics__plot_3d_estimated_poses   (fig_3d_handle, models_extrinsic_estimate_as_local_to_world)
         camera.plot_camera()
-        drawnow
-                
-        display('now reproject');
+        drawnow               
         
+        display('now reproject');
+                
+        %--    EVALUATE the EPnP estimates 
         best_model_consensus_size = 0;
         for ii_ = 1:num_RANSAC_iterations   
 %                 display(sprintf('RANSAC iteration %d',ii_));
@@ -237,12 +252,12 @@ for jj_ = 1:num_cam_poses
 %     draw_axes_direct_c(end_pt_yaw_then_pitch(3), camera_position(1:3), 'cam_position not rot',adj,'c');
 %     draw_axes_direct(end_pt_yaw_then_pitch(3), camera_position(1:3), 'cam_position not rot', 0.75*adj);
 
-    % camera position, with axes aligned with world coordinate frame:  
+    %--  plot camera position, with axes aligned with world coordinate frame:  
     plot3_rows( camera_position , 'ms', 'Linewidth',3)
     draw_axes_direct_c(eye(3), camera_position(1:3), 'cam_position not rot',adj,'c');
     draw_axes_direct(eye(3), camera_position(1:3), 'cam_position not rot', 0.75*adj);
     
-end
+
 
 
 
