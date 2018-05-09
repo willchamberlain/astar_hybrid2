@@ -24,7 +24,8 @@ Image.getTimeStamp() :  https://developer.android.com/reference/android/media/Im
     
 start_posn = [6 1 0]  ;
 via_posns = [ 6,2,0; 6,4,0; 7,2,0; 4,3,0 ]  ;  %  via points - testing
-via_posns = [ 4,3,0 ]  ;  %  via points  - single line of points 
+via_posns = [ 4,3,0 ]  ;  %  via points  - single line of points   %-  0001 0002 0003 
+via_posns = [ 5,3,0 ;  4,3,0 ]  ;  %  via points  - single line of points   %-  0004   :  6->5->4  1->2->3
 axis_speed_limits = [0.3 0.3 0.3]  ;
 time_under_acc = 5  ;
 time_step = 0.005;
@@ -40,7 +41,9 @@ time_step = 0.005;
 
 % positions of features on the robot 
 feature_1_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.645 ]' ; [ 0 0 0 1 ] ];
-feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];
+% feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0001
+% feature_2_pose_SE3 = [ eye(3) [ 0 , -0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0002
+feature_2_pose_SE3 = [ eye(3) [ 0 , 0.4 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0003
 % locations of features in the world as the robot moves through its trajectory
 feature_1_positions =  qb' + repmat(feature_1_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
 feature_2_positions =  qb' + repmat(feature_2_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
@@ -90,7 +93,8 @@ feature_2_positions =  qb' + repmat(feature_2_pose_SE3(1:3,4), 1 , size(qb,1) ) 
 %   Use feature_1_pose_SE3 , feature_2_pose_SE3 with EPnP at [0:5:40]ms latencies
 
 latency_s = 0.05;
-latency_time_steps = ceil(latency_s/time_step)  ;
+%--   latency_time_steps = ceil(latency_s/time_step)  ;
+latency_time_steps = 10  ;
 num_points = 200 ;
 % data_step_size = size(feature_1_positions,2)/num_points  ; 
 % point_indices = ceil(1:data_step_size:size(feature_1_positions,2)-latency_time_steps)  ; 
@@ -122,11 +126,11 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
 % }
 
 %--   Try EPnP on the good data and on the latency data  ---  see  /mnt/nixbig/ownCloud/project_code/camera_extrinsics__generate_perfect_data.m   
-   %--   3D -  no  latency
-   points_3D_preconditioned = [  points_3D_f1  points_3D_f2  ]    ;
-   num_points = size(points_3D_preconditioned,2)  ;
-   %--   3D -  with  latency
+   %--   3D -  no  latency     
+   points_3D_preconditioned_no_latency = [  points_3D_f1  points_3D_f2  ]    ;
+   %--   3D -  with  latency: no latency set by configuring   latency_time_steps=0 
    points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency  ]    ;
+   num_points = size(points_3D_preconditioned,2)  ;
    
     %-- Camera 
     %-- Camera pose setup - place a camera at a random pose 
@@ -141,10 +145,11 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
     hold on;   camera.plot_camera;   hold on;
     draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 0.75 )   % draw the camera pose        
 
+    %%
 
     %--   Try EPnP on the good data or latency data
         %--   3D --> 2D  
-           points_2D = camera.project( points_3D_preconditioned );
+           points_2D = camera.project( points_3D_preconditioned_no_latency );
            points_2D_preconditioned = points_2D;
            %--   RUN EPNP 
             model_size = 5;
@@ -215,12 +220,13 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
     for ii_ = 1:num_RANSAC_iterations
         pose_estimate = squeeze( models_extrinsic_estimate_as_local_to_world(:,:, ii_) )  ; 
         cam_reproject = CentralCamera('default')  ;  cam_reproject.T = pose_estimate  ;  
-        points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned )  ;
+%         points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned )  ;
+        points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned_no_latency )  ;        
         reprojection_difference(:,:,ii_) = points_2D_reprojected(:,:,ii_) - points_2D  ;
         reprojection_Euclidean(:,:,ii_) = norm_2(reprojection_difference(:,:,ii_),1)  ;
         reprojection_Euclidean_total(ii_) = sum(reprojection_Euclidean(:,:,ii_))  ;
     end
-    figure('Name','reprojection_Euclidean_total per RANSAC iteration');  
+    figure('Name','reprojection_Euclidean_total per RANSAC iteration');  hold on  ;
     semilogy(reprojection_Euclidean_total, 'rx') ;
     semilogy(reprojection_Euclidean_total.*(reprojection_Euclidean_total>1), 'rs') ;  % higlight the high-magnitude errors 
     hold on; xlabel('iteration'); ylabel('reprojection_Euclidean_total'); hold on; grid on;    
