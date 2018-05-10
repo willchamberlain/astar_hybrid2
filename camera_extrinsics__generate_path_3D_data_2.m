@@ -43,7 +43,8 @@ time_step = 0.005;
 feature_1_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.645 ]' ; [ 0 0 0 1 ] ];
 % feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0001
 % feature_2_pose_SE3 = [ eye(3) [ 0 , -0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0002
-feature_2_pose_SE3 = [ eye(3) [ 0 , 0.4 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0003
+% feature_2_pose_SE3 = [ eye(3) [ 0 , 0.4 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0003, 0004
+feature_2_pose_SE3 = [ eye(3) [ 0 , -0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0005
 % locations of features in the world as the robot moves through its trajectory
 feature_1_positions =  qb' + repmat(feature_1_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
 feature_2_positions =  qb' + repmat(feature_2_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
@@ -95,7 +96,7 @@ feature_2_positions =  qb' + repmat(feature_2_pose_SE3(1:3,4), 1 , size(qb,1) ) 
 latency_s = 0.05;
 %--   latency_time_steps = ceil(latency_s/time_step)  ;
 latency_time_steps = 10  ;
-num_points = 200 ;
+num_points = 100 ;
 % data_step_size = size(feature_1_positions,2)/num_points  ; 
 % point_indices = ceil(1:data_step_size:size(feature_1_positions,2)-latency_time_steps)  ; 
 % point_indices_with_latency = point_indices+latency_time_steps  ;
@@ -104,17 +105,19 @@ num_points = 200 ;
 %  latency_feature_1_positions - true_feature_1_positions  
     
 %  sample from full trajectory --> observations
-num_points_feature_1 = randi(num_points*0.5)  + num_points/4.0   ;
-points_3D_f1_indices = randperm(size(feature_1_positions,2) - latency_time_steps, num_points_feature_1)   ;
+num_points_feature_1 = round(randi(num_points*0.5)  + num_points/4.0)   ;
+points_3D_f1_indices = randperm(size(feature_1_positions,2) - latency_time_steps, num_points_feature_1)   ; % random distribution
 feat_1_lim = size(feature_1_positions,2) - latency_time_steps   ;
-points_3D_f1_indices = [ 1  ceil(feat_1_lim/4) ceil(feat_1_lim/3) ceil(feat_1_lim/2)  ceil(2*feat_1_lim/3)  ceil(3*feat_1_lim/4)  feat_1_lim ]   ; 
+points_3D_f1_indices = [ 1  ceil(feat_1_lim/4) ceil(feat_1_lim/3) ceil(feat_1_lim/2)  ceil(2*feat_1_lim/3)  ceil(3*feat_1_lim/4)  feat_1_lim ]   ;   % even 14-point distribution - 0001,0002,0003,0004
+points_3D_f1_indices = [ round([1:(feat_1_lim/( (num_points/2) -1)):feat_1_lim]) feat_1_lim]   ; % even variable-size distribution of points
 points_3D_f1                = feature_1_positions(: , points_3D_f1_indices )   ;
 points_3D_f1_latency = feature_1_positions(: , points_3D_f1_indices+latency_time_steps )   ;
 
 num_points_feature_2 = num_points - num_points_feature_1   ;
-points_3D_f2_indices = randperm(size(feature_2_positions,2) - latency_time_steps, num_points_feature_2)   ;
+points_3D_f2_indices = randperm(size(feature_2_positions,2) - latency_time_steps, num_points_feature_2)   ; % random distribution
 feat_2_lim = feat_1_lim - 500 ;
-points_3D_f2_indices = [ 1  ceil(feat_2_lim/4) ceil(feat_2_lim/3) ceil(feat_2_lim/2)  ceil(2*feat_2_lim/3)  ceil(3*feat_2_lim/4)  feat_2_lim ]   ; 
+points_3D_f2_indices = [ 1  ceil(feat_2_lim/4) ceil(feat_2_lim/3) ceil(feat_2_lim/2)  ceil(2*feat_2_lim/3)  ceil(3*feat_2_lim/4)  feat_2_lim ]   ;    % even 14-point distribution - 0001,0002,0003,0004
+points_3D_f2_indices = [ round([1:(feat_2_lim/( (num_points/2) -1)):feat_2_lim]) feat_2_lim]   ; % even variable-size distribution of points
 points_3D_f2                = feature_2_positions(: , points_3D_f2_indices )  ;
 points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time_steps )  ;
 
@@ -138,10 +141,12 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
 %     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  testing
 %     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  0001
     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0002 
+    if ~exist('camera','var') || (exist('p_change_camera','var') && p_change_camera)
     camera =  camera_extrinsics__place_camera_safely_2( ...
         min_angle_degs,angle_range_degs, ...
         x_max, y_max, z_max, [ 2 2 1 ]' ,  ...   [ 0.5 0.5 0.1]' , ... 
         [ 1.0 1.0 1.0 ]' , points_3D_preconditioned , proportion_in_fov);
+    end
     hold on;   camera.plot_camera;   hold on;
     draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 0.75 )   % draw the camera pose        
 
@@ -153,7 +158,7 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
            points_2D_preconditioned = points_2D;
            %--   RUN EPNP 
             model_size = 5;
-            num_RANSAC_iterations = 100;   % otten 100-1000, but papers imply can be significantly less 
+            num_RANSAC_iterations = 1000;   % otten 100-1000, but papers imply can be significantly less 
            [ models , models_max_diff_SE3_element , models_extrinsic_estimate_as_local_to_world ] = ...  % , models_best_solution , models_solution_set ] = ...           
         camera_extrinsics__iterate_epnp  ( ...
             points_2D_preconditioned, points_3D_preconditioned, camera_K_default, ...
@@ -187,13 +192,22 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
         estimated_position_diffs(:,ii_) =  estimated_positions(:,ii_) - camera_position   ;
     end
     fig_handle_position_error = figure;  fig_handle_position_error.Name='Estimated position errors'  ; grid on; xlabel('estimatenumber'); ylabel('euclidean distance from true camera position');
-    eucidean_distance_error = norm_2( estimated_position_diffs, 1)  ;
-    hold on; plot(eucidean_distance_error,'bx')  ;
+    posn_euclidean_dist_error = norm_2( estimated_position_diffs, 1)  ;
+    hold on; plot(posn_euclidean_dist_error,'bx')  ;
     plot( estimated_position_diffs(1,:) , 'rs' )  ; plot( estimated_position_diffs(2,:) , 'gs' )  ;plot( estimated_position_diffs(3,:) , 'bs' )  ;
     figure('Name','position errors plotted as 3D points: looking for clusters')  ;  grid on  ;  hold on  ;  
     plot3_rows(estimated_position_diffs, 'rx')  ;     
-    figure('Name','Euclidean distance of position errors as hist/density')  ;  grid on  ;  hold on  ; 
-    hist(eucidean_distance_error,100)  ;    
+    params_as_string = sprintf(' num_points=%d, model_size=%d , num_RANSAC_iterations=%d' , num_points,  model_size , num_RANSAC_iterations ) ;
+    figure('Name',  strcat('Euclidean distance of position errors as hist/density',params_as_string))  ;  grid on  ;  hold on  ; 
+    hist(posn_euclidean_dist_error,100)  ;    
+    
+    % works, BUT not necessarily useful: could use difference between rays through a plane 
+    %  e.g. the floor plane or a robot feature height plane, normalised by the actual camera ray horizontal distance ,
+    %  or the distance along the surface of the 5m radius cylinder wall, or the 3D distance between te 5m projection along the real and estimated optic centres
+    sorted_eucidean_distance_error=sort(posn_euclidean_dist_error(posn_euclidean_dist_error<1));
+    pd = fitdist(sorted_eucidean_distance_error','half normal')  ;
+    
+    % distribution of reprojection errors 
     
     % { 
     %-- compare the orientations  --  not sure that this is useful  
@@ -226,21 +240,35 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
         reprojection_Euclidean(:,:,ii_) = norm_2(reprojection_difference(:,:,ii_),1)  ;
         reprojection_Euclidean_total(ii_) = sum(reprojection_Euclidean(:,:,ii_))  ;
     end
-    figure('Name','reprojection_Euclidean_total per RANSAC iteration');  hold on  ;
-    semilogy(reprojection_Euclidean_total, 'rx') ;
-    semilogy(reprojection_Euclidean_total.*(reprojection_Euclidean_total>1), 'rs') ;  % higlight the high-magnitude errors 
-    hold on; xlabel('iteration'); ylabel('reprojection_Euclidean_total'); hold on; grid on;    
+    figure('Name','mean reprojection_Euclidean_total per RANSAC iteration');  hold on  ;
+    semilogy(reprojection_Euclidean_total/num_points, 'rx') ;
+    semilogy( (reprojection_Euclidean_total.*(reprojection_Euclidean_total>1)/num_points ), 'rs') ;  % higlight the high-magnitude errors 
+    hold on; xlabel('iteration'); ylabel('mean reprojection_Euclidean_total'); hold on; grid on;    
     
-    figure('Name','pose posn error vs reprojection_Euclidean_total');  
-    semilogy( eucidean_distance_error , ...
-        reprojection_Euclidean_total, 'rx') ;
-    hold on; xlabel('eucidean_distance_error'); ylabel('reprojection_Euclidean_total'); hold on; grid on; 
+    figure('Name','mean reprojection_Euclidean_total per RANSAC iteration');  hold on  ;
+    semilogy(reprojection_Euclidean_total(reprojection_Euclidean_total/num_points < 10)/num_points, 'rx') ;
+    % semilogy( (reprojection_Euclidean_total.*(reprojection_Euclidean_total>1)/num_points ), 'rs') ;  % higlight the high-magnitude errors 
+    hold on; xlabel('iteration'); ylabel('mean reprojection_Euclidean_total'); hold on; grid on;    
+    % 2018_05_10 23:45 
+    mean_reprojection_thresholded = reprojection_Euclidean_total(reprojection_Euclidean_total/num_points < 100)/num_points  ;
+    mean_reprojection_thresholded = sort(mean_reprojection_thresholded ) ;
+    figure; plot(mean_reprojection_thresholded)
+    figure; hist(mean_reprojection_thresholded,100)   % approximates a half-normal distribution ; very few with almost-zero reprojection, but probably good enough for approx probability distribution and confidence
     
-    figure('Name','pose posn error vs reprojection_Euclidean_total');  
-    loglog( eucidean_distance_error , ...
-        reprojection_Euclidean_total, 'rx') ;
-    hold on; xlabel('eucidean_distance_error'); ylabel('reprojection_Euclidean_total'); hold on; grid on; 
+    figure('Name','pose posn error vs mean reprojection_Euclidean_total');  
+    semilogy( posn_euclidean_dist_error , ...
+        reprojection_Euclidean_total/num_points, 'rx') ;
+    hold on; xlabel('eucidean_distance_error'); ylabel('mean reprojection_Euclidean_total'); hold on; grid on; 
+    
+    figure('Name','pose posn error vs mean mean reprojection_Euclidean_total');  
+    loglog( posn_euclidean_dist_error , ...
+        reprojection_Euclidean_total/num_points, 'rx') ;
+    hold on; xlabel('eucidean_distance_error'); ylabel('mean reprojection_Euclidean_total'); hold on; grid on; 
 
+    
+    %  SAVE THE RESULTS
+    save_Results_001(description ,  camera ,  qb ,  qbd ,  qbdd ,  start_posn ,  via_posns ,  axis_speed_limits ,  time_under_acc ,  time_step ,  latency_s ,  latency_time_steps ,  num_points ,  feature_1_pose_SE3 ,  feature_1_positions ,  points_3D_f1_indices ,  points_3D_f1 ,  points_3D_f1_latency ,  feature_2_pose_SE3 ,  feature_2_positions ,  points_3D_f2_indices ,  points_3D_f2 ,  points_3D_f2_latency ,  num_RANSAC_iterations ,  models_extrinsic_estimate_as_local_to_world )  ;
+    
         
         %%
     %--   Works:  Test camera aiming process :  generate one camera pointing at each of the datapoints, project the 3D->2D 
