@@ -22,7 +22,7 @@ start_posn = [6 1 0]  ;
 % via_posns = [ 6,2,0; 6,4,0; 7,2,0; 4,3,0 ]  ;  %  via points - testing
 % via_posns = [ 4,3,0 ]  ;  %  via points  - single line of points   %-  0001 0002 0003 
 % via_posns = [ 5,3,0 ;  4,3,0 ]  ;  %  via points  - single line of points   %-  0004   :  6->5->4  1->2->3
-via_posns = [ 4,3,0 ] ;  % 0_000 
+via_posns = [ 4,3,0 ] ;  % 0_*
 axis_speed_limits = [0.3 0.3 0.3]  ;
 time_under_acc = 5  ;
 time_step = 0.005;
@@ -40,60 +40,87 @@ feature_1_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.645 ]' ; [ 0 0 0 1 ] ];
 % feature_2_pose_SE3 = [ eye(3) [ 0 , -0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0002
 % feature_2_pose_SE3 = [ eye(3) [ 0 , 0.4 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0003, 0004
 % feature_2_pose_SE3 = [ eye(3) [ 0 , -0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0005
-feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_0001
+% feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_000, 0_001
+% feature_2_pose_SE3 = [ eye(3) [ 0.5 , 0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_002
+% feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2      , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003
+% feature_3_pose_SE3 = [ eye(3) [ 0 , 0.645 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003
+feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2      , 0.05 ]' ; [ 0 0 0 1 ] ];  %-- 0_003_2
+% feature_3_pose_SE3 = [ eye(3) [ 0.2 , -0.645 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003_2
+feature_3_pose_SE3 = [ eye(3) [ 0.2 , -0.645 , 0.8 ]' ; [ 0 0 0 1 ] ];  %-- 0_003_3
 % locations of features in the world as the robot moves through its trajectory
 feature_1_positions =  qb' + repmat(feature_1_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
 feature_2_positions =  qb' + repmat(feature_2_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
+feature_3_positions =  qb' + repmat(feature_3_pose_SE3(1:3,4), 1 , size(qb,1) )   ; %-- 0_003
 %     figure('Name', 'Robot features and the robot trajectory'); hold on; grid on ; plot3_rows(feature_1_positions,'gx') ;  plot3_rows(feature_2_positions,'cx') ; plot3_rows(qb','bx');   axis equal
 
 %%    
 display( 'Set up true and latency feature positions --> 3D data' )
-latency_s = 0.05;
+latency_s = 0.05; %-- 0_000-0_003
+latency_s = 0.025; %-- 0_003_1
 %--   latency_time_steps = ceil(latency_s/time_step)  ;
-latency_time_steps = 10  ;
+latency_time_steps = 10  ; %-- 0_000-0_003 
+latency_time_steps = 5  ;  %-- 0_003_1
 num_points = 100 ;    
 %  feature 1 - sample from full trajectory --> observations
-num_points_feature_1 = round(randi(num_points*0.5)  + num_points/4.0)   ;
-points_3D_f1_indices = randperm(size(feature_1_positions,2) - latency_time_steps, num_points_feature_1)   ; % random distribution
+% num_points_feature_1 = round(randi(num_points*0.5)  + num_points/4.0)   ;
+% num_points_feature_1 = 34  ;  %  round(randi(num_points*0.35)  + num_points/6.0)   ; %-- 0_003
+% points_3D_f1_indices = randperm(size(feature_1_positions,2) - latency_time_steps, num_points_feature_1)   ; % random distribution
 feat_1_lim = size(feature_1_positions,2) - latency_time_steps   ;
-points_3D_f1_indices = [ 1  ceil(feat_1_lim/4) ceil(feat_1_lim/3) ceil(feat_1_lim/2)  ceil(2*feat_1_lim/3)  ceil(3*feat_1_lim/4)  feat_1_lim ]   ;   % even 14-point distribution - 0001,0002,0003,0004
-points_3D_f1_indices = [ round([1:(feat_1_lim/( (num_points/2) -1)):feat_1_lim]) feat_1_lim]   ; % even variable-size distribution of points
+% points_3D_f1_indices = [ 1  ceil(feat_1_lim/4) ceil(feat_1_lim/3) ceil(feat_1_lim/2)  ceil(2*feat_1_lim/3)  ceil(3*feat_1_lim/4)  feat_1_lim ]   ;   % even 14-point distribution - 0001,0002,0003,0004
+% points_3D_f1_indices = [ round([1:(feat_1_lim/( (num_points/2) -1)):feat_1_lim]) feat_1_lim]   ;  % even variable-size distribution of points
+points_3D_f1_indices = [ round([1:(feat_1_lim/( (num_points/3) -1)):feat_1_lim]) feat_1_lim]   ; %-- 0_003 % even variable-size distribution of points
 points_3D_f1                = feature_1_positions(: , points_3D_f1_indices )   ;
 points_3D_f1_latency = feature_1_positions(: , points_3D_f1_indices+latency_time_steps )   ;
 %  feature 2
-num_points_feature_2 = num_points - num_points_feature_1   ;
-points_3D_f2_indices = randperm(size(feature_2_positions,2) - latency_time_steps, num_points_feature_2)   ; % random distribution
+% num_points_feature_2 = num_points - num_points_feature_1   ;
+% num_points_feature_2 = 33  ;  %  round(randi(num_points*0.35)  + num_points/6.0)   ; %-- 0_003
+% num_points_feature_3 = 33  ;  %  num_points - (num_points_feature_1+num_points_feature_2)   ; %-- 0_003
+% points_3D_f2_indices = randperm(size(feature_2_positions,2) - latency_time_steps, num_points_feature_2)   ; % random distribution
 feat_2_lim = feat_1_lim - 500 ;
-points_3D_f2_indices = [ 1  ceil(feat_2_lim/4) ceil(feat_2_lim/3) ceil(feat_2_lim/2)  ceil(2*feat_2_lim/3)  ceil(3*feat_2_lim/4)  feat_2_lim ]   ;    % even 14-point distribution - 0001,0002,0003,0004
-points_3D_f2_indices = [ round([1:(feat_2_lim/( (num_points/2) -1)):feat_2_lim]) feat_2_lim]   ; % even variable-size distribution of points
+% points_3D_f2_indices = [ 1  ceil(feat_2_lim/4) ceil(feat_2_lim/3) ceil(feat_2_lim/2)  ceil(2*feat_2_lim/3)  ceil(3*feat_2_lim/4)  feat_2_lim ]   ;    % even 14-point distribution - 0001,0002,0003,0004
+% points_3D_f2_indices = [ round([1:(feat_2_lim/( (num_points/2) -1)):feat_2_lim]) feat_2_lim]   ; % even variable-size distribution of points
+points_3D_f2_indices = [ round([1:(feat_2_lim/( (num_points/3) -1)):feat_2_lim]) feat_2_lim]   ; %-- 0_003 % even variable-size distribution of points
 points_3D_f2                = feature_2_positions(: , points_3D_f2_indices )  ;
 points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time_steps )  ;
+feat_3_lim = feat_2_lim  ;   %--  0_003 
+points_3D_f3_indices = [ round([1:(feat_3_lim/( (num_points/3) -1)):feat_3_lim]) feat_3_lim]   ; %-- 0_003 % even variable-size distribution of points
+points_3D_f3                = feature_3_positions(: , points_3D_f3_indices )  ;
+points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time_steps )  ;
 % {
      fig_3d_handle = figure('Name',strcat(exp_num,' : ','3D scene')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
      plot3_rows(points_3D_f1,'rx')  ;  plot3_rows(points_3D_f2,'bx')  ;
+       plot3_rows(points_3D_f3,'mx')  ;  %-- 0_003
      plot3_rows(points_3D_f1_latency,'ro')  ;  plot3_rows(points_3D_f2_latency,'bo')  ;
      plot3_rows(qb','m')  ;   axis equal   ;
 % }
 
 %%%--   3D -  no  latency     
-   points_3D_preconditioned_no_latency = [  points_3D_f1  points_3D_f2  ]    ;
+   points_3D_preconditioned_no_latency = [  points_3D_f1  points_3D_f2  points_3D_f3  ]    ;
    %--   3D -  with  latency: no latency set by configuring   latency_time_steps=0 
-   points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency  ]    ;
+%    points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency  ]    ;  %-- 0_000-0_002
+   points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency points_3D_f3_latency ]    ;  %-- 0_003   
    num_points = size(points_3D_preconditioned,2)  ;
+   
+   fig_3d_handle_check_pre = figure('Name',strcat(exp_num,' : ','check 3D points precond')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
+   plot3_rows(points_3D_preconditioned_no_latency,'rx')
+   fig_3d_handle_check_pre_lat = figure('Name',strcat(exp_num,' : ','check 3D points precond lat')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
+   plot3_rows(points_3D_preconditioned_no_latency,'bx')
+   
    
     %-- Camera 
     %-- Camera pose setup - place a camera at a random pose 
 %     min_angle_degs=45; angle_range_degs=40; x_max=3; y_max=1; z_max=2; proportion_in_fov=1.0;    - pre-testing
 %     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  testing
 %     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  0001
-    min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0002 
+    min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
+    min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
     if ~exist('camera','var') || (exist('p_change_camera','var') && p_change_camera)
     camera =  camera_extrinsics__place_camera_safely_2( ...
         min_angle_degs,angle_range_degs, ...
         x_max, y_max, z_max, [ 2 2 1 ]' ,  ...   [ 0.5 0.5 0.1]' , ... 
         [ 1.0 1.0 1.0 ]' , points_3D_preconditioned , proportion_in_fov );
     end
-    hold on;   camera.plot_camera;   hold on;
+    figure(fig_3d_handle) ; hold on;   camera.plot_camera;   hold on;
     draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, 'true cam', 0.85, 'k' )   % draw the camera pose       
     draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 0.75 )   % draw the camera pose        
 
@@ -212,6 +239,8 @@ points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time
         reprojection_Euclidean_total/num_points, 'rx') ;
     hold on; xlabel('eucidean_distance_error'); ylabel('mean reprojection_Euclidean_total'); hold on; grid on; 
 
+    figure(fig_3d_handle) ; 
+    
     %--  SAVE THE RESULTS
     display( 'SAVE THE RESULTS')
     save_Results_001(exp_num, description ,  camera ,  qb ,  qbd ,  qbdd ,  start_posn ,  via_posns ,  axis_speed_limits ,  time_under_acc ,  time_step ,  latency_s ,  latency_time_steps ,  num_points ,  feature_1_pose_SE3 ,  feature_1_positions ,  points_3D_f1_indices ,  points_3D_f1 ,  points_3D_f1_latency ,  feature_2_pose_SE3 ,  feature_2_positions ,  points_3D_f2_indices ,  points_3D_f2 ,  points_3D_f2_latency ,  num_RANSAC_iterations ,  models_extrinsic_estimate_as_local_to_world )  ;
