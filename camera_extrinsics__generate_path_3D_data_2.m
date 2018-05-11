@@ -43,10 +43,10 @@ feature_1_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.645 ]' ; [ 0 0 0 1 ] ];
 % feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_000, 0_001
 % feature_2_pose_SE3 = [ eye(3) [ 0.5 , 0.2 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_002
 % feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2      , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003
-% feature_3_pose_SE3 = [ eye(3) [ 0 , 0.645 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003
-feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2      , 0.05 ]' ; [ 0 0 0 1 ] ];  %-- 0_003_2
-% feature_3_pose_SE3 = [ eye(3) [ 0.2 , -0.645 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003_2
-feature_3_pose_SE3 = [ eye(3) [ 0.2 , -0.645 , 0.8 ]' ; [ 0 0 0 1 ] ];  %-- 0_003_3
+feature_3_pose_SE3 = [ eye(3) [ 0 , 0.645 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003
+% % % feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2      , 0.05 ]' ; [ 0 0 0 1 ] ];  %-- 0_003_2
+% % % % feature_3_pose_SE3 = [ eye(3) [ 0.2 , -0.645 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003_2
+% % % feature_3_pose_SE3 = [ eye(3) [ 0.2 , -0.645 , 0.8 ]' ; [ 0 0 0 1 ] ];  %-- 0_003_3
 % locations of features in the world as the robot moves through its trajectory
 feature_1_positions =  qb' + repmat(feature_1_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
 feature_2_positions =  qb' + repmat(feature_2_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
@@ -57,9 +57,9 @@ feature_3_positions =  qb' + repmat(feature_3_pose_SE3(1:3,4), 1 , size(qb,1) ) 
 display( 'Set up true and latency feature positions --> 3D data' )
 latency_s = 0.05; %-- 0_000-0_003
 latency_s = 0.025; %-- 0_003_1
+latency_time_steps = 10  ; %-- 0_000-0_003_3 
+latency_time_steps = 5  ; %-- 0_000-0_003_4
 %--   latency_time_steps = ceil(latency_s/time_step)  ;
-latency_time_steps = 10  ; %-- 0_000-0_003 
-latency_time_steps = 5  ;  %-- 0_003_1
 num_points = 100 ;    
 %  feature 1 - sample from full trajectory --> observations
 % num_points_feature_1 = round(randi(num_points*0.5)  + num_points/4.0)   ;
@@ -111,9 +111,9 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
     %-- Camera pose setup - place a camera at a random pose 
 %     min_angle_degs=45; angle_range_degs=40; x_max=3; y_max=1; z_max=2; proportion_in_fov=1.0;    - pre-testing
 %     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  testing
-%     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  0001
-    min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
-    min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
+   min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  0001
+% % %     min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
+% % %     min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
     if ~exist('camera','var') || (exist('p_change_camera','var') && p_change_camera)
     camera =  camera_extrinsics__place_camera_safely_2( ...
         min_angle_degs,angle_range_degs, ...
