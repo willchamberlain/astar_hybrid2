@@ -1,5 +1,6 @@
 classdef Results_001 
     properties
+        exp_num
         description
         camera
         true_camera_pose
@@ -28,8 +29,9 @@ classdef Results_001
         models_extrinsic_estimate_as_local_to_world
     end
     methods
-        function obj = Results_001(description_ ,  camera_ ,  qb_ ,  qbd_ ,  qbdd_ ,  start_posn_ ,  via_posns_ ,  axis_speed_limits_ ,  time_under_acc_ ,  time_step_ ,  latency_s_ ,  latency_time_steps_ ,  num_points_ ,  feature_1_pose_SE3_ ,  feature_1_positions_ ,  points_3D_f1_indices_ ,  points_3D_f1_ ,  points_3D_f1_latency_ ,  feature_2_pose_SE3_ ,  feature_2_positions_ ,  points_3D_f2_indices_ ,  points_3D_f2_ ,  points_3D_f2_latency_ ,  num_RANSAC_iterations_ ,  models_extrinsic_estimate_as_local_to_world_ )
+        function obj = Results_001(exp_num_, description_ ,  camera_ ,  qb_ ,  qbd_ ,  qbdd_ ,  start_posn_ ,  via_posns_ ,  axis_speed_limits_ ,  time_under_acc_ ,  time_step_ ,  latency_s_ ,  latency_time_steps_ ,  num_points_ ,  feature_1_pose_SE3_ ,  feature_1_positions_ ,  points_3D_f1_indices_ ,  points_3D_f1_ ,  points_3D_f1_latency_ ,  feature_2_pose_SE3_ ,  feature_2_positions_ ,  points_3D_f2_indices_ ,  points_3D_f2_ ,  points_3D_f2_latency_ ,  num_RANSAC_iterations_ ,  models_extrinsic_estimate_as_local_to_world_ )
             if nargin > 0
+                obj.exp_num = exp_num_;
                 obj.description=description_  ;
                 obj.camera=camera_  ;
                 obj.true_camera_pose=obj.camera.T  ;
