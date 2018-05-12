@@ -18,20 +18,35 @@ Image.getTimeStamp() :  https://developer.android.com/reference/android/media/Im
 
 %%
 display(' Generate the trajectory ')
-start_posn = [6 1 0]  ;
+start_posn = [6.5 0.5 0]  ;
 % via_posns = [ 6,2,0; 6,4,0; 7,2,0; 4,3,0 ]  ;  %  via points - testing
 % via_posns = [ 4,3,0 ]  ;  %  via points  - single line of points   %-  0001 0002 0003 
-% via_posns = [ 5,3,0 ;  4,3,0 ]  ;  %  via points  - single line of points   %-  0004   :  6->5->4  1->2->3
-via_posns = [ 4,3,0 ] ;  % 0_*
-axis_speed_limits = [0.3 0.3 0.3]  ;
-time_under_acc = 5  ;
-time_step = 0.005;
-[ qb, qbd, qbdd ] = mstraj_2(via_posns, axis_speed_limits, [], start_posn, time_step, time_under_acc);
+% via_posns = [ 5,2,0 ;  4,3,0 ]  ;  %  via points  - single line of points   %-  0004   :  6->5->4  1->2->3
+% via_posns = [ 5,3,0 ;  4,3,0 ]  ;  %  1 bend 
+% via_posns = [ 4,3,0 ] ;  % 0_*
+% via_posns = [ 5,2.2,0 ;  4,3,0 ]  ;  %-- 0_003_5
+% end_posn = [4,3,0]  ; deviate = [ 0 0.2 0 ]  ;
+end_posn = [4,3,0]  ; deviate = [ 0 0.2 0 ]  ;  %-- 0_003_14
+% via_posns = [ start_posn + ([end_posn-start_posn]*1/3) + deviate; start_posn + ([end_posn-start_posn]*2/3) - deviate;   end_posn ]  ;  %-- 0_003_6  %-- 0_003_14
+% via_posns = [ via_posns ; flip(via_posns,1) ; start_posn ]  ;   %-- 0_003_14
+% via_posns = [ via_posns ;   flip(via_posns,1) + repmat( [0 0.2 0] , size(via_posns,1), 1 )  ;   start_posn+[0 0.2 0] ]  ;   %-- 0_003_15 , 0_003_16  :  double-back
+% via_posns = [ start_posn + ([end_posn-start_posn]*1/3) + deviate; start_posn + ([end_posn-start_posn]*2/3) - deviate;   end_posn ]  ;  %--  0_003_17 : double up the path
+via_posns = [  [5  1.5  0]   ;   [6 1 0]   ;   end_posn ]  ;  %--  0_003_21 : double up the path
+% axis_speed_limits = [0.3 0.3 0.3]  ;  %-- 0_003x - 0_003_5 
+axis_speed_limits = [1 1 1]  ;  %-- 0_003_6   :  sqrt(1.4^2 / 2) = 0.989949 ~~ 1.00 :  walking speed is 1.4m/s
+time_under_acc = 0.5  ;
+time_step = 0.005  ;
+[ qb, qbd, qbdd ] = mstraj_2(via_posns, axis_speed_limits, [], start_posn, time_step, time_under_acc)  ;
+% qb = [ qb ; qb + repmat( [0  0.4  0] , size(qb,1) , 1)]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_17 
+% qb = [ qb ; qb + repmat( [0  0.8  0] , size(qb,1) , 1)]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_18 
+% qb = [ qb ; qb + repmat( [0.5  1.2  0] , size(qb,1) , 1)]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_19 
+qb = [ qb ; flip(qb,1) + repmat( [1.0  1.2  0] , size(qb,1) , 1) ]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_21 
 % q = mstraj(via, [2 1 1], [], [4 1 0], 0.05, 1);  %  via points , axis speed limits , t per seg , initial posn , time step , time under acc between segments   - Only one of QDMAX or TSEG should be specified, the other is set to []
 % q = mstraj(via, [0.3 0.3 0.3], [], [4 1 0], 0.05, 5);  %  via points , axis speed limits , t per seg , initial posn , time step , time under acc between segments   - Only one of QDMAX or TSEG should be specified, the other is set to []
 % eyeball the trajectory:  plot the trajectory x,y,z components independently:  check that it looks reasonable
 % figure('Name','Trajectory position components');hold on; grid on; plot(qb(:,1)');  plot(qb(:,2)');  plot(qb(:,3)')  ; legend('x', 'y', 'z');
 % figure('Name','Trajectory velocity components');hold on; grid on; plot(qbd(:,1)');  plot(qbd(:,2)');  plot(qbd(:,3)')  ; legend('x', 'y', 'z');
+figure('Name','Trajectory velocity');hold on; grid on; plot( norm_2(qbd,2) )   ; legend('ve');
 % figure('Name','Trajectory acceleration components');hold on; grid on; plot(qbdd(:,1)');  plot(qbdd(:,2)');  plot(qbdd(:,3)')  ; legend('x', 'y', 'z');
 
 % positions of features on the robot 
@@ -59,8 +74,12 @@ latency_s = 0.05; %-- 0_000-0_003
 latency_s = 0.025; %-- 0_003_1
 latency_time_steps = 10  ; %-- 0_000-0_003_3 
 latency_time_steps = 5  ; %-- 0_000-0_003_4
+latency_time_steps = 10 ; %-- 0_003_15
+latency_time_steps = 5 ; %-- 0_003_16
+latency_s = latency_time_steps*time_step  ;
 %--   latency_time_steps = ceil(latency_s/time_step)  ;
 num_points = 100 ;    
+num_points = 50 ;  %-- 0_003_13  
 %  feature 1 - sample from full trajectory --> observations
 % num_points_feature_1 = round(randi(num_points*0.5)  + num_points/4.0)   ;
 % num_points_feature_1 = 34  ;  %  round(randi(num_points*0.35)  + num_points/6.0)   ; %-- 0_003
@@ -76,7 +95,7 @@ points_3D_f1_latency = feature_1_positions(: , points_3D_f1_indices+latency_time
 % num_points_feature_2 = 33  ;  %  round(randi(num_points*0.35)  + num_points/6.0)   ; %-- 0_003
 % num_points_feature_3 = 33  ;  %  num_points - (num_points_feature_1+num_points_feature_2)   ; %-- 0_003
 % points_3D_f2_indices = randperm(size(feature_2_positions,2) - latency_time_steps, num_points_feature_2)   ; % random distribution
-feat_2_lim = feat_1_lim - 500 ;
+feat_2_lim = feat_1_lim - 100 ;
 % points_3D_f2_indices = [ 1  ceil(feat_2_lim/4) ceil(feat_2_lim/3) ceil(feat_2_lim/2)  ceil(2*feat_2_lim/3)  ceil(3*feat_2_lim/4)  feat_2_lim ]   ;    % even 14-point distribution - 0001,0002,0003,0004
 % points_3D_f2_indices = [ round([1:(feat_2_lim/( (num_points/2) -1)):feat_2_lim]) feat_2_lim]   ; % even variable-size distribution of points
 points_3D_f2_indices = [ round([1:(feat_2_lim/( (num_points/3) -1)):feat_2_lim]) feat_2_lim]   ; %-- 0_003 % even variable-size distribution of points
@@ -115,10 +134,12 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
 % % %     min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
 % % %     min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
     if ~exist('camera','var') || (exist('p_change_camera','var') && p_change_camera)
+        display('SETTING UP NEW CAMERA')
     camera =  camera_extrinsics__place_camera_safely_2( ...
         min_angle_degs,angle_range_degs, ...
         x_max, y_max, z_max, [ 2 2 1 ]' ,  ...   [ 0.5 0.5 0.1]' , ... 
         [ 1.0 1.0 1.0 ]' , points_3D_preconditioned , proportion_in_fov );
+        display('SET UP NEW CAMERA')
     end
     figure(fig_3d_handle) ; hold on;   camera.plot_camera;   hold on;
     draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, 'true cam', 0.85, 'k' )   % draw the camera pose       
@@ -131,6 +152,9 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
            points_2D_preconditioned = points_2D;
            %--   RUN EPNP 
             model_size = 5;
+            model_size = 12; %-- 0_003_11
+            model_size = 24; %-- 0_003_12
+            model_size = 12; %-- 0_003_13
             num_RANSAC_iterations = 1000;   % otten 100-1000, but papers imply can be significantly less 
            [ models , models_max_diff_SE3_element , models_extrinsic_estimate_as_local_to_world ] = ...  % , models_best_solution , models_solution_set ] = ...           
         camera_extrinsics__iterate_epnp  ( ...
@@ -139,9 +163,8 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
             camera.get_pose_transform);    
 
         % fig_3d_handle = gcf 
-        camera_extrinsics__plot_3d_estimated_poses   (fig_3d_handle, models_extrinsic_estimate_as_local_to_world)
-        plot3( 0 , 0 , 0 , 'bo')
-        plot3_rows(points_3D_f2,'go')
+        camera_extrinsics__plot_3d_estimated_poses   (fig_3d_handle, models_extrinsic_estimate_as_local_to_world)        
+        plot3_rows(points_3D_f2,'go')  ;   %         plot3( 0 , 0 , 0 , 'bo')  ;
         for ii_ = 1:size(points_3D_preconditioned,2) ; text(points_3D_preconditioned(1,ii_),points_3D_preconditioned(2,ii_),points_3D_preconditioned(3,ii_),num2str(ii_));  end
         %   draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '5', 5.0 )   % draw the camera pose      
         %   draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, '5', 4.0  , 'r' )   % draw the camera pose       
@@ -164,15 +187,21 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
     for ii_ = 1:num_RANSAC_iterations
         estimated_position_diffs(:,ii_) =  estimated_positions(:,ii_) - camera_position   ;
     end
-    fig_handle_position_error = figure('Name',strcat(exp_num,' : ','position error'));  fig_handle_position_error.Name='Estimated position errors'  ; grid on; xlabel('estimatenumber'); ylabel('euclidean distance from true camera position');
+    fighandle_posn_error = ... 
+        figure('Name',strcat(exp_num,' : ','position error'));  fighandle_posn_error.Name='Estimated position errors'  ; grid on; xlabel('estimatenumber'); ylabel('euclidean distance from true camera position');
     posn_euclidean_dist_error = norm_2( estimated_position_diffs, 1)  ;
     hold on; plot(posn_euclidean_dist_error,'bx')  ;
     plot( estimated_position_diffs(1,:) , 'rs' )  ; plot( estimated_position_diffs(2,:) , 'gs' )  ;plot( estimated_position_diffs(3,:) , 'bs' )  ;
-    figure('Name',strcat(exp_num,' : ','position errors plotted as 3D points: looking for clusters'))  ;  grid on  ;  hold on  ;  
+    fighandle_posn_err_3d = ...
+        figure('Name',strcat(exp_num,' : ','position errors plotted as 3D points: looking for clusters'))  ;  grid on  ;  hold on  ;  
     plot3_rows(estimated_position_diffs, 'rx')  ;     
     params_as_string = sprintf(' num_points=%d, model_size=%d , num_RANSAC_iterations=%d' , num_points,  model_size , num_RANSAC_iterations ) ;
-    figure('Name',  strcat(exp_num,' : ',strcat('Euclidean distance of position errors as hist/density',params_as_string)))  ;  grid on  ;  hold on  ; 
+    fighandle_euc_posn_err_hist = ...
+        figure('Name',  strcat(exp_num,' : ',strcat('Euclidean distance of position errors as hist/density',params_as_string)))  ;  grid on  ;  hold on  ; 
     hist(posn_euclidean_dist_error,100)  ;    
+    fighandle_euc_posn_err_hist2 = ...
+        figure('Name',  strcat(exp_num,' : ',strcat('Euclidean distance of position errors as hist/density 2',params_as_string)))  ;  grid on  ;  hold on  ; 
+    histogram(posn_euclidean_dist_error(posn_euclidean_dist_error<1), [ 0:0.01:0.5   0.52:0.02:1.0  ]  )
     
     % works, BUT not necessarily useful: could use difference between rays through a plane 
     %  e.g. the floor plane or a robot feature height plane, normalised by the actual camera ray horizontal distance ,
@@ -213,12 +242,14 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
         reprojection_Euclidean(:,:,ii_) = norm_2(reprojection_difference(:,:,ii_),1)  ;
         reprojection_Euclidean_total(ii_) = sum(reprojection_Euclidean(:,:,ii_))  ;
     end
-    figure('Name',strcat(exp_num,' : ','mean reprojection_Euclidean_total per RANSAC iteration'));  hold on  ;
+    fighandle_mean_reproj = ...
+        figure('Name',strcat(exp_num,' : ','mean reprojection_Euclidean_total per RANSAC iteration'));  hold on  ;
     semilogy(reprojection_Euclidean_total/num_points, 'rx') ;
     semilogy( (reprojection_Euclidean_total.*(reprojection_Euclidean_total>1)/num_points ), 'rs') ;  % higlight the high-magnitude errors 
     hold on; xlabel('iteration'); ylabel('mean reprojection_Euclidean_total'); hold on; grid on;    
     
-    figure('Name',strcat(exp_num,' : ','mean reprojection_Euclidean_total per RANSAC iteration'));  hold on  ;
+    fighandle_mean_reproj_thresh = ...
+        figure('Name',strcat(exp_num,' : ','mean reprojection_Euclidean_total per RANSAC iteration'));  hold on  ;
     semilogy(reprojection_Euclidean_total(reprojection_Euclidean_total/num_points < 10)/num_points, 'rx') ;
     % semilogy( (reprojection_Euclidean_total.*(reprojection_Euclidean_total>1)/num_points ), 'rs') ;  % higlight the high-magnitude errors 
     hold on; xlabel('iteration'); ylabel('mean reprojection_Euclidean_total'); hold on; grid on;    
@@ -226,8 +257,10 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
     
     mean_reprojection_thresholded = reprojection_Euclidean_total(reprojection_Euclidean_total/num_points < 100)/num_points  ;
     mean_reprojection_thresholded = sort(mean_reprojection_thresholded ) ;
-    figure('Name',strcat(exp_num,' : ','mean reprojection error, thresholded - sorted')); plot(mean_reprojection_thresholded)
-    figure('Name',strcat(exp_num,' : ','mean reprojection error, thresholded - hist')); hist(mean_reprojection_thresholded,100)   % approximates a half-normal distribution ; very few with almost-zero reprojection, but probably good enough for approx probability distribution and confidence
+    fighandle_reproj_sorted = figure('Name',strcat(exp_num,' : ','mean reprojection error, thresholded - sorted')); plot(mean_reprojection_thresholded)
+    fighandle_reproj_hist1 = figure('Name',strcat(exp_num,' : ','mean reprojection error, thresholded - hist - 100 bins')); hist(mean_reprojection_thresholded,100)   % approximates a half-normal distribution ; very few with almost-zero reprojection, but probably good enough for approx probability distribution and confidence
+    fighandle_reproj_hist2 = figure('Name',strcat(exp_num,' : ','mean reprojection error, thresholded - hist - 0-100')); histogram(mean_reprojection_thresholded, [ 0:0.1:5 5.2:0.2:10 11:1:20 22:2:100 ]  )
+    fighandle_reproj_hist3 = figure('Name',strcat(exp_num,' : ','mean reprojection error, thresholded - hist - 0-10')); histogram(mean_reprojection_thresholded, [ 0:0.1:5 5.2:0.2:10 ]  )
     
     figure('Name',strcat(exp_num,' : ','pose posn error vs mean reprojection_Euclidean_total'));  
     semilogy( posn_euclidean_dist_error , ...

@@ -26,7 +26,7 @@ function camera__ = camera_extrinsics__place_camera_safely_2(min_angle_degs_,ang
             display (sprintf('camera_extrinsics__place_camera_safely_2:   retry: need %f percent in FoV, only have %d of %d', proportion_in_fov_ , num_points_in_FoV , size(points_3D_,2) ));
 %             
             draw_axes_direct(camera__.get_pose_rotation, camera__.get_pose_translation, '', 0.75 )   % draw the camera pose
-            pause
+            % pause
 %             
         end 
     end
