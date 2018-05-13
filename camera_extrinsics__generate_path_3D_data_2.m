@@ -1,6 +1,6 @@
 % addpath( '/mnt/nixbig/ownCloud/project_code/' )
 %{  
-Latency sources:  
+Latency sources:   
 1)  shutter close to timestamp on the device
 Image.getTimeStamp() :  https://developer.android.com/reference/android/media/Image#gettimestamp
     " Get the timestamp associated with this frame.
@@ -31,7 +31,7 @@ end_posn = [4,3,0]  ; deviate = [ 0 0.2 0 ]  ;  %-- 0_003_14
 % via_posns = [ via_posns ; flip(via_posns,1) ; start_posn ]  ;   %-- 0_003_14
 % via_posns = [ via_posns ;   flip(via_posns,1) + repmat( [0 0.2 0] , size(via_posns,1), 1 )  ;   start_posn+[0 0.2 0] ]  ;   %-- 0_003_15 , 0_003_16  :  double-back
 % via_posns = [ start_posn + ([end_posn-start_posn]*1/3) + deviate; start_posn + ([end_posn-start_posn]*2/3) - deviate;   end_posn ]  ;  %--  0_003_17 : double up the path
-via_posns = [  [5  1.5  0]   ;   [6 1 0]   ;   end_posn ]  ;  %--  0_003_21 : double up the path
+via_posns = [  [6 1 0]   ;   [5  1.5  0]   ;   end_posn ]  ;  %--  0_003_21 : double up the path
 % axis_speed_limits = [0.3 0.3 0.3]  ;  %-- 0_003x - 0_003_5 
 axis_speed_limits = [1 1 1]  ;  %-- 0_003_6   :  sqrt(1.4^2 / 2) = 0.989949 ~~ 1.00 :  walking speed is 1.4m/s
 time_under_acc = 0.5  ;
@@ -40,7 +40,8 @@ time_step = 0.005  ;
 % qb = [ qb ; qb + repmat( [0  0.4  0] , size(qb,1) , 1)]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_17 
 % qb = [ qb ; qb + repmat( [0  0.8  0] , size(qb,1) , 1)]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_18 
 % qb = [ qb ; qb + repmat( [0.5  1.2  0] , size(qb,1) , 1)]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_19 
-qb = [ qb ; flip(qb,1) + repmat( [1.0  1.2  0] , size(qb,1) , 1) ]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_21 
+% qb = [ qb ; flip(qb,1) + repmat( [1.0  1.2  0] , size(qb,1) , 1) ]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_21 
+qb = [ qb ; (flip(qb,1) + repmat( [1.0  1.2  0] , size(qb,1) , 1)).*1.05 ]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_23 
 % q = mstraj(via, [2 1 1], [], [4 1 0], 0.05, 1);  %  via points , axis speed limits , t per seg , initial posn , time step , time under acc between segments   - Only one of QDMAX or TSEG should be specified, the other is set to []
 % q = mstraj(via, [0.3 0.3 0.3], [], [4 1 0], 0.05, 5);  %  via points , axis speed limits , t per seg , initial posn , time step , time under acc between segments   - Only one of QDMAX or TSEG should be specified, the other is set to []
 % eyeball the trajectory:  plot the trajectory x,y,z components independently:  check that it looks reasonable
