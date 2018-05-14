@@ -46,7 +46,7 @@ time_step = 0.005  ;
 % qb = [ qb ; (flip(qb,1) + repmat( [1.0  0.4  0] , size(qb,1) , 1)).*1.05 ]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_24c 
 % qb = [ qb ; (flip(qb,1) + repmat( [0.5  0.4  0] , size(qb,1) , 1)).*1.05 ]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_24d 
 % qb = [ qb ; (flip(qb,1) + repmat( [0.3  0.2  0] , size(qb,1) , 1)).*1.05 ]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_24e 
-qb = [ qb ; (flip(qb,1) + repmat( [0.1  0.1  0] , size(qb,1) , 1)).*1.05 ]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_24f 
+qb = [ qb ; (flip(qb,1) + repmat( [0.1  0.1  0] , size(qb,1) , 1)).*1.05 ]  ; qbd = [ qbd ; qbd ] ; qbdd = [ qbdd ; qbdd ]  ;  %-- 0_003_24f , 0_003_25 
 % q = mstraj(via, [2 1 1], [], [4 1 0], 0.05, 1);  %  via points , axis speed limits , t per seg , initial posn , time step , time under acc between segments   - Only one of QDMAX or TSEG should be specified, the other is set to []
 % q = mstraj(via, [0.3 0.3 0.3], [], [4 1 0], 0.05, 5);  %  via points , axis speed limits , t per seg , initial posn , time step , time under acc between segments   - Only one of QDMAX or TSEG should be specified, the other is set to []
 % eyeball the trajectory:  plot the trajectory x,y,z components independently:  check that it looks reasonable
@@ -156,6 +156,13 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
         %--   3D --> 2D  
            points_2D = camera.project( points_3D_preconditioned_no_latency );
            points_2D_preconditioned = points_2D;
+           
+            pts_2D_noise_magnitude = 2  ;  
+            pts_2D_noise_mean =  0  ; 
+            points_2D_noise_u = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) ,  pts_2D_noise_magnitude ,  pts_2D_noise_mean , 1 )    ;
+            points_2D_noise_v = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) ,  pts_2D_noise_magnitude ,  pts_2D_noise_mean , 1 )    ;
+            points_2D_preconditioned(1,:) = points_2D_preconditioned(1,:) + points_2D_noise_u ;
+            points_2D_preconditioned(2,:) = points_2D_preconditioned(2,:) + points_2D_noise_v ;
            %--   RUN EPNP 
             model_size = 5;
             model_size = 12; %-- 0_003_11
