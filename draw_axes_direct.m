@@ -6,12 +6,12 @@ camera_position = T;
 camera_to_world =  vertcat(horzcat( R, T ), [ 0 0 0 1]);
 check_se3(camera_to_world,'camera_to_world');
 
-se3_ = camera_to_world  ; 
+se3_ = camera_to_world(1:3,1:3)  ; 
     col_norms = norm_2(se3_,1)  ;
-    se3_scaled = se3_./repmat(col_norms,4,1)  ;
+    se3_scaled = se3_./repmat(col_norms,3,1)  ;
     row_norms = norm_2(se3_scaled,2)  ;
-    se3_scaled = se3_scaled./repmat(row_norms,1, 4 )  ;
-camera_to_world = se3_scaled;
+    se3_scaled = se3_scaled./repmat(row_norms,1, 3 )  ;
+camera_to_world(1:3,1:3) = se3_scaled;
     hold on;
     
     camera_axis_u = camera_to_world*[1.0*axis_arrow_scale 0 0 1]';
