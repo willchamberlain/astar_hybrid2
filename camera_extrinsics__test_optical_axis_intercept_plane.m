@@ -73,9 +73,93 @@ pca_major = coeff(:,1)
 pca_major_vert = [ pca_major(1:2) ;pca_major(3)+10 ]
 normal_vec = cross(pca_major,pca_major_vert)
 pca_major_vert = cross(normal_vec, pca_major)
-figure; draw_axes_direct( [pca_major, pca_major_vert, normal_vec]  , [0 0 0]', '', 1  )
+figure; 
+draw_axes_direct( [pca_major, pca_major_vert, normal_vec]  , [0 0 0]', '', 1  )
 hold on; grid on; axis equal
+draw_axes_direct( [pca_major, pca_major_vert, normal_vec]  , mu', '', 1  )
 
+reflection_matrix =  vertcat(  horzcat([pca_major, pca_major_vert, normal_vec]  , mu') , [ 0 0 0 1 ] )
+
+unit_normal_vec = normal_vec./norm_2(normal_vec,1)
+R_o = eye(3) - 2*(unit_normal_vec*unit_normal_vec')
+R_a = r2t(R_o)
+% plot3_rows(mu','ks')
+% A =  [ [ eye(3) -1*[ mu'] ]  ; [ 0 0 0 1 ] ]
+% R_ = A*R_a*inv(A)
+% plot3_rows(R_*euc2hom(points_3D_f1),'ms')
+A =  [ [ eye(3)  [ mu'] ]  ; [ 0 0 0 1 ] ]
+R_ = A*R_a*inv(A)
+plot3_rows(R_*euc2hom(points_3D_f1),'ms')
+
+
+
+
+%%
+
+se3_ = reflection_matrix(1:3,1:3)  ; 
+    col_norms = norm_2(se3_,1)  ;
+    se3_scaled = se3_./repmat(col_norms,3,1)  ;
+    row_norms = norm_2(se3_scaled,2)  ;
+    se3_scaled = se3_scaled./repmat(row_norms,1, 3 )  
+reflection_matrix =    vertcat(  horzcat(  se3_scaled   , mu') , [ 0 0 0 1 ] )
+
+plot3_rows(  euc2hom(points_3D_f1)'*inv(reflection_matrix) ,  'ks' )
+
+plot3_rows(mu'+(coeff(:,2)*10) , 'co')
+plot3_rows( inv(reflection_matrix)*euc2hom(mu'+coeff(:,2)*10) , 'cs')
+
+plot3_rows(inv(reflection_matrix)*[1 0 0 1]'  ,  'ks')
+plot3_rows([1 0 0 1]'  ,  'ks')
+plot3_rows(reflection_matrix*[1.1 0 0 1]'  ,  'ks')
+plot3_rows(reflection_matrix*[1.2 0 0 1]'  ,  'ks')
+plot3_rows(reflection_matrix*[1.3 0 0 1]'  ,  'ks')
+plot3_rows(reflection_matrix*[1.4 0 0 1]'  ,  'ks')
+plot3_rows(reflection_matrix*[1.5 0 0 1]'  ,  'ks')
+plot3_rows([1.1 0 0 1]'  ,  'ks')
+plot3_rows([1.2 0 0 1]'  ,  'ks')
+plot3_rows([1.3 0 0 1]'  ,  'ks')
+plot3_rows([1.4 0 0 1]'  ,  'ks')
+plot3_rows([1.5 0 0 1]'  ,  'ks')
+
+plot3_rows( [0 0 0 ]' , 'bo' )
+
+
+reflect_x  = [  [-1 0 0 0]' [ 0 1 0 0 ]' [ 0 0 1 0]'  [ 0 0 0 1]' ]
+
+for ii_ = 0.1:0.1:0.5
+    plot3_rows([1+ii_ 0 0 1]'  ,  'rs')
+    plot3_rows(reflect_x*[1+ii_ 0 0 1]'  ,  'ms')
+    plot3_rows(reflection_matrix*[1+ii_ 0 0 1]'  ,  'rs')
+    plot3_rows([ 0  1+ii_  0 1]'  ,  'gs')
+    plot3_rows(reflection_matrix*[ 0  1+ii_  0 1]'  ,  'gd')
+    plot3_rows([ 0 0  1+ii_  1]'  ,  'bs')
+    plot3_rows(reflection_matrix*[ 0 0  1+ii_  1]'  ,  'bd')
+end
+
+plot3_rows(euc2hom( points_3D_f1 )  ,  'ms')
+meh = (euc2hom( points_3D_f1)'*inv(reflection_matrix))'
+mehmeh = meh./repmat(meh(4,:),4,1)
+plot3_rows(mehmeh, 'rs')
+plot3_rows(   - euc2hom(repmat(mu',1,size(points_3D_f1,2))) ,  'md')
+
+(x,y,z)−2(ax+by+cz)(a,b,c).
+
+a = normal_vec(1); b=normal_vec(2); c=normal_vec(3);
+reflection_matrix = ...
+[ 1-(2*a^2)  -2*a*b -2*a*c 
+  -2*a*b 1-(2*b^2) -2*b*c
+  -2*a*c -2*b*c 1-(2*c^2) ]
+    col_norms = norm_2(reflection_matrix,1)  ;
+    se3_scaled = reflection_matrix./repmat(col_norms,3,1)  ;
+    row_norms = norm_2(se3_scaled,2)  ;
+    se3_scaled = se3_scaled./repmat(row_norms,1, 3 )  ;
+
+meh = se3_scaled*points_3D_f1
+plot3_rows(meh, 'cs')
+plot3_rows(points_3D_f1, 'cs')
+
+
+plot3_rows((se3_scaled*(points_3D_f1 - repmat(mu',1,size(points_3D_f1,2)))) + repmat(mu',1,size(points_3D_f1,2)),'gs')
 
 
 
