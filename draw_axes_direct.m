@@ -4,8 +4,14 @@ function draw_axes_direct(R, T, text_string, axis_arrow_scale, varargin)
 camera_position = T;
 % want to plot the camera axes ; plot is in the world coordinate system 
 camera_to_world =  vertcat(horzcat( R, T ), [ 0 0 0 1]);
-check_se3(camera_to_world);
+check_se3(camera_to_world,'camera_to_world');
 
+se3_ = camera_to_world  ; 
+    col_norms = norm_2(se3_,1)  ;
+    se3_scaled = se3_./repmat(col_norms,4,1)  ;
+    row_norms = norm_2(se3_scaled,2)  ;
+    se3_scaled = se3_scaled./repmat(row_norms,1, 4 )  ;
+camera_to_world = se3_scaled;
     hold on;
     
     camera_axis_u = camera_to_world*[1.0*axis_arrow_scale 0 0 1]';
