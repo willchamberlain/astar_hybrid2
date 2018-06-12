@@ -4,6 +4,7 @@ function results001__load(filenamepath_)
 
     display(results_001__.exp_num)
     display(results_001__.description)
+    display('PRESS ANY KEY TO CONTINUE')
     pause
 assignin('base','exp_num', results_001__.exp_num) ;
 assignin('base','description', results_001__.description) ;
