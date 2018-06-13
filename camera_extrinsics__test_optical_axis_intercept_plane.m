@@ -11,8 +11,7 @@ plot3_rows(feature_1_positions(:,points_3D_f1_indices), 'rx');
 plot3_rows(feature_2_positions(:,points_3D_f2_indices), 'bx'); 
 
 
-%%
-% camera optical axis intercept on the floor plain 
+%% camera optical axis intercept on the floor plain 
 % simplified case of the general line-plane intercept 
 camera_to_world = camera.T(1:3,1:3)  ; 
 camera_axis_z = camera_to_world*[0  0 1.0 ]'  ;
@@ -28,7 +27,10 @@ point_on_plane =  [ camera_loc_xy ; 0 ]  ; %  a point on the plane: use camera p
 % p = % set of points in the plane
 normal_to_plane = [ 0 0 1 ] ; % vector in direction normal to the plane
 
-scaling_factor_for_vector_along_line_to_intercept = dot( (point_on_plane - l_point_on_line ) , normal_to_plane ) / dot( l_vector_along_line , normal_to_plane )  ;
+scaling_factor_for_vector_along_line_to_intercept = ...
+    dot( (point_on_plane - l_point_on_line ) , normal_to_plane ) ...
+    / ...
+    dot( l_vector_along_line , normal_to_plane )  ;
 
 z_plane_intercept = scaling_factor_for_vector_along_line_to_intercept*l_vector_along_line + l_point_on_line  ;
 
@@ -51,16 +53,16 @@ figure ; surf(X,Y,Z); grid on; axis equal ; hold on;
 %  alpha(handle_patch, 0.3)  ;
 colormap jet
 shading interp
-point_on_plane =  [ camera.T(1:2,4) ; sum(camera.T(1:2,4).*[0.1;0.1] )  ]  ; 
-plot3_rows(point_on_plane,'ko')
-handle_patch = patch( [ -10 -10 10 15 ]' , [ -10 10 10 -9 ]' , ones(4,1)*point_on_plane(3) , 'y' )  ;
+point_on_plane_01 =  [ camera.T(1:2,4) ; sum(camera.T(1:2,4).*[0.1;0.1] )  ]  ; 
+plot3_rows(point_on_plane_01,'ko')
+handle_patch = patch( [ -10 -10 10 15 ]' , [ -10 10 10 -9 ]' , ones(4,1)*point_on_plane_01(3) , 'y' )  ;
 alpha(handle_patch,0.4)
-scaling_factor_for_vector_along_line_to_intercept = dot( (point_on_plane - l_point_on_line ) , normal_to_plane ) / dot( l_vector_along_line , normal_to_plane )  ;
+scaling_factor_for_vector_along_line_to_intercept_01 = dot( (point_on_plane_01 - l_point_on_line ) , normal_to_plane ) / dot( l_vector_along_line , normal_to_plane )  ;
 
-z_plane_intercept = scaling_factor_for_vector_along_line_to_intercept*l_vector_along_line + l_point_on_line  ;
+z_plane_intercept_01 = scaling_factor_for_vector_along_line_to_intercept_01*l_vector_along_line + l_point_on_line  ;
 
-plot3_rows(z_plane_intercept,'rs')
-text( z_plane_intercept(1), z_plane_intercept(2), z_plane_intercept(3) , 'z_intercept on [x y 0.1]' )
+plot3_rows(z_plane_intercept_01,'rs')
+text( z_plane_intercept_01(1), z_plane_intercept_01(2), z_plane_intercept_01(3) , 'z_intercept on [x y 0.1]' )
 
 draw_axes_direct( camera.T(1:3,1:3), camera.T(1:3,4), '', 10)  ;
 axis equal ;
@@ -90,6 +92,7 @@ plot3_rows( [ mu'-(coeff(:,1)*10) mu'+(coeff(:,1)*10) ] , 'm')
 plot3_rows( [ mu'-(coeff(:,2)*10) mu'+(coeff(:,2)*10) ] , 'c')
 plot3_rows( [ mu'-(coeff(:,3)*10) mu'+(coeff(:,3)*10) ] , 'k')
 
+
 %% PCA gives one option for axes to reflect across/through for a path /path segment
 % let's try that reflecting across that
 pca_major = coeff(:,1) ;
@@ -104,7 +107,8 @@ draw_axes_direct( [pca_major, pca_major_vert, normal_vec]  , [0 0 0]', '', 1  )
 hold on; grid on; axis equal
 draw_axes_direct( [pca_major, pca_major_vert, normal_vec]  , mu', '', 1  )
 
-reflection_matrix =  vertcat(  horzcat( [pca_major, pca_major_vert, normal_vec]  , mu' ) , [ 0 0 0 1 ] ) 
+reflection_matrix =  vertcat(  horzcat( [pca_major, pca_major_vert, normal_vec]  , mu' ) , [ 0 0 0 1 ] ) ;
+
 
 %% Reflect across the path 
 %       !! USE THIS !!
@@ -124,6 +128,31 @@ R_ = A*R_a*inv(A) ; % Reflection SO3/Transform
 plot3_rows(R_*euc2hom(points_3D_f1),'ms')
 plot3_rows(R_*euc2hom(points_3D_f1),'ko')
 
+
+%% use the refactored functions to flip the camera
+[coeff, score, latent, tsquared, explained, mu]  =  pca( [feature_1_positions feature_2_positions]' ) ;
+
+pca_major = coeff(:,1) ;    %  the direction of the path / path segment / plane to reflect through
+pca_major_vert = pca_major + [ 0 ; 0 ; 10 ]; %  vector in the same direction but divergent in Z ; other vector in the plane to reflect through
+normal_vec = cross(pca_major,pca_major_vert) ;      %  vector to reflect _along_ . The cross-product is the normal : in the xy-plane
+
+reflection_matrix_2 = reflection_matix_vector(normal_vec, mu')
+reflection_matrix_3 = reflection_matix_plane(pca_major_vert, pca_major, mu')
+reflection_matrix_2 - R_ 
+reflection_matrix_2 - reflection_matrix_3
+
+camera_flipped_T = reflection_matrix_2*camera.T ;
+plot3_rows(camera_flipped_T(1:3,4), 'ko')
+text(camera_flipped_T(1,4), camera_flipped_T(2,4), camera_flipped_T(3,4),'camera flipped')
+draw_axes_direct(camera_flipped_T(1:3,1:3), camera_flipped_T(1:3,4),'',6)
+draw_axes_direct_c(camera_flipped_T(1:3,1:3), camera_flipped_T(1:3,4),'',1,'r')
+
+%% show the flipped camera
+camera_flipped_T = R_*camera.T ;
+plot3_rows(camera_flipped_T(1:3,4), 'ko')
+text(camera_flipped_T(1,4), camera_flipped_T(2,4), camera_flipped_T(3,4),'camera flipped')
+draw_axes_direct(camera_flipped_T(1:3,1:3), camera_flipped_T(1:3,4),'',6)
+draw_axes_direct_c(camera_flipped_T(1:3,1:3), camera_flipped_T(1:3,4),'',1,'r')
 
 
 
