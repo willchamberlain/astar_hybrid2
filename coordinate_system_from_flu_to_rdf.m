@@ -1,4 +1,6 @@
 function rdf_coordinate_system__ = coordinate_system_from_flu_to_rdf(flu_coordinate_system_) 
+% param : flu_coordinate_system_ : coordinate system to convert from FLU to RDF.
+% return : rdf_coordinate_system__ : coordinate system in RDF : z_new = x_old ; y_new = -z_old ; x_new = -y_old .
     change_of_basis_rdf_to_flu = ...
         [   0 0 1 ; 
            -1 0 0 ; 
