@@ -1,4 +1,5 @@
 function results001__load(filenamepath_) 
+% load the Results_001 object from file <filenamepath_> and assign to workspace variables.
 
     load(filenamepath_)
 

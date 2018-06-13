@@ -1,4 +1,5 @@
 classdef Results_001 
+% container for interesting workspace variables which can easily be saved to a file: version 1	
     properties
         exp_num
         description
