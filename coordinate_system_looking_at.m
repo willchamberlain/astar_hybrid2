@@ -1,5 +1,8 @@
 function coordinate_system_as_SO3__ = coordinate_system_looking_at( direction_to_look_in , desired_up_vector)
-% Calculates the _orientation_  of coordinate system in FLU (x-foward, y-left, z-up )
+% Calculates the _orientation_  of right-hand coordinate system with 
+%  x axis aligned to direction_to_look_in, 
+%  z axis aligned to desired_up_vector, and 
+%  y axis normal to both : in FLU (x-foward, y-left, z-up )
 %  i.e. determines an oriented frame.
     x_ = direction_to_look_in  ;
     z_ = desired_up_vector  ;     

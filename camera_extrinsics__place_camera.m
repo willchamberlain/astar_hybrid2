@@ -1,5 +1,5 @@
 function camera__ = camera_extrinsics__place_camera(min_angle_degs_,angle_range_degs_, x_max, y_max, z_max)
-    camera_extrinsics__place_camera_position(x_max, y_max, z_max)
+    cam_pose_xyz = camera_extrinsics__place_camera_position(x_max, y_max, z_max)  ;
     %cam_pose_xyz(3) = cam_pose_xyz(3)-5;
     if nargin < 1 
         angle_range_degs = 10;
