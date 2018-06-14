@@ -1,4 +1,3 @@
-% addpath( '/mnt/nixbig/ownCloud/project_code/' )
 %{  
 Latency sources:   
 1)  shutter close to timestamp on the device
@@ -8,6 +7,10 @@ Image.getTimeStamp() :  https://developer.android.com/reference/android/media/Im
     "
 2)  clock synchronisation : NTP
 %}
+
+%%
+addpath( '/mnt/nixbig/ownCloud/project_code/' )
+
 
 %%
 %--  Camera intrinsics  from  DEFAULT camera  %-- camera parameters / intrinsics :  need this to get the camera_K at zero offset, because moving the camera alters these intrinsics for
@@ -119,7 +122,7 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
      plot3_rows(qb','m')  ;   axis equal   ;
 % }
 
-%%%--   3D -  no  latency     
+%% %--   3D -  no  latency     
    points_3D_preconditioned_no_latency = [  points_3D_f1  points_3D_f2  points_3D_f3  ]    ;
    %--   3D -  with  latency: no latency set by configuring   latency_time_steps=0 
 %    points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency  ]    ;  %-- 0_000-0_002
@@ -151,6 +154,11 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
     draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, 'true cam', 0.85, 'k' )   % draw the camera pose       
     draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 0.75 )   % draw the camera pose        
 
+    %% 
+    %  see  camera_extrinsics__test_optical_axis_intercept_plane.m  
+    display( 'FLIP the camera across the path' )
+    
+    
     %%
     display( 'Try EPnP on the good data or latency data')  %-- see  /mnt/nixbig/ownCloud/project_code/camera_extrinsics__generate_perfect_data.m         
         %--   3D --> 2D  
@@ -217,6 +225,37 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
      subplot(1,3,3); histogram(estimated_position_diffs(3,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' z(m) '); ylim([0 350]); 
         %      fig_now_=gcf
         %      fig_now_.Position=[808 460 907 414]
+        
+        
+    camera_orientation_quat = Quaternion(camera.T(1:3,1:3))  ;
+    estimated_orientations_SO3 = models_extrinsic_estimate_as_local_to_world(1:3,1:3,:)   ;    
+    estimated_orientations_quat = repmat(Quaternion(),  1, num_RANSAC_iterations);    
+    estimated_orientation_diffs = zeros(num_RANSAC_iterations,1)   ;     
+    estimated_orientation_diffs_b = zeros(num_RANSAC_iterations,1)   ;     
+    estimated_orientation_diffs_c = zeros(num_RANSAC_iterations,1)   ;    
+    for ii_ = 1:num_RANSAC_iterations
+        estimated_orientations_quat(ii_) =  Quaternion( estimated_orientations_SO3(:,:,ii_)  )  ;
+        estimated_orientation_diff = quaternion_distance(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
+        estimated_orientation_diffs(ii_) = estimated_orientation_diff  ;
+        
+        estimated_orientation_diffs_2 = estimated_orientation_diffs  ;
+        estimated_orientation_diffs_2(estimated_orientation_diffs_2(:,1)<pi*-1) = estimated_orientation_diffs_2(estimated_orientation_diffs_2(:,1)<pi*-1)+2*pi  ;       
+        
+        estimated_orientation_diffs_b(ii_) = quaternion_distance_b(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
+        estimated_orientation_diffs_c(ii_) = quaternion_distance_c(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
+    end
+    figure('Name' , strcat( exp_num , ' : ' , 'orientation error distribution' ) )  ;  
+    histogram(estimated_orientation_diffs, 1000)  ;
+    
+    figure('Name' , strcat( exp_num , ' : ' , 'orientation error distribution  _b' ) )  ;  
+    histogram(estimated_orientation_diffs_2, 1000)  ;
+    hold on;  plot( [pi pi], [0 40], 'r')  ;  plot( [-pi -pi], [0 40], 'r')  ;  plot( [0 0], [7 40], 'r') ;     %  emphasise the limits 
+    
+    
+    NEXT HERE %     NEXT
+    %     A = [  estimated_orientation_diffs  ,   abs(estimated_orientation_diffs)  ,  2*pi-abs(estimated_orientation_diffs)  ,  min( abs(estimated_orientation_diffs) , 2*pi-abs(estimated_orientation_diffs) ) , estimated_orientation_diffs  ]
+    %     A(A(:,1)<pi*-1 , 5)+2*pi
+    %     A(A(:,1)<pi*-1 , 5) = A(A(:,1)<pi*-1 , 5)+2*pi
     
     
     fighandle_posn_err_3d = ...
