@@ -115,7 +115,8 @@ points_3D_f3_indices = [ round([1:(feat_3_lim/( (num_points/3) -1)):feat_3_lim])
 points_3D_f3                = feature_3_positions(: , points_3D_f3_indices )  ;
 points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time_steps )  ;
 % {
-     fig_3d_handle = figure('Name',strcat(exp_num,' : ','3D scene')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
+     clock_for_filename=clock;     
+     fig_3d_handle = figure('Name',strcat(exp_num,'_', sprintf('%d_%02d_%02d_%02d%02d%02d',[clock_for_filename(1,1:5) round(clock_for_filename(6))]) ,' : ','3D scene')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
      plot3_rows(points_3D_f1,'rx')  ;  plot3_rows(points_3D_f2,'bx')  ;
        plot3_rows(points_3D_f3,'mx')  ;  %-- 0_003
      plot3_rows(points_3D_f1_latency,'ro')  ;  plot3_rows(points_3D_f2_latency,'bo')  ;
@@ -139,7 +140,7 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
     %-- Camera pose setup - place a camera at a random pose 
 %     min_angle_degs=45; angle_range_degs=40; x_max=3; y_max=1; z_max=2; proportion_in_fov=1.0;    - pre-testing
 %     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  testing
-   min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  0001
+   min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    % -  0001
 % % %     min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
 % % %     min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
     if ~exist('camera','var') || (exist('p_change_camera','var') && p_change_camera)
