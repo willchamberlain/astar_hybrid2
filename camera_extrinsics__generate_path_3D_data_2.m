@@ -144,7 +144,7 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
 % % %     min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
     if ~exist('camera','var') || (exist('p_change_camera','var') && p_change_camera)
         display('SETTING UP NEW CAMERA')
-    camera =  camera_extrinsics__place_camera_safely_2( ...
+    [ camera , target_point ] =  camera_extrinsics__place_camera_safely_2( ...
         min_angle_degs,angle_range_degs, ...
         x_max, y_max, z_max, [ 2 2 1 ]' ,  ...   [ 0.5 0.5 0.1]' , ... 
         [ 1.0 1.0 1.0 ]' , points_3D_preconditioned , proportion_in_fov );
@@ -155,12 +155,60 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
     draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 0.75 )   % draw the camera pose        
 
     %% 
-    %  see  camera_extrinsics__test_optical_axis_intercept_plane.m  
-    display( 'FLIP the camera across the path' )
+    %  see  camera_extrinsics__test_optical_axis_intercept_plane.m  -  section  "use the refactored functions to flip the camera"
+    display( 'FLIP the camera across the path' )    
     
+    camera_old = camera ;    
     
+    %   see   /mnt/nixbig/ownCloud/project_code/camera_extrinsics__test_optical_axis_intercept_plane.m
+    
+    [coeff, score, latent, tsquared, explained, mu]  =  pca( [feature_1_positions feature_2_positions]' ) ;
+        hold on;  plot3_rows( mu' , 'mo' ) ;  plot3_rows( [ mu'-(coeff(:,1)*10) mu'+(coeff(:,1)*10) ] , 'm') ;    plot3_rows( [ mu'-(coeff(:,2)*10) mu'+(coeff(:,2)*10) ] , 'c') ;    plot3_rows( [ mu'-(coeff(:,3)*10) mu'+(coeff(:,3)*10) ] , 'k')
+    % PCA gives one option for axes to reflect across/through for a path /path segment : let's try that reflecting across that
+    pca_major = coeff(:,1) ;    %  the direction of the path / path segment / plane to reflect through
+    pca_major_vert = pca_major + [ 0 ; 0 ; 10 ]; %  vector in the same direction but divergent in Z ; other vector in the plane to reflect through
+    normal_vec = cross(pca_major,pca_major_vert) ;      %  vector to reflect _along_ . The cross-product is the normal : in the xy-plane
+    reflection_matrix_2 = reflection_matix_vector(normal_vec, mu')  ;
+    reflection_matrix_3 = reflection_matix_plane(pca_major_vert, pca_major, mu')  ;
+    camera_flipped_T = reflection_matrix_2*camera.T  ;    
+    plot3_rows(camera_flipped_T(1:3,4), 'rx')   ;   % check:  eyeball
+    cam_pose_xyz = camera_flipped_T(1:3,4)  ; 
+    plot3_rows(cam_pose_xyz, 'ro')   ;   % check:  eyeball
+    
+    plot3_rows(target_point, 'ko')   ;   % check:  eyeball
+    %     cam_direction_vector = target_point - cam_pose_xyz ;
+    %     cam_rdf_coord_sys = camera_rdf_coordinate_system(cam_direction_vector, [ cam_direction_vector(1:2) ; cam_direction_vector(3)+2 ])  ;   %  vector_along_x_axis_ , vector_in_z_axis_plane_ )
+    %     draw_axes_direct(cam_rdf_coord_sys, cam_pose_xyz, '', 5 )   % draw the camera pose                   
+    target_point_reflected = reflection_matrix_2*[target_point;1]  ;
+    plot3_rows(target_point_reflected, 'bx')   ;   % check:  eyeball
+    plot3_rows(target_point_reflected, 'bo')   ;   % check:  eyeball
+    cam_direction_vector = target_point_reflected(1:3) - cam_pose_xyz ;
+    cam_rdf_coord_sys = camera_rdf_coordinate_system(cam_direction_vector, [ cam_direction_vector(1:2) ; cam_direction_vector(3)+2 ])  ;   %  vector_along_x_axis_ , vector_in_z_axis_plane_ )
+    draw_axes_direct(cam_rdf_coord_sys, cam_pose_xyz, '', 5 )   % draw the camera pose    
+    camera_flipped_T = rt2tr(cam_rdf_coord_sys,cam_pose_xyz)  ;
+    clear 'camera'
+    camera = CentralCamera('default'); 
+    camera.T=camera_flipped_T  ;
+    draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, 'true cam', 7 )   % draw the camera pose       
+    draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, 'true cam', 2, 'k' )   % draw the camera pose       
+    
+           points_2D_old = camera_old.project( points_3D_preconditioned_no_latency );
+    
+    %  Try as rotation of 180 around vertical Z vector at the target point       
+    clear 'camera'
+    camera = CentralCamera('default'); 
+%     camera.T = r2t(rotz(pi))*camera_old.T  ;
+draw_axes_direct_c(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:3,4)), 'ttttttttttttttrue cam', 2, 'k' )   % draw the camera pose       
+    
+    flu_temp = rt2tr(rotz(pi), target_point) * rt2tr(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:3,4)))  ;
+    camera.T = rt2tr( coordinate_system_from_flu_to_rdf(flu_temp(1:3,1:3))  , flu_to_rdf(flu_temp(1:3,4)))  ;
+    draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, 'true cam', 7 )   % draw the camera pose       
+    draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, 'tttrue cam', 2, 'k' )   % draw the camera pose       
+    
+           
     %%
     display( 'Try EPnP on the good data or latency data')  %-- see  /mnt/nixbig/ownCloud/project_code/camera_extrinsics__generate_perfect_data.m         
+        % fig_3d_handle = gcf 
         %--   3D --> 2D  
            points_2D = camera.project( points_3D_preconditioned_no_latency );
            points_2D_preconditioned = points_2D;
@@ -187,9 +235,34 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
         camera_extrinsics__plot_3d_estimated_poses   (fig_3d_handle, models_extrinsic_estimate_as_local_to_world)        
         plot3_rows(points_3D_f2,'go')  ;   %         plot3( 0 , 0 , 0 , 'bo')  ;
         for ii_ = 1:size(points_3D_preconditioned,2) ; text(points_3D_preconditioned(1,ii_),points_3D_preconditioned(2,ii_),points_3D_preconditioned(3,ii_),num2str(ii_));  end
-        %   draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '5', 5.0 )   % draw the camera pose      
-        %   draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, '5', 4.0  , 'r' )   % draw the camera pose       
+        draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 5.0 )   % draw the camera pose      
+        draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, '', 4.0  , 'g' )   % draw the camera pose       
+        draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 3.7 )   % draw the camera pose               
         
+        %  draw black axes for each of the estimates below a threshold
+        %         models_with_mean_reprojection_error_below_threshold__logical = (reprojection_Euclidean_total/num_points < quantile([reprojection_Euclidean_total/num_points]',0.10))  ; 
+        %         mwmrebt__logical = models_with_mean_reprojection_error_below_threshold__logical   ;
+        %         figure; histogram(models_with_mean_reprojection_error_below_threshold__logical)  ;
+        %         mwmrebt__pose_estimate = models_extrinsic_estimate_as_local_to_world(:,:,models_with_mean_reprojection_error_below_threshold__logical)  ;
+        % %             figure;  
+        %             for ii_ = 1:size(mwmrebt__pose_estimate,3)
+        %                 draw_axes_direct_c( mwmrebt__pose_estimate(1:3,1:3,ii_) , mwmrebt__pose_estimate(1:3,4,ii_) , '' ,  2 , 'k'    )  ;
+        %             end
+        %  draw black axes for each of the estimates below a threshold
+%         figure; grid on; axis equal;
+        reprojection_Euclidean_mean = reprojection_Euclidean_total/num_points  ;
+        reprojection_Euclidean_mean = squeeze(reprojection_Euclidean_mean)'  ;
+        reprojection_error_threshold = quantile([reprojection_Euclidean_total/num_points]',0.5)  ;
+        %  reprojection_error_threshold = quantile([reprojection_Euclidean_total/num_points]',1.0)  ;
+        for ii_ = 1:size(models_extrinsic_estimate_as_local_to_world,3)
+            if reprojection_Euclidean_mean(ii_) <= reprojection_error_threshold
+                axes_scale = (reprojection_error_threshold-reprojection_Euclidean_mean(ii_)) * (5/reprojection_error_threshold)  ;
+                draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,ii_) , models_extrinsic_estimate_as_local_to_world(1:3,4,ii_) , '' ,  axes_scale , 'k'    )  ;                    
+            end
+        end
+        
+        %         mean_reprojection_error_below_threshold__dist_HalfNormal = fitdist([reprojection_Euclidean_total/num_points]','HalfNormal')  ;
+        %         mean_reprojection_error_below_threshold__dist_Exponential = fitdist([reprojection_Euclidean_total/num_points]','Exponential')  ;        
  
         fig_handle_2D_no_latency = figure('Name',strcat(exp_num,' : ',sprintf('2D latency_time_steps = %f',latency_time_steps)));  grid on; hold on;
         plot2_rows( [1024 0]' ,'bo')  ;  plot2_rows(points_2D_preconditioned, 'rx')  ; plot2_rows(reshape(camera.limits,2,2),'bo')  ; plot2_rows(reshape(camera.limits,2,2)','bo')  ;        
@@ -252,7 +325,7 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
     hold on;  plot( [pi pi], [0 40], 'r')  ;  plot( [-pi -pi], [0 40], 'r')  ;  plot( [0 0], [7 40], 'r') ;     %  emphasise the limits 
     
     
-    NEXT HERE %     NEXT
+    % NEXT HERE %     NEXT
     %     A = [  estimated_orientation_diffs  ,   abs(estimated_orientation_diffs)  ,  2*pi-abs(estimated_orientation_diffs)  ,  min( abs(estimated_orientation_diffs) , 2*pi-abs(estimated_orientation_diffs) ) , estimated_orientation_diffs  ]
     %     A(A(:,1)<pi*-1 , 5)+2*pi
     %     A(A(:,1)<pi*-1 , 5) = A(A(:,1)<pi*-1 , 5)+2*pi
@@ -325,7 +398,7 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
     hold on; xlabel('iteration'); ylabel('mean reprojection_Euclidean_total'); hold on; grid on;    
     
     fighandle_mean_reproj_thresh = ...
-        figure('Name',strcat(exp_num,' : ','mean reprojection_Euclidean_total per RANSAC iteration'));  hold on  ;
+        figure('Name',strcat(exp_num,' : ','mean reprojection_Euclidean_total per RANSAC iteration with mean below 10'));  hold on  ;
     semilogy(reprojection_Euclidean_total(reprojection_Euclidean_total/num_points < 10)/num_points, 'rx') ;
     % semilogy( (reprojection_Euclidean_total.*(reprojection_Euclidean_total>1)/num_points ), 'rs') ;  % higlight the high-magnitude errors 
     hold on; xlabel('iteration'); ylabel('mean reprojection_Euclidean_total'); hold on; grid on;    
