@@ -12,5 +12,5 @@ plane_normal_vec = cross(plane_vector_1_,plane_vector_2_) ;      %  vector to re
             % plot3_rows(R_*euc2hom(points_3D_f1),'ms')
     translation_to_point_of_reflection =  [ [ eye(3)  [ reflection_origin_] ]  ; [ 0 0 0 1 ] ] ; % Translation SE3/Transform
     reflection_matrix_SO3__ = translation_to_point_of_reflection*reflection_rot_SE3*inv(translation_to_point_of_reflection) ; % Reflection SE3/Transform    
-    \
+ 
 end
