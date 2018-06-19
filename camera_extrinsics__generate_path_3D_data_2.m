@@ -115,8 +115,7 @@ points_3D_f3_indices = [ round([1:(feat_3_lim/( (num_points/3) -1)):feat_3_lim])
 points_3D_f3                = feature_3_positions(: , points_3D_f3_indices )  ;
 points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time_steps )  ;
 % {
-     clock_for_filename=clock;     
-     fig_3d_handle = figure('Name',strcat(exp_num,'_', sprintf('%d_%02d_%02d_%02d%02d%02d',[clock_for_filename(1,1:5) round(clock_for_filename(6))]) ,' : ','3D scene')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
+     fig_3d_handle = figure('Name',strcat(exp_num, time_string_for_figuretitle() ,' : ','3D scene')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
      plot3_rows(points_3D_f1,'rx')  ;  plot3_rows(points_3D_f2,'bx')  ;
        plot3_rows(points_3D_f3,'mx')  ;  %-- 0_003
      plot3_rows(points_3D_f1_latency,'ro')  ;  plot3_rows(points_3D_f2_latency,'bo')  ;
@@ -130,10 +129,12 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
    points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency points_3D_f3_latency ]    ;  %-- 0_003   
    num_points = size(points_3D_preconditioned,2)  ;
    
-   fig_3d_handle_check_pre = figure('Name',strcat(exp_num,' : ','check 3D points precond')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
-   plot3_rows(points_3D_preconditioned_no_latency,'rx')
-   fig_3d_handle_check_pre_lat = figure('Name',strcat(exp_num,' : ','check 3D points precond lat')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
+   fig_3d_handle_check_pre = figure('Name',strcat(exp_num,time_string_for_figuretitle(),' : ','check 3D points precond')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
+   plot3_rows(points_3D_preconditioned,'rx')
+   fig_3d_handle_check_pre_lat = figure('Name',strcat(exp_num,time_string_for_figuretitle(),' : ','check 3D points precond lat')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
    plot3_rows(points_3D_preconditioned_no_latency,'bx')
+   plot3_rows(points_3D_preconditioned,'rx')
+   legend('no latency','with latency')
    
    
     %-- Camera 
@@ -315,7 +316,7 @@ draw_axes_direct_c(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:
         estimated_orientation_diffs_2 = estimated_orientation_diffs  ;
         estimated_orientation_diffs_2(estimated_orientation_diffs_2(:,1)<pi*-1) = estimated_orientation_diffs_2(estimated_orientation_diffs_2(:,1)<pi*-1)+2*pi  ;       
         
-        estimated_orientation_diffs_b(ii_) = quaternion_distance_b(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
+        estimated_orientation_diffs_reprojection_Euclidean_totalb(ii_) = quaternion_distance_b(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
         estimated_orientation_diffs_c(ii_) = quaternion_distance_c(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
     end
     figure('Name' , strcat( exp_num , ' : ' , 'orientation error distribution' ) )  ;  
@@ -356,12 +357,13 @@ draw_axes_direct_c(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:
     model_1_quat = Quaternion( squeeze( models_extrinsic_estimate_as_local_to_world(1:3,1:3,1) ))
     camera.get_pose_rotation
     camera_pose_rotation_quat = Quaternion(camera.get_pose_rotation)
-    model_pose_rotation_quat = Quaternion( squeeze( models_extrinsic_estimate_as_local_to_world(1:3,1:3, 99 )) )
+    model_pose_rotation_quat = Quaternion( squeeze( models_extrinsic_estimate_as_reprojection_Euclidean_totallocal_to_world(1:3,1:3, 99 )) )
     minus(model_pose_rotation_quat,camera_pose_rotation_quat)
     model_pose_rotation_quat * camera_pose_rotation_quat
     model_pose_rotation_quat.inv() * camera_pose_rotation_quat
     diff_quat = model_pose_rotation_quat.inv() * camera_pose_rotation_quat
     % } 
+    
     
     %--  QUESTION: does reprojection error always correspond to Euclidean error? 
     % -- reprojection error  --  is the default that everyone will reach for, and the one that would 
@@ -369,27 +371,28 @@ draw_axes_direct_c(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:
     %       systematic  effects of  noise. latency, etc, on the camera pose estimate. 
     %       Can also exclude the poses precluded by the floorplan. 
     
-    points_2D_reprojected = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 3xnum_datapointsxnum_RANSAC_iterations      
-    reprojection_difference = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 3xnum_datapointsxnum_RANSAC_iterations  
-    reprojection_Euclidean = zeros( [ 1 size(points_2D,2) num_RANSAC_iterations ] )  ;  %  1xnum_datapointsxnum_RANSAC_iterations
+    points_2D_reprojected = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations      
+    reprojection_Manhattan_pts = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations  
+    reprojection_Euclidean_pts = zeros( [ 1 size(points_2D,2) num_RANSAC_iterations ] )  ;  %  1xnum_datapointsxnum_RANSAC_iterations
     reprojection_Euclidean_total = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-    reprojection_inliers_2 = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-    reprojection_inliers_1 = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-    mean_reprojection_inliers = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+    reprojection_inliers_num_below_1px = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+    reprojection_inliers_num_below_2px = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+    mean_reprojection_inliers_threshold = 1 ;
+    mean_reprojection_inliers_exclude_above_threshold = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
     for ii_ = 1:num_RANSAC_iterations 
         pose_estimate = squeeze( models_extrinsic_estimate_as_local_to_world(:,:, ii_) )  ;
         cam_reproject = CentralCamera('default')  ;  cam_reproject.T = pose_estimate  ;  
 %         points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned )  ;
         points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned_no_latency )  ;        
-        reprojection_difference(:,:,ii_) = points_2D_reprojected(:,:,ii_) - points_2D  ;
-        reprojection_Euclidean(:,:,ii_) = norm_2(reprojection_difference(:,:,ii_),1)  ;
-        reprojection_Euclidean_total(ii_) = sum(reprojection_Euclidean(:,:,ii_))  ;
-        reprojection_inliers_1(ii_) = sum(reprojection_Euclidean(:,:,ii_)<=1) ;
-        reprojection_inliers_2(ii_) = sum(reprojection_Euclidean(:,:,ii_)<=2) ;
-        if sum(reprojection_Euclidean(:,:,ii_)<=1) > 0
-            mean_reprojection_inliers(ii_)=mean(reprojection_Euclidean(:,reprojection_Euclidean(:,:,ii_)<=1, ii_)) ;
+        reprojection_Manhattan_pts(:,:,ii_) = points_2D_reprojected(:,:,ii_) - points_2D  ;
+        reprojection_Euclidean_pts(:,:,ii_) = norm_2(reprojection_Manhattan_pts(:,:,ii_),1)  ;
+        reprojection_Euclidean_total(ii_) = sum(reprojection_Euclidean_pts(:,:,ii_))  ;
+        reprojection_inliers_num_below_1px(ii_) = sum(reprojection_Euclidean_pts(:,:,ii_)<=1) ;
+        reprojection_inliers_num_below_2px(ii_) = sum(reprojection_Euclidean_pts(:,:,ii_)<=2) ;
+        if sum(reprojection_Euclidean_pts(:,:,ii_)<=mean_reprojection_inliers_threshold) > 0
+            mean_reprojection_inliers_exclude_above_threshold(ii_)=mean(reprojection_Euclidean_pts(:,reprojection_Euclidean_pts(:,:,ii_)<=mean_reprojection_inliers_threshold, ii_)) ;
         else
-            mean_reprojection_inliers(ii_)=nan;
+            mean_reprojection_inliers_exclude_above_threshold(ii_)=nan;
         end
     end
     fighandle_mean_reproj = ...
@@ -412,7 +415,7 @@ draw_axes_direct_c(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:
     fighandle_reproj_hist2 = figure('Name',strcat(exp_num,' : ','mean reprojection error, thresholded - hist - 0-100')); histogram(mean_reprojection_thresholded, [ 0:0.1:5 5.2:0.2:10 11:1:20 22:2:100 ]  )
     fighandle_reproj_hist3 = figure('Name',strcat(exp_num,' : ','mean reprojection error, thresholded - hist - 0-10')); histogram(mean_reprojection_thresholded, [ 0:0.1:5 5.2:0.2:10 ]  )
     
-    fighandle_reproj_hist4 = figure('Name',strcat(exp_num,' : ','mean reprojection error of inliers, thresholded - hist - 0-10')); histogram(mean_reprojection_inliers, [ 0:0.1:5 5.2:0.2:10 ]  )
+    fighandle_reproj_hist4 = figure('Name',strcat(exp_num,' : ','mean reprojection error of inliers, thresholded - hist - 0-10')); histogram(mean_reprojection_inliers_exclude_above_threshold, [ 0:0.1:5 5.2:0.2:10 ]  )
     
     figure('Name',strcat(exp_num,' : ','pose posn error vs mean reprojection_Euclidean_total'));  
     semilogy( posn_euclidean_dist_error , ...
