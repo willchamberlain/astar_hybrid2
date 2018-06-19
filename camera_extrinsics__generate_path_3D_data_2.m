@@ -142,17 +142,61 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
 %     min_angle_degs=45; angle_range_degs=40; x_max=3; y_max=1; z_max=2; proportion_in_fov=1.0;    - pre-testing
 %     min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    -  testing
    min_angle_degs=45; angle_range_degs=40; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    % -  0001
+   min_angle_degs=45; angle_range_degs=10; x_max=6; y_max=3; z_max=5; proportion_in_fov=1.0;    % -  0001
 % % %     min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
 % % %     min_angle_degs=45; angle_range_degs=40; x_max=6.5; y_max=3; z_max=2.5; proportion_in_fov=1.0;    % - 0_000-0_003_1
+%%
+
+    %tilt up
+    if ~exist('camera_array','var')
+        camera_pose_array(:,:,1) = camera.T  ;
+        camera_exp_array = [ time_string_for_figuretitle() ] ;
+    end
+    cam_pose_ = camera_pose_array(:,:,1)  ;    
+    [r,t] = tr2rt(cam_pose_) ; 
+    clear 'camera'
+    camera = CentralCamera('default');
+%     camera.T = rt2tr(r, t)  ;
+%     camera.T = rt2tr(rotx( -10*(2*pi/360) )*r, t)  ;  % tilt up 10 degrees
+%     camera.T = rt2tr(rotx( -20*(2*pi/360) )*r, t)  ;  % tilt up 20 degrees
+%     camera.T = rt2tr(rotx( 10*(2*pi/360) )*r, t)  ;  % tilt down 10 degrees
+%     camera.T = rt2tr(rotx( 20*(2*pi/360) )*r, t)  ;  % tilt down 20 degrees
+%     camera.T = rt2tr(r, t)  ;
+%     camera.T = rt2tr(r, t + r*[1 0 0]')  ;  % move right-ish 1m
+%     camera.T = rt2tr(r, t + r*[2 0 0]' + [+0.5 +1.0 0]')  ;  % move right-ish 2m
+%     camera.T = rt2tr(r, t + r*[2 0 0]' + [+1.0 +2.0 0]')  ;  % move right-ish 2m
+%     camera.T = rt2tr(r, t + r*[2 0 0]' + [-0.5 +1.0 0]')  ;  % move right-ish 2m
+%     camera.T = rt2tr(r, t + r*[2 0 0]' + [-0.5 +1.5 0]')  ;  % move right-ish 2m
+     camera.T = rt2tr(r, t)  ;
+    
+    [r,t] = tr2rt( camera_pose_array(:,:,1)) ; 
+    draw_axes_direct( r , t , '', 5.0 )  ;  % eyeball: draw the original camera pose
+    t-camera.get_pose_translation
+
+    draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation , '', 7.0 , 'm')  ;  % eyeball: draw the camera pose
+    
+
+%%
     if ~exist('camera','var') || (exist('p_change_camera','var') && p_change_camera)
         display('SETTING UP NEW CAMERA')
     [ camera , target_point ] =  camera_extrinsics__place_camera_safely_2( ...
         min_angle_degs,angle_range_degs, ...
         x_max, y_max, z_max, [ 2 2 1 ]' ,  ...   [ 0.5 0.5 0.1]' , ... 
         [ 1.0 1.0 1.0 ]' , points_3D_preconditioned , proportion_in_fov );
+        if ~exist('camera_array','var')
+            camera_pose_array(:,:,1) = camera.T  ;
+            camera_exp_array = [ time_string_for_figuretitle() ] ;
+        else 
+            camera_pose_array(:,:,end+1)  = camera.T  ;
+            camera_exp_array(end+1,:) =  time_string_for_figuretitle()  ;
+        end
         display('SET UP NEW CAMERA')
+    else
+            camera_pose_array(:,:,end+1) = camera.T  ;
+            camera_exp_array(end+1,:) = [ time_string_for_figuretitle() ] ;
+        display('USING EXISTING CAMERA')
     end
-    figure(fig_3d_handle) ; hold on;   camera.plot_camera;   hold on;
+    figure(fig_3d_handle) ; hold on;   camera.plot_camera('scale',0.2);   hold on;
     draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, 'true cam', 0.85, 'k' )   % draw the camera pose       
     draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 0.75 )   % draw the camera pose        
 
@@ -166,7 +210,8 @@ points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time
     
     [coeff, score, latent, tsquared, explained, mu]  =  pca( [feature_1_positions feature_2_positions]' ) ;
         hold on;  plot3_rows( mu' , 'mo' ) ;  plot3_rows( [ mu'-(coeff(:,1)*10) mu'+(coeff(:,1)*10) ] , 'm') ;    plot3_rows( [ mu'-(coeff(:,2)*10) mu'+(coeff(:,2)*10) ] , 'c') ;    plot3_rows( [ mu'-(coeff(:,3)*10) mu'+(coeff(:,3)*10) ] , 'k')
-    % PCA gives one option for axes to reflect across/through for a path /path segment : let's try that reflecting across that
+    % PCA gives one option for axes to reflect across/through fo
+    draw_axes_direct( r , t , '', 5.0 )  ;  % eyeball: draw the original camera poser a path /path segment : let's try that reflecting across that
     pca_major = coeff(:,1) ;    %  the direction of the path / path segment / plane to reflect through
     pca_major_vert = pca_major + [ 0 ; 0 ; 10 ]; %  vector in the same direction but divergent in Z ; other vector in the plane to reflect through
     normal_vec = cross(pca_major,pca_major_vert) ;      %  vector to reflect _along_ . The cross-product is the normal : in the xy-plane
@@ -226,7 +271,7 @@ draw_axes_direct_c(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:
             model_size = 12; %-- 0_003_11
             model_size = 24; %-- 0_003_12
             model_size = 12; %-- 0_003_13
-            num_RANSAC_iterations = 1000;   % otten 100-1000, but papers imply can be significantly less 
+            num_RANSAC_iterations = 5000;   % otten 100-1000, but papers imply can be significantly less 
            [ models , models_max_diff_SE3_element , models_extrinsic_estimate_as_local_to_world ] = ...  % , models_best_solution , models_solution_set ] = ...           
         camera_extrinsics__iterate_epnp  ( ...
             points_2D_preconditioned, points_3D_preconditioned, camera_K_default, ...
@@ -234,12 +279,50 @@ draw_axes_direct_c(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:
             camera.get_pose_transform);    
 
         % fig_3d_handle = gcf 
-        camera_extrinsics__plot_3d_estimated_poses   (fig_3d_handle, models_extrinsic_estimate_as_local_to_world)        
+        if ~exist('DONT_DRAW','var') 
+            camera_extrinsics__plot_3d_estimated_poses   (fig_3d_handle, models_extrinsic_estimate_as_local_to_world)        
+        end
         plot3_rows(points_3D_f2,'go')  ;   %         plot3( 0 , 0 , 0 , 'bo')  ;
         for ii_ = 1:size(points_3D_preconditioned,2) ; text(points_3D_preconditioned(1,ii_),points_3D_preconditioned(2,ii_),points_3D_preconditioned(3,ii_),num2str(ii_));  end
         draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 5.0 )   % draw the camera pose      
         draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, '', 4.0  , 'g' )   % draw the camera pose       
         draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 3.7 )   % draw the camera pose               
+        
+    
+        % distribution of reprojection errors 
+        %--  QUESTION: does reprojection error always correspond to Euclidean error? 
+        % -- reprojection error  --  is the default that everyone will reach for, and the one that would 
+        %       be used for  RANSAC , but _may_ not be the best for trying to understand the/any 
+        %       systematic  effects of  noise. latency, etc, on the camera pose estimate. 
+        %       Can also exclude the poses precluded by the floorplan. 
+
+        points_2D_reprojected = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations      
+        reprojection_Manhattan_pts = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations  
+        reprojection_Euclidean_pts = zeros( [ 1 size(points_2D,2) num_RANSAC_iterations ] )  ;  %  1xnum_datapointsxnum_RANSAC_iterations
+        reprojection_Euclidean_total = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+        reprojection_inliers_num_below_1px = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+        reprojection_inliers_num_below_2px = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+        mean_reprojection_inliers_threshold = 1 ;
+        mean_reprojection_inliers_exclude_above_threshold = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+        for ii_ = 1:num_RANSAC_iterations 
+            pose_estimate = squeeze( models_extrinsic_estimate_as_local_to_world(:,:, ii_) )  ;
+            cam_reproject = CentralCamera('default')  ;  cam_reproject.T = pose_estimate  ;  
+    %         points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned )  ;
+            points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned_no_latency )  ;        
+            reprojection_Manhattan_pts(:,:,ii_) = points_2D_reprojected(:,:,ii_) - points_2D  ;
+            reprojection_Euclidean_pts(:,:,ii_) = norm_2(reprojection_Manhattan_pts(:,:,ii_),1)  ;
+            reprojection_Euclidean_total(ii_) = sum(reprojection_Euclidean_pts(:,:,ii_))  ;
+            reprojection_inliers_num_below_1px(ii_) = sum(reprojection_Euclidean_pts(:,:,ii_)<=1) ;
+            reprojection_inliers_num_below_2px(ii_) = sum(reprojection_Euclidean_pts(:,:,ii_)<=2) ;
+            if sum(reprojection_Euclidean_pts(:,:,ii_)<=mean_reprojection_inliers_threshold) > 0
+                mean_reprojection_inliers_exclude_above_threshold(ii_)=mean(reprojection_Euclidean_pts(:,reprojection_Euclidean_pts(:,:,ii_)<=mean_reprojection_inliers_threshold, ii_)) ;
+            else
+                mean_reprojection_inliers_exclude_above_threshold(ii_)=nan;
+            end
+        end
+        
+        
+        
         
         %  draw black axes for each of the estimates below a threshold
         %         models_with_mean_reprojection_error_below_threshold__logical = (reprojection_Euclidean_total/num_points < quantile([reprojection_Euclidean_total/num_points]',0.10))  ; 
@@ -256,12 +339,15 @@ draw_axes_direct_c(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:
         reprojection_Euclidean_mean = squeeze(reprojection_Euclidean_mean)'  ;
         reprojection_error_threshold = quantile([reprojection_Euclidean_total/num_points]',0.5)  ;
         %  reprojection_error_threshold = quantile([reprojection_Euclidean_total/num_points]',1.0)  ;
-        for ii_ = 1:size(models_extrinsic_estimate_as_local_to_world,3)
-            if reprojection_Euclidean_mean(ii_) <= reprojection_error_threshold
-                axes_scale = (reprojection_error_threshold-reprojection_Euclidean_mean(ii_)) * (5/reprojection_error_threshold)  ;
-                draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,ii_) , models_extrinsic_estimate_as_local_to_world(1:3,4,ii_) , '' ,  axes_scale , 'k'    )  ;                    
+        if ~exist('DONT_DRAW','var')
+            for ii_ = 1:size(models_extrinsic_estimate_as_local_to_world,3)
+                if reprojection_Euclidean_mean(ii_) <= reprojection_error_threshold
+                    axes_scale = (reprojection_error_threshold-reprojection_Euclidean_mean(ii_)) * (5/reprojection_error_threshold)  ;
+                    draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,ii_) , models_extrinsic_estimate_as_local_to_world(1:3,4,ii_) , '' ,  axes_scale , 'k'    )  ;                    
+                end
             end
         end
+        
         
         %         mean_reprojection_error_below_threshold__dist_HalfNormal = fitdist([reprojection_Euclidean_total/num_points]','HalfNormal')  ;
         %         mean_reprojection_error_below_threshold__dist_Exponential = fitdist([reprojection_Euclidean_total/num_points]','Exponential')  ;        
@@ -350,51 +436,23 @@ draw_axes_direct_c(rdf_to_flu(camera_old.T(1:3,1:3)), rdf_to_flu(camera_old.T(1:
     sorted_eucidean_distance_error=sort(posn_euclidean_dist_error(posn_euclidean_dist_error<1));
     pd = fitdist(sorted_eucidean_distance_error','half normal')  ;
     
-    % distribution of reprojection errors 
+    
     
     % { 
     %-- compare the orientations  --  not sure that this is useful  
-    model_1_quat = Quaternion( squeeze( models_extrinsic_estimate_as_local_to_world(1:3,1:3,1) ))
-    camera.get_pose_rotation
-    camera_pose_rotation_quat = Quaternion(camera.get_pose_rotation)
-    model_pose_rotation_quat = Quaternion( squeeze( models_extrinsic_estimate_as_reprojection_Euclidean_totallocal_to_world(1:3,1:3, 99 )) )
-    minus(model_pose_rotation_quat,camera_pose_rotation_quat)
-    model_pose_rotation_quat * camera_pose_rotation_quat
-    model_pose_rotation_quat.inv() * camera_pose_rotation_quat
-    diff_quat = model_pose_rotation_quat.inv() * camera_pose_rotation_quat
+    camera_pose_rotation_quat = Quaternion(camera.get_pose_rotation)  ;
+    model_1_quat = Quaternion( squeeze( models_extrinsic_estimate_as_local_to_world(1:3,1:3,1) ))  ;
+    model_1_quat * camera_pose_rotation_quat  ;
+    model_1_quat.inv() * camera_pose_rotation_quat  ;
+    minus(model_1_quat,camera_pose_rotation_quat)
+    model_pose_rotation_quat = Quaternion( squeeze( models_extrinsic_estimate_as_local_to_world(1:3,1:3, : )) )  ;
+     diff_quat = Quaternion(repmat(ones(3,3), [1, 1 ,num_RANSAC_iterations])) ;
+    for ii_ = 1 : num_RANSAC_iterations
+        diff_quat(ii_) = model_pose_rotation_quat(ii_).inv() * camera_pose_rotation_quat ;
+    end
     % } 
     
     
-    %--  QUESTION: does reprojection error always correspond to Euclidean error? 
-    % -- reprojection error  --  is the default that everyone will reach for, and the one that would 
-    %       be used for  RANSAC , but _may_ not be the best for trying to understand the/any 
-    %       systematic  effects of  noise. latency, etc, on the camera pose estimate. 
-    %       Can also exclude the poses precluded by the floorplan. 
-    
-    points_2D_reprojected = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations      
-    reprojection_Manhattan_pts = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations  
-    reprojection_Euclidean_pts = zeros( [ 1 size(points_2D,2) num_RANSAC_iterations ] )  ;  %  1xnum_datapointsxnum_RANSAC_iterations
-    reprojection_Euclidean_total = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-    reprojection_inliers_num_below_1px = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-    reprojection_inliers_num_below_2px = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-    mean_reprojection_inliers_threshold = 1 ;
-    mean_reprojection_inliers_exclude_above_threshold = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-    for ii_ = 1:num_RANSAC_iterations 
-        pose_estimate = squeeze( models_extrinsic_estimate_as_local_to_world(:,:, ii_) )  ;
-        cam_reproject = CentralCamera('default')  ;  cam_reproject.T = pose_estimate  ;  
-%         points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned )  ;
-        points_2D_reprojected(:,:,ii_) = cam_reproject.project( points_3D_preconditioned_no_latency )  ;        
-        reprojection_Manhattan_pts(:,:,ii_) = points_2D_reprojected(:,:,ii_) - points_2D  ;
-        reprojection_Euclidean_pts(:,:,ii_) = norm_2(reprojection_Manhattan_pts(:,:,ii_),1)  ;
-        reprojection_Euclidean_total(ii_) = sum(reprojection_Euclidean_pts(:,:,ii_))  ;
-        reprojection_inliers_num_below_1px(ii_) = sum(reprojection_Euclidean_pts(:,:,ii_)<=1) ;
-        reprojection_inliers_num_below_2px(ii_) = sum(reprojection_Euclidean_pts(:,:,ii_)<=2) ;
-        if sum(reprojection_Euclidean_pts(:,:,ii_)<=mean_reprojection_inliers_threshold) > 0
-            mean_reprojection_inliers_exclude_above_threshold(ii_)=mean(reprojection_Euclidean_pts(:,reprojection_Euclidean_pts(:,:,ii_)<=mean_reprojection_inliers_threshold, ii_)) ;
-        else
-            mean_reprojection_inliers_exclude_above_threshold(ii_)=nan;
-        end
-    end
     fighandle_mean_reproj = ...
         figure('Name',strcat(exp_num,' : ','mean reprojection_Euclidean_total per RANSAC iteration'));  hold on  ;
     semilogy(reprojection_Euclidean_total/num_points, 'rx') ;
