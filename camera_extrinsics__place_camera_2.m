@@ -8,7 +8,7 @@ function camera__ = camera_extrinsics__place_camera_2(min_angle_degs_,angle_rang
             cam_pose_xyz = x_max  ;
         end
     else        
-        cam_pose_xyz = camera_extrinsics__place_camera_position_2(x_max, y_max, z_max)  ;
+        cam_pose_xyz = camera_extrinsics__place_camera_position_2(x_max, y_max, z_max, gauss_scale_)  ;
     end
     if nargin < 1 
         angle_range_degs = 10;
