@@ -1,4 +1,6 @@
-function camera_rdf_coordinate_system_SO3__ = camera_rdf_coordinate_system( direction_to_look_in , desired_up_vector )
+function camera_rdf_coordinate_system_SO3__ = camera_rdf_coordinate_system( ...
+    direction_to_look_in , ...
+    desired_up_vector )
 % Calculates the _orientation_  of right-hand coordinate system with 
 %  z axis aligned to direction_to_look_in, 
 %  y axis aligned opposite to desired_up_vector, and 
