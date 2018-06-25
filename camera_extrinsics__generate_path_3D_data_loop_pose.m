@@ -40,8 +40,8 @@ via_posns = [ via_posns ; end_posn ]  ;
 
 % positions of features on the robot 
 feature_1_pose_SE3 = [ eye(3) [ 0 , 0.2 , 0.645 ]' ; [ 0 0 0 1 ] ];
-feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2      , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003
-feature_3_pose_SE3 = [ eye(3) [ 0 , 0.645 , 0.25 ]' ; [ 0 0 0 1 ] ];  %-- 0_003
+feature_3_pose_SE3 = [ eye(3) [ 0 , 0.645 , 0.25 ]' ; [ 0 0 0 1 ] ];  %
+feature_2_pose_SE3 = [ eye(3) [ 0 , 0.2      , 0.25 ]' ; [ 0 0 0 1 ] ];  %
 % locations of features in the world as the robot moves through its trajectory
 feature_1_positions =  qb' + repmat(feature_1_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
 feature_2_positions =  qb' + repmat(feature_2_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
@@ -50,12 +50,13 @@ feature_3_positions =  qb' + repmat(feature_3_pose_SE3(1:3,4), 1 , size(qb,1) ) 
      figure('Name', 'Robot features and the robot trajectory'); 
     hold on; grid on ; plot3_rows(feature_1_positions,'gx') ;  plot3_rows(feature_2_positions,'cx') ; plot3_rows(qb','bx');   axis equal
 %}
+display(strcat(' Finished: trajectory generated'));
 
 %%    
 display( 'Set up true and latency feature positions --> 3D data' )
 latency_time_steps = 5 ; %-- 0_003_16
-latency_time_steps = 5 ; %-- 0_003_16
 latency_time_steps = 10 ; %-- 0_003_16
+latency_time_steps = 5 ; %-- 0_003_16
 latency_s = latency_time_steps*time_step  ;
 %--   latency_time_steps = ceil(latency_s/time_step)  ;
 num_obs = 50 ;  
@@ -100,7 +101,6 @@ num_points = size(points_3D_preconditioned,2)  ;
   
     %-- Camera 
     %-- Camera pose setup - place a camera looking at one datapointdescription
-    display(description)
     num_camera_posn = 3  ;
     rat_ = size(points_3D_f1,2) / num_camera_posn  ; 
     indices_ = floor([1:num_camera_posn].*rat_)  ;
@@ -117,24 +117,13 @@ num_points = size(points_3D_preconditioned,2)  ;
             cam_direction_vector, ...
             cam_desired_up_vector )  ;   %  vector_along_x_axis_ , vector_in_z_axis_plane_ )
         cam_SE3 =  rt2tr(  cam_rdf_coord_sys , cam_pose_xyz)  ;
-        draw_axes_direct(cam_SE3(1:3,1:3),cam_SE3(1:3,4), '', 0.5)  ;
+        figure(fig_3d_handle) ;   draw_axes_direct(cam_SE3(1:3,1:3),cam_SE3(1:3,4), '', 0.5)  ;
 
 %         camera = CentralCamera('default','centre',[512 512],'pose',cam_SE3); 
         camera = CentralCamera_default(cam_SE3) ;
-        figure( fig_3d_handle )  ;
+        figure( fig_3d_handle )  ; 
         draw_axes_direct_SE3(camera.T, '', 5)  ;
-        
-    % {
-        if 1 == ii_ii_ 
-            fig_handle_2D_no_latency = figure('Name',strcat(exp_num,' : ',sprintf('2D latency_time_steps = %f',latency_time_steps)));  grid on; hold on;
-            plot2_rows(points_2D_preconditioned, 'rx')  ;
-            u_0 = camera.limits(1) ; u_max = camera.limits(2) ; v_0 = camera.limits(3) ; v_max = camera.limits(4)  ;
-            plot2_rows( [ u_0  u_max  ;  v_0  v_max ] ,'bo')  ;
-            plot2_rows( [ u_0  u_max  ;  v_max  v_0  ] ,'bo')  ;
-            axis equal
-            for ii_ = 1:size(points_2D_preconditioned,2) ; text(points_2D_preconditioned(1,ii_),points_2D_preconditioned(2,ii_),num2str(ii_));  end
-        end
-    % }       
+        text(camera.T(1,4),camera.T(2,4),camera.T(3,4), int2str(ii_ii_))  ;        
     
 
     % % %
@@ -144,15 +133,28 @@ num_points = size(points_3D_preconditioned,2)  ;
            points_2D = camera.project( points_3D_preconditioned_no_latency ) ;
            points_2D = camera.project( points_3D_preconditioned ) ;
            points_2D_preconditioned = points_2D;
-           
-            pts_2D_noise_magnitude = 2  ;  
-            pts_2D_noise_mean =  0  ; 
-            points_2D_noise_u = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) ,  pts_2D_noise_magnitude ,  pts_2D_noise_mean , 1 )    ;
-            points_2D_noise_v = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) ,  pts_2D_noise_magnitude ,  pts_2D_noise_mean , 1 )    ;
+        
+           % add noise to 2D data
+            p_pts_2D_noise_magnitude = 2  ;  
+            p_pts_2D_noise_mean =  0  ; 
+            points_2D_noise_u = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) ,  p_pts_2D_noise_magnitude ,  p_pts_2D_noise_mean , 1 )    ;
+            points_2D_noise_v = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) ,  p_pts_2D_noise_magnitude ,  p_pts_2D_noise_mean , 1 )    ;
             points_2D_preconditioned(1,:) = points_2D_preconditioned(1,:) + points_2D_noise_u ;
-            points_2D_preconditioned(2,:) = points_2D_preconditioned(2,:) + points_2D_noise_v ;
-            
-            plot2_rows(points_2D_preconditioned,'rx')
+            points_2D_preconditioned(2,:) = points_2D_preconditioned(2,:) + points_2D_noise_v ;            
+
+            % {
+                if 1 == ii_ii_ 
+                    fig_handle_2D_no_latency = figure('Name',strcat(exp_num,' : ',sprintf('2D latency_time_steps = %f',latency_time_steps)));  grid on; hold on;
+                    plot2_rows(points_2D_preconditioned, 'rx')  ;
+                    u_0 = camera.limits(1) ; u_max = camera.limits(2) ; v_0 = camera.limits(3) ; v_max = camera.limits(4)  ;
+                    plot2_rows( [ u_0  u_max  ;  v_0  v_max ] ,'bo')  ;
+                    plot2_rows( [ u_0  u_max  ;  v_max  v_0  ] ,'bo')  ;
+                    axis equal
+                    for ii_ = 1:size(points_2D_preconditioned,2) ; text(points_2D_preconditioned(1,ii_),points_2D_preconditioned(2,ii_),num2str(ii_));  end
+                end
+            % }       
+    
+            figure(fig_handle_2D_no_latency) ;  plot2_rows(points_2D_preconditioned,'rx')
             points_2D_preconditioned_in_fov_hist(ii_ii_,:)  = ...
                     points_2D_preconditioned(1,:) >= camera.limits(1) ...
                     & points_2D_preconditioned(1,:) <= camera.limits(2) ...                
@@ -161,24 +163,26 @@ num_points = size(points_3D_preconditioned,2)  ;
             points_2D_preconditioned_in_fov = points_2D_preconditioned(:, points_2D_preconditioned_in_fov_hist(ii_ii_,:) > 0)  ;
             points_3D_preconditioned_in_fov = points_3D_preconditioned(:, points_2D_preconditioned_in_fov_hist(ii_ii_,:) > 0)  ;
            %--   RUN EPNP 
-            model_size = 5;
-            model_size = 12; %-- 0_003_11
-            model_size = 12; %-- 0_003_13
-            model_size = 24; %-- 0_003_12
-            num_RANSAC_iterations = 5000;   % otten 100-1000, but papers imply can be significantly less 
-            num_RANSAC_iterations = min(500 , 5*size(points_2D_preconditioned_in_fov,2) )  ;
-            num_RANSAC_iterations = 1000;  
+            p_model_size = 5;
+            p_model_size = 12; %-- 0_003_11
+            p_model_size = 12; %-- 0_003_13
+            p_model_size = 24; %-- 0_003_12
+            p_num_RANSAC_iterations = 5000;   % otten 100-1000, but papers imply can be significantly less 
+            p_num_RANSAC_iterations = min(500 , 5*size(points_2D_preconditioned_in_fov,2) )  ;
+            p_num_RANSAC_iterations = 1000;  
            [ models , models_max_diff_SE3_element , models_extrinsic_estimate_as_local_to_world ] = ...  % , models_best_solution , models_solution_set ] = ...           
         camera_extrinsics__iterate_epnp  ( ...
             points_2D_preconditioned_in_fov,    points_3D_preconditioned_in_fov  , camera_K_default, ...
-            num_RANSAC_iterations, model_size, ...
+            p_num_RANSAC_iterations, p_model_size, ...
             camera.get_pose_transform);    
 
         % fig_3d_handle = gcf 
         if ~exist('DONT_DRAW','var') 
             camera_extrinsics__plot_3d_estimated_poses   (fig_3d_handle, models_extrinsic_estimate_as_local_to_world)        
+            figure(fig_3d_handle) ;
             plot3_rows(points_3D_f2,'go')  ;   %         plot3( 0 , 0 , 0 , 'bo')  ;
         end
+        figure(fig_3d_handle) ;
         draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 5.0 )   % draw the camera pose      
         draw_axes_direct_c(camera.get_pose_rotation, camera.get_pose_translation, '', 4.0  , 'g' )   % draw the camera pose       
         draw_axes_direct(camera.get_pose_rotation, camera.get_pose_translation, '', 3.7 )   % draw the camera pose               
@@ -191,15 +195,15 @@ num_points = size(points_3D_preconditioned,2)  ;
         %       systematic  effects of  noise. latency, etc, on the camera pose estimate. 
         %       Can also exclude the poses precluded by the floorplan. 
 
-        points_2D_reprojected = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations      
-        reprojection_Manhattan_pts = zeros( [ size(points_2D) num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations  
-        reprojection_Euclidean_pts = zeros( [ 1 size(points_2D,2) num_RANSAC_iterations ] )  ;  %  1xnum_datapointsxnum_RANSAC_iterations
-        reprojection_Euclidean_total = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-        reprojection_inliers_num_below_1px = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-        reprojection_inliers_num_below_2px = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+        points_2D_reprojected = zeros( [ size(points_2D) p_num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations      
+        reprojection_Manhattan_pts = zeros( [ size(points_2D) p_num_RANSAC_iterations ] )  ;  % 2xnum_datapointsxnum_RANSAC_iterations  
+        reprojection_Euclidean_pts = zeros( [ 1 size(points_2D,2) p_num_RANSAC_iterations ] )  ;  %  1xnum_datapointsxnum_RANSAC_iterations
+        reprojection_Euclidean_total = zeros( [ 1 p_num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+        reprojection_inliers_num_below_1px = zeros( [ 1 p_num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+        reprojection_inliers_num_below_2px = zeros( [ 1 p_num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
         mean_reprojection_inliers_threshold = 1 ;
-        mean_reprojection_inliers_exclude_above_threshold = zeros( [ 1 num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
-        for ii_ = 1:num_RANSAC_iterations 
+        mean_reprojection_inliers_exclude_above_threshold = zeros( [ 1 p_num_RANSAC_iterations ] )  ;  %  1xnum_RANSAC_iterations
+        for ii_ = 1:p_num_RANSAC_iterations 
             pose_estimate = squeeze( models_extrinsic_estimate_as_local_to_world(:,:, ii_) )  ;
 %             cam_reproject = CentralCamera('default')  ;  cam_reproject.T = pose_estimate  ;  
             cam_reproject = CentralCamera_default(pose_estimate) ;
@@ -236,6 +240,7 @@ num_points = size(points_3D_preconditioned,2)  ;
         if ~exist('DONT_DRAW','var')
             for ii_ = 1:size(models_extrinsic_estimate_as_local_to_world,3)
                 if reprojection_Euclidean_mean(ii_) <= reprojection_error_threshold
+                    figure(fig_3d_handle)  ;
                     axes_scale = (reprojection_error_threshold-reprojection_Euclidean_mean(ii_)) * (5/reprojection_error_threshold)  ;
                     draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,ii_) , models_extrinsic_estimate_as_local_to_world(1:3,4,ii_) , '' ,  axes_scale , 'k'    )  ;                    
                 end
@@ -251,12 +256,12 @@ num_points = size(points_3D_preconditioned,2)  ;
         %--  position/translation 
     camera_position =   camera.T(1:3,4)   ;
     estimated_positions = models_extrinsic_estimate_as_local_to_world(1:3,4,:)   ;
-    estimated_positions = reshape(estimated_positions, [3 num_RANSAC_iterations])   ;
-    estimated_position_diffs_1 = diff(   cat( 3, estimated_positions , repmat( camera_position, [1, num_RANSAC_iterations] ) )  ,  1  , 3  )   ;
+    estimated_positions = reshape(estimated_positions, [3 p_num_RANSAC_iterations])   ;
+    estimated_position_diffs_1 = diff(   cat( 3, estimated_positions , repmat( camera_position, [1, p_num_RANSAC_iterations] ) )  ,  1  , 3  )   ;
     
     
     estimated_position_diffs = zeros(size(estimated_positions))   ;
-    for ii_ = 1:num_RANSAC_iterations
+    for ii_ = 1:p_num_RANSAC_iterations
         estimated_position_diffs(:,ii_) =  estimated_positions(:,ii_) - camera_position   ;
     end
 % %     fighandle_posn_error = ... 
@@ -284,12 +289,13 @@ end
         
         
     estimated_positions = models_extrinsic_estimate_as_local_to_world(1:3,4,:)   ;
-    estimated_positions = reshape(estimated_positions, [3 num_RANSAC_iterations])   ;
+    estimated_positions = reshape(estimated_positions, [3 p_num_RANSAC_iterations])   ;
     estimated_position_diffs = estimated_positions(:,reprojection_Euclidean_mean <= 5 )  ;   
     estimated_position_diffs =  estimated_position_diffs - repmat(camera_position, 1, size(estimated_position_diffs,2))   ;
-     figure('Name',strcat(exp_num,' : ',sprintf('%d',ii_ii_),': position error distribution'));  
+    
+     figure('Name',strcat(exp_num,' : ',sprintf('%d',ii_ii_),': error distribution: ', sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) ));  
      ylim_ = [0 350]  ;
-     ylim_ = [0 min(num_RANSAC_iterations, 100)]  ;
+     ylim_ = [0 min(p_num_RANSAC_iterations, 100)]  ;
      subplot(3,3,1); histogram(estimated_position_diffs(1,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' x(m) '); ylim(ylim_);
      subplot(3,3,2); histogram(estimated_position_diffs(2,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' y(m) '); ylim(ylim_);  
      subplot(3,3,3); histogram(estimated_position_diffs(3,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' z(m) '); ylim(ylim_);
@@ -298,16 +304,16 @@ end
          subplot(3,3,5); histogram(estimated_position_diffs(2,:), 100); xlabel(' y(m) '); ylim(ylim_);  
          subplot(3,3,6); histogram(estimated_position_diffs(3,:), 100); xlabel(' z(m) '); ylim(ylim_); 
      end
-     subplot(3,3,7); histogram(reprojection_Euclidean_mean); title('reprojection\_Euclidean\_mean')
+     subplot(3,3,7); histogram(reprojection_Euclidean_mean, 100); title('reprojection\_Euclidean\_mean')
         
         
     camera_orientation_quat = Quaternion(camera.T(1:3,1:3))  ;
     estimated_orientations_SO3 = models_extrinsic_estimate_as_local_to_world(1:3,1:3,:)   ;    
-    estimated_orientations_quat = repmat(Quaternion(),  1, num_RANSAC_iterations);    
-    estimated_orientation_diffs = zeros(num_RANSAC_iterations,1)   ;     
-    estimated_orientation_diffs_b = zeros(num_RANSAC_iterations,1)   ;     
-    estimated_orientation_diffs_c = zeros(num_RANSAC_iterations,1)   ;    
-    for ii_ = 1:num_RANSAC_iterations
+    estimated_orientations_quat = repmat(Quaternion(),  1, p_num_RANSAC_iterations);    
+    estimated_orientation_diffs = zeros(p_num_RANSAC_iterations,1)   ;     
+    estimated_orientation_diffs_b = zeros(p_num_RANSAC_iterations,1)   ;     
+    estimated_orientation_diffs_c = zeros(p_num_RANSAC_iterations,1)   ;    
+    for ii_ = 1:p_num_RANSAC_iterations
         estimated_orientations_quat(ii_) =  Quaternion( estimated_orientations_SO3(:,:,ii_)  )  ;
         estimated_orientation_diff = quaternion_distance(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
         estimated_orientation_diffs(ii_) = estimated_orientation_diff  ;
@@ -361,8 +367,8 @@ end
     model_1_quat.inv() * camera_pose_rotation_quat  ;
     minus(model_1_quat,camera_pose_rotation_quat)
     model_pose_rotation_quat = Quaternion( squeeze( models_extrinsic_estimate_as_local_to_world(1:3,1:3, : )) )  ;
-     diff_quat = Quaternion(repmat(ones(3,3), [1, 1 ,num_RANSAC_iterations])) ;
-    for ii_ = 1 : num_RANSAC_iterations
+     diff_quat = Quaternion(repmat(ones(3,3), [1, 1 ,p_num_RANSAC_iterations])) ;
+    for ii_ = 1 : p_num_RANSAC_iterations
         diff_quat(ii_) = model_pose_rotation_quat(ii_).inv() * camera_pose_rotation_quat ;
     end
     % } 
@@ -403,9 +409,13 @@ end
 % %     figure(fig_3d_handle) ; 
     
     %--  SAVE THE RESULTS
-    display( 'SAVE THE RESULTS')
-    save_Results_001(exp_num, description ,  camera ,  qb ,  qbd ,  qbdd ,  start_posn ,  via_posns ,  axis_speed_limits ,  time_under_acc ,  time_step ,  latency_s ,  latency_time_steps ,  num_points ,  feature_1_pose_SE3 ,  feature_1_positions ,  points_3D_f1_indices ,  points_3D_f1 ,  points_3D_f1_latency ,  feature_2_pose_SE3 ,  feature_2_positions ,  points_3D_f2_indices ,  points_3D_f2 ,  points_3D_f2_latency ,  num_RANSAC_iterations ,  models_extrinsic_estimate_as_local_to_world )  ;
-    display( 'SAVED RESULTS')
+    if ~exist('DONT_SAVE_THE_RESULTS','var')
+        display( 'SAVE THE RESULTS')
+        save_Results_001(exp_num, description ,  camera ,  qb ,  qbd ,  qbdd ,  start_posn ,  via_posns ,  axis_speed_limits ,  time_under_acc ,  time_step ,  latency_s ,  latency_time_steps ,  num_points ,  feature_1_pose_SE3 ,  feature_1_positions ,  points_3D_f1_indices ,  points_3D_f1 ,  points_3D_f1_latency ,  feature_2_pose_SE3 ,  feature_2_positions ,  points_3D_f2_indices ,  points_3D_f2 ,  points_3D_f2_latency ,  p_num_RANSAC_iterations ,  models_extrinsic_estimate_as_local_to_world )  ;
+        display( 'SAVED RESULTS')
+    else
+        display('Did NOT save the results: DONT_SAVE_THE_RESULTS is set.');
+    end
     
     end
         
