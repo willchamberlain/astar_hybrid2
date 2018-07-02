@@ -55,8 +55,8 @@ display(strcat(' Finished: trajectory generated'));
 %%    
 display( 'Set up true and latency feature positions --> 3D data' )
 latency_time_steps = 5 ; %-- 0_003_16
-latency_time_steps = 10 ; %-- 0_003_16
 latency_time_steps = 5 ; %-- 0_003_16
+latency_time_steps = 10 ; %-- 0_003_16
 latency_s = latency_time_steps*time_step  ;
 %--   latency_time_steps = ceil(latency_s/time_step)  ;
 num_obs = 50 ;  
@@ -82,6 +82,7 @@ points_3D_preconditioned_no_latency = [  points_3D_f1  points_3D_f2  points_3D_f
 
 %--   3D -  with  latency: no latency set by configuring   latency_time_steps=0 
 points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency points_3D_f3_latency ]    ;  %-- 0_003   
+points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency points_3D_f3_latency ]    ;  %-- 0_003   
 
 num_points = size(points_3D_preconditioned,2)  ;
 %%
@@ -101,9 +102,9 @@ num_points = size(points_3D_preconditioned,2)  ;
   
     %-- Camera 
     %-- Camera pose setup - place a camera looking at one datapointdescription
-    num_camera_posn = 3  ;
-    rat_ = size(points_3D_f1,2) / num_camera_posn  ; 
-    indices_ = floor([1:num_camera_posn].*rat_)  ;
+    num_camera_posn = 4  ;
+    rat_ = (size(points_3D_f1,2)-1) / (num_camera_posn-1)  ; 
+    indices_ = floor(  [1:num_camera_posn].*rat_ -  rat_ + 1) ;
     points_2D_preconditioned_in_fov_hist = zeros(num_camera_posn,num_points, 'uint32')  ;
     for ii_ii_ = 1: num_camera_posn
         target_point3D = points_3D_f1(:,indices_(ii_ii_) )  ;
@@ -143,15 +144,15 @@ num_points = size(points_3D_preconditioned,2)  ;
             points_2D_preconditioned(2,:) = points_2D_preconditioned(2,:) + points_2D_noise_v ;            
 
             % {
-                if 1 == ii_ii_ 
-                    fig_handle_2D_no_latency = figure('Name',strcat(exp_num,' : ',sprintf('2D latency_time_steps = %f',latency_time_steps)));  grid on; hold on;
+%                 if 1 == ii_ii_ 
+                    fig_handle_2D_no_latency = figure('Name',strcat(exp_num,' : ',sprintf('#%d: 2D latency_time_steps = %f',ii_ii_,latency_time_steps)));  grid on; hold on;
                     plot2_rows(points_2D_preconditioned, 'rx')  ;
                     u_0 = camera.limits(1) ; u_max = camera.limits(2) ; v_0 = camera.limits(3) ; v_max = camera.limits(4)  ;
                     plot2_rows( [ u_0  u_max  ;  v_0  v_max ] ,'bo')  ;
                     plot2_rows( [ u_0  u_max  ;  v_max  v_0  ] ,'bo')  ;
                     axis equal
                     for ii_ = 1:size(points_2D_preconditioned,2) ; text(points_2D_preconditioned(1,ii_),points_2D_preconditioned(2,ii_),num2str(ii_));  end
-                end
+%                 end
             % }       
     
             figure(fig_handle_2D_no_latency) ;  plot2_rows(points_2D_preconditioned,'rx')
@@ -275,37 +276,55 @@ num_points = size(points_3D_preconditioned,2)  ;
 % %     grid on; xlabel('estimatenumber'); ylabel('euclidean distance from true camera position');     
 % %     figure(fighandle_posn_error_log); legend('x','y','z')
     
-if 1 > 2 
-     figure('Name',strcat(exp_num,' : ',sprintf('%d',ii_ii_),': position error distribution'));  
-     subplot(2,3,1); histogram(estimated_position_diffs(1,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' x(m) '); ylim([0 350]);
-     subplot(2,3,2); histogram(estimated_position_diffs(2,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' y(m) '); ylim([0 350]);  
-     subplot(2,3,3); histogram(estimated_position_diffs(3,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' z(m) '); ylim([0 350]); 
-     subplot(2,3,4); histogram(estimated_position_diffs(1,:), 100); xlabel(' x(m) '); ylim([0 350]);
-     subplot(2,3,5); histogram(estimated_position_diffs(2,:), 100); xlabel(' y(m) '); ylim([0 350]);  
-     subplot(2,3,6); histogram(estimated_position_diffs(3,:), 100); xlabel(' z(m) '); ylim([0 350]); 
-end
         %      fig_now_=gcf
         %      fig_now_.Position=[808 460 907 414]
         
         
     estimated_positions = models_extrinsic_estimate_as_local_to_world(1:3,4,:)   ;
     estimated_positions = reshape(estimated_positions, [3 p_num_RANSAC_iterations])   ;
-    estimated_position_diffs = estimated_positions(:,reprojection_Euclidean_mean <= 5 )  ;   
-    estimated_position_diffs =  estimated_position_diffs - repmat(camera_position, 1, size(estimated_position_diffs,2))   ;
     
-     figure('Name',strcat(exp_num,' : ',sprintf('%d',ii_ii_),': error distribution: ', sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) ));  
+    estimated_position_diffs_under_reproj_5 = estimated_positions(:,reprojection_Euclidean_mean <= 5 )  ;   
+    estimated_position_diffs_under_reproj_5 =  estimated_position_diffs_under_reproj_5 - repmat(camera_position, 1, size(estimated_position_diffs_under_reproj_5,2))   ;
+
+    estimated_position_diffs_under_dist = estimated_positions( : , posn_euclidean_dist_error < 0.1 )  ;
+    estimated_position_diffs_under_dist =  estimated_position_diffs_under_dist - repmat(camera_position, 1, size(estimated_position_diffs_under_dist,2))   ;
+    
+if size(estimated_position_diffs_under_reproj_5,2) > 5
+     figure('Name',strcat(exp_num,' : #',sprintf('%d',ii_ii_),': error distribution under reprojection: ', sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) ));  
      ylim_ = [0 350]  ;
      ylim_ = [0 min(p_num_RANSAC_iterations, 100)]  ;
-     subplot(3,3,1); histogram(estimated_position_diffs(1,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' x(m) '); ylim(ylim_);
-     subplot(3,3,2); histogram(estimated_position_diffs(2,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' y(m) '); ylim(ylim_);  
-     subplot(3,3,3); histogram(estimated_position_diffs(3,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' z(m) '); ylim(ylim_);
-     if size(estimated_position_diffs,2) > 0
-         subplot(3,3,4); histogram(estimated_position_diffs(1,:), 100); xlabel(' x(m) '); ylim(ylim_);
-         subplot(3,3,5); histogram(estimated_position_diffs(2,:), 100); xlabel(' y(m) '); ylim(ylim_);  
-         subplot(3,3,6); histogram(estimated_position_diffs(3,:), 100); xlabel(' z(m) '); ylim(ylim_); 
-     end
+     subplot(3,3,1); histogram(estimated_position_diffs_under_reproj_5(1,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' x(m) '); ylim(ylim_);
+     subplot(3,3,2); histogram(estimated_position_diffs_under_reproj_5(2,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' y(m) '); ylim(ylim_);  
+     subplot(3,3,3); histogram(estimated_position_diffs_under_reproj_5(3,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' z(m) '); ylim(ylim_);
+     A = histcounts(estimated_position_diffs_under_reproj_5(1,:), 100);
+     ylim_ = [0 min(min(p_num_RANSAC_iterations, 100), max(max(A),10))] 
+         subplot(3,3,4); histogram(estimated_position_diffs_under_reproj_5(1,:), 100); xlabel(' x(m) '); ylim(ylim_);
+         subplot(3,3,5); histogram(estimated_position_diffs_under_reproj_5(2,:), 100); xlabel(' y(m) '); ylim(ylim_);  
+         subplot(3,3,6); histogram(estimated_position_diffs_under_reproj_5(3,:), 100); xlabel(' z(m) '); ylim(ylim_); 
      subplot(3,3,7); histogram(reprojection_Euclidean_mean, 100); title('reprojection\_Euclidean\_mean')
-        
+elseif size(estimated_position_diffs_under_dist,2) > 5
+     figure('Name',strcat(exp_num,' : #',sprintf('%d',ii_ii_),': error distribution under distance: ', sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) ));  
+     ylim_ = [0 350]  ;
+     ylim_ = [0 min(p_num_RANSAC_iterations, 100)]  ;
+     subplot(3,3,1); histogram(estimated_position_diffs_under_dist(1,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' x(m) '); ylim(ylim_);
+     subplot(3,3,2); histogram(estimated_position_diffs_under_dist(2,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' y(m) '); ylim(ylim_);  
+     subplot(3,3,3); histogram(estimated_position_diffs_under_dist(3,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' z(m) '); ylim(ylim_);
+     A = histcounts(estimated_position_diffs_under_dist(1,:), 100);
+     ylim_ = [0 min(min(p_num_RANSAC_iterations, 100), max(max(A),10))]  ;
+         subplot(3,3,4); histogram(estimated_position_diffs_under_dist(1,:), 100); xlabel(' x(m) '); ylim(ylim_);
+         subplot(3,3,5); histogram(estimated_position_diffs_under_dist(2,:), 100); xlabel(' y(m) '); ylim(ylim_);  
+         subplot(3,3,6); histogram(estimated_position_diffs_under_dist(3,:), 100); xlabel(' z(m) '); ylim(ylim_); 
+     subplot(3,3,7); histogram(reprojection_Euclidean_mean, 100); title('reprojection\_Euclidean\_mean')
+else
+     figure('Name',strcat(exp_num,' : #',sprintf('%d',ii_ii_),': error distribution: ', sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) ));  
+     subplot(3,3,1); histogram(estimated_position_diffs(1,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' x(m) '); ylim([0 350]);
+     subplot(3,3,2); histogram(estimated_position_diffs(2,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' y(m) '); ylim([0 350]);  
+     subplot(3,3,3); histogram(estimated_position_diffs(3,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' z(m) '); ylim([0 350]); 
+     subplot(3,3,4); histogram(estimated_position_diffs(1,:), 100); xlabel(' x(m) '); ylim([0 350]);
+     subplot(3,3,5); histogram(estimated_position_diffs(2,:), 100); xlabel(' y(m) '); ylim([0 350]);  
+     subplot(3,3,6); histogram(estimated_position_diffs(3,:), 100); xlabel(' z(m) '); ylim([0 350]); 
+     subplot(3,3,7); histogram(reprojection_Euclidean_mean, 100); title('reprojection\_Euclidean\_mean')
+end       
         
     camera_orientation_quat = Quaternion(camera.T(1:3,1:3))  ;
     estimated_orientations_SO3 = models_extrinsic_estimate_as_local_to_world(1:3,1:3,:)   ;    
