@@ -17,42 +17,74 @@ function total_path_smoothed__ = path_planning__smooth_path_lineofsight(total_pa
     skip_ = 1    ;
     for ii_ = 1:max(max(size(varargin)))
         if strcmpi( varargin{ii_} , 'threshold' )
-            threshold_ = varargin{ii_+1}    
+            threshold_ = varargin{ii_+1}    ;
         elseif    strcmpi( varargin{ii_} , 'skip' )
-            skip_ = varargin{ii_+1}            
+            skip_ = varargin{ii_+1}            ;
         end
     end
     total_path_smoothed__ = total_path_start_to_goal_    ;
-    checkPointIndex = 1;                                            %  checkPoint = starting point of path
-    currentPointIndex =  checkPointIndex + 1;       %  currentPoint = next point in path
-    while currentPointIndex <= size(total_path_smoothed__,2)
+    checkfromPointIndex = 1;                                            %  checkPoint = starting point of path
+    currentToPointIndex =  checkfromPointIndex + 1;       %  currentPoint = next point in path
+    while currentToPointIndex < size(total_path_smoothed__,2)
         %  checkPoint = starting point of path
-        checkPoint = total_path_smoothed__(:,checkPointIndex);
+        checkfromPoint = total_path_smoothed__(:,checkfromPointIndex);
         %  currentPoint = next point in path
-        currentPoint = total_path_smoothed__(:,currentPointIndex);
+        currentToPoint = total_path_smoothed__(:,currentToPointIndex);
         
-        % obstacle detection - approximation 
-        if checkPoint(1,1) < currentPoint(1,1)
-            x_low = checkPoint(1,1); x_high = currentPoint(1,1);
-        else
-            x_high = checkPoint(1,1); x_low = currentPoint(1,1);
-        end
-        if checkPoint(2,1) < currentPoint(2,1)
-            y_low = checkPoint(2,1); y_high = currentPoint(2,1);
-        else
-            y_high = checkPoint(2,1); y_low = currentPoint(2,1);
-        end
-        detectionLocality = cost_map_( x_low:x_high , y_low:y_high )    ;
+            %         
+            %         % obstacle detection - approximation 
+            %         if checkfromPoint(1,1) < currentToPoint(1,1)
+            %             x_low = checkfromPoint(1,1); 
+            %             x_high = currentToPoint(1,1);
+            %         else
+            %             x_high = checkfromPoint(1,1); x_low = currentToPoint(1,1);
+            %         end
+            %         if checkfromPoint(2,1) < currentToPoint(2,1)
+            %             y_low = checkfromPoint(2,1); 
+            %             y_high = currentToPoint(2,1);
+            %         else
+            %             y_high = checkfromPoint(2,1); y_low = currentToPoint(2,1);
+            %         end
+            %         detectionLocality = cost_map_( x_low:x_high , y_low:y_high )    ;
+            %         if isinf(threshold_)  
+            %             is_walkable = sum(sum(isinf(detectionLocality))) <= 0;
+            %         else
+            %             is_walkable = sum(sum( detectionLocality(:,:)>threshold_ )) <= 0;
+            %         end
+            %         
+            %             x_low = checkfromPoint(1,1); 
+            %             x_high = currentToPoint(1,1);
+            %             y_low = checkfromPoint(2,1); 
+            %             y_high = currentToPoint(2,1);
+            % points_on_line__ = geom__points_on_line(Xstart, Ystart, Xend, Yend)
+            %         points_on_line__ = geom__points_on_line_values([63,49] , [75,47] , map_2))  ;
+        checkfromPoint_xy = flip(checkfromPoint,1)  ;
+        currentToPoint_xy = flip(currentToPoint,1)  ;
+        points_on_line_values = test__geom__points_on_line__3( checkfromPoint_xy ,  currentToPoint_xy , cost_map_)  ;
         if isinf(threshold_)  
-            is_walkable = sum(sum(isinf(detectionLocality))) <= 0;
+             is_walkable = sum(sum(isinf(points_on_line_values))) <= 0;
         else
-            is_walkable = sum(sum( detectionLocality(:,:)>threshold_ )) <= 0;
-        end
+             if sum(sum(size(max( points_on_line_values )))) == 0
+                 display('sum(sum(size(max( points_on_line_values )))) == 0')
+             end
+             is_walkable = max( points_on_line_values ) < threshold_ ;
+         end
+        
         if is_walkable
-            total_path_smoothed__(:,currentPointIndex) = []    ;
+                node_from_xy = flip( total_path_smoothed__(:,checkfromPointIndex),1)  ;
+                node_to_remove_xy = flip(total_path_smoothed__(:,currentToPointIndex),1)  ;
+                plot( [node_from_xy(1) node_to_remove_xy(1) ] , [node_from_xy(2) node_to_remove_xy(2)] , 'g')
+%             last_node_removed = total_path_smoothed__(:,currentToPointIndex)  ;    
+            total_path_smoothed__(:,currentToPointIndex) = []    ;
+%             total_path_ignore_(:,currentToPointIndex) = true;
+%             currentToPointIndex = currentToPointIndex+1
+%             pause
         else
-            checkPointIndex = currentPointIndex    ;
-            currentPointIndex =  checkPointIndex + skip_    ;
+            checkfromPointIndex = currentToPointIndex     ;
+            currentToPointIndex =  checkfromPointIndex + skip_     ;
+%             pause(0.1)
         end
     end
 end
+
+% 
