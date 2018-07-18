@@ -90,6 +90,45 @@ points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency points_
 
 num_points = size(points_3D_preconditioned,2)  ;
 %%
+display( 'Add second path, unprincipled: same direction as first path' ) ;
+feature_1_positions =  qb' + repmat(feature_1_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
+feature_2_positions =  qb' + repmat(feature_2_pose_SE3(1:3,4), 1 , size(qb,1) )   ;
+feature_3_positions =  qb' + repmat(feature_3_pose_SE3(1:3,4), 1 , size(qb,1) )   ; %-- 0_003
+
+num_obs = 50 ;  
+num_obs = floor(50/3) ;  
+num_obs = num_obs * 2 ; 
+
+feature_1_positions = [ feature_1_positions , ( feature_1_positions + repmat([0;1;0], 1, size(feature_1_positions,2)) )    ]   ;
+feat_1_lim = size(feature_1_positions,2) - latency_time_steps   ;
+points_3D_f1_indices = sort(randperm(feat_1_lim,num_obs))  ;
+points_3D_f1                = feature_1_positions(: , points_3D_f1_indices )   ;
+points_3D_f1_latency = feature_1_positions(: , points_3D_f1_indices+latency_time_steps )   ;
+
+feat_2_lim = feat_1_lim - 100 ;
+feature_2_positions = [ feature_2_positions , ( feature_2_positions + repmat([0;1;0], 1, size(feature_2_positions,2)) )    ]   ;
+points_3D_f2_indices = sort(randperm(feat_2_lim,num_obs))  ;
+points_3D_f2                = feature_2_positions(: , points_3D_f2_indices )  ;
+points_3D_f2_latency = feature_2_positions(: , points_3D_f2_indices+latency_time_steps )  ;
+
+feat_3_lim = feat_2_lim  ;   %--  0_003 
+feature_3_positions = [ feature_3_positions , ( feature_3_positions + repmat([0;1;0], 1, size(feature_3_positions,2)) )    ]   ;
+points_3D_f3_indices = sort(randperm(feat_3_lim,num_obs))  ;
+points_3D_f3                = feature_3_positions(: , points_3D_f3_indices )  ;
+points_3D_f3_latency = feature_3_positions(: , points_3D_f3_indices+latency_time_steps )  ;
+
+%--   3D -  no  latency     
+points_3D_preconditioned_no_latency = [  points_3D_f1  points_3D_f2  points_3D_f3  ]    ;
+
+%--   3D -  with  latency: no latency set by configuring   latency_time_steps=0 
+points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency points_3D_f3_latency ]    ;  %-- 0_003   
+points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency points_3D_f3_latency ]    ;  %-- 0_003   
+
+num_points = size(points_3D_preconditioned,2)  ;
+
+
+%%
+display(  'Run the pose estimation'  )
 % {
      fig_3d_handle = figure('Name',strcat(exp_num, time_string_for_figuretitle() ,' : ','3D scene')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
      plot3_rows(points_3D_f1,'rx')  ;   
@@ -116,13 +155,15 @@ num_points = size(points_3D_preconditioned,2)  ;
     rat_ = (size(points_3D_f1,2)-1) / (num_camera_posn-1)  ; 
     indices_ = floor(  [1:num_camera_posn].*rat_ -  rat_ + 1) ;
     points_2D_preconditioned_in_fov_hist = zeros(num_camera_posn,num_points, 'uint32')  ;
-    for ii_ii_ = 1: num_camera_posn
+    for ii_ii_ = 1: 1
         target_point3D = points_3D_f1(:,indices_(ii_ii_) )  ;
+        target_point3D = points_3D_f1(:,round(size(points_3D_f1,2)/2))  ;
+        target_point3D = [ 3.5 ; 0.25 ; 0.645 ]  ;
         % Orient camera orthogonal to the x axis, and zero roll
         %  see camera_extrinsics__place_camera_2.m
-        cam_pose_xyz = target_point3D + [ -1.0 -2.2 2.0 ]'  ;  % 3m away, 2m up
         cam_pose_xyz = target_point3D + [ -2.0 -2.2 2.0 ]'  ;  % 3m away, 2m up
         cam_pose_xyz = target_point3D + [ 0.0 -3.0 2.0 ]'  ;  % 3m away, 2m up
+        cam_pose_xyz = target_point3D + [ -1.0 -2.2 2.0 ]'  ;  % 3m away, 2m up
         cam_direction_vector = target_point3D - cam_pose_xyz ;
         cam_desired_up_vector = cam_direction_vector + [ 0.0 , 0.0 , 2.0]'  ; % camera vertical in-plane with world vertical
         cam_rdf_coord_sys = camera_rdf_coordinate_system(...
@@ -489,6 +530,83 @@ end
     
     end
         
+    
+%%
+    %  see  camera_extrinsics__test_optical_axis_intercept_plane.m  -  section  "use the refactored functions to flip the camera"
+    display( 'do PCA' )    
+    
+    camera_old = camera ;    
+    
+    %   see   /mnt/nixbig/ownCloud/project_code/camera_extrinsics__test_optical_axis_intercept_plane.m
+    
+        %     [coeff, score, latent, tsquared, explained, mu]  =  pca( [feature_1_positions feature_2_positions feature_3_positions]' ) ;
+    [coeff, score, latent, tsquared, explained, mu]  =  pca( [ points_3D_f1_latency points_3D_f3_latency points_3D_f3_latency ]' ) ;
+        hold on;  plot3_rows( mu' , 'mo' ) ;  plot3_rows( [ mu'-(coeff(:,1)*10) mu'+(coeff(:,1)*10) ] , 'm') ;    plot3_rows( [ mu'-(coeff(:,2)*10) mu'+(coeff(:,2)*10) ] , 'c') ;    plot3_rows( [ mu'-(coeff(:,3)*10) mu'+(coeff(:,3)*10) ] , 'k')
+        
+    pca_second_axis = [ mu'-(coeff(:,2)*10) mu'+(coeff(:,2)*10) ] ;
+    pca_second_axis = [ pca_second_axis(1:2,1:2) ;  0 0]  ;
+    plot3_rows(pca_second_axis , 'ks')
+    plot3_rows(pca_second_axis(:,1) , 'rd')
+    plot3_rows(pca_second_axis(:,2) , 'bd')  %  THIS direction 
+    
+    pca_first_axis = [ mu'-(coeff(:,1)*10) mu'+(coeff(:,1)*10) ] ;
+    pca_first_axis = [ pca_first_axis(1:2,1:2) ;  0 0]  ;
+    plot3_rows(pca_first_axis , 'ks')
+    
+    % want to generate a set of points :  
+        %   Option 1. A path parallel to the one already observed, but shifted in the direction of pca_second_axis
+        %       Then check for visibility in the current pose estimate - Then WITH uncertainty.
+        %       ( Then check for occlusion by floorplan. )
+        %       NOTE:  _path_ _trajectory_, not just points  -->
+        %           --> control the latency direction, control the velocity so can get expected number of observations
+        %   Option 1.2. As Option 1 - a path parallel to the one already observed, but shifted in the direction of pca_second_axis 
+        %       - BUT give as envelopes that the robot can pass through rather than specific points/trajectories 
+        %   Option 2. Create a grid of points parallel to pca_first_axis , but shifted incrementally in the direction of pca_second_axis
+        %       AND culled by edges of Field of View 
+        %       ( Then culled for occlusion by floorplan. )
+        %       THEN joined into short trajectories :  send the trajectories to the robot :  ' trajectories'  are poses and max,preferred velocities  -  max="this or
+        %           slower" min="best vel for me (cam); you could go slower than this if it suits you"
+        %
+        %   Probably instantiate pose demands in A* as bracketing end point with lead-in obstacles parallel to the goal
+        %       OR by setting poses along Beziers as with mtraj() function. 
+        %   Plan the global path as a series of A* plans from each pose to the next
+        
+    % Option 2. Part 1. Generate a grid of points         
+    offset_vec = pca_second_axis(:,2)  ;   %  THIS direction 
+    offset_vec = offset_vec ./ norm_2(offset_vec,1)  ;
+    p_num_new_path_points = ceil(sqrt( (pca_first_axis(1,1) - pca_first_axis(1,2))^2 + (pca_first_axis(2,1) - pca_first_axis(2,2))^2 ))  ;
+    new_path_points = [  ...
+        linspace(pca_first_axis(1,1) , pca_first_axis(1,2) , p_num_new_path_points )  ;
+        linspace(pca_first_axis(2,1) , pca_first_axis(2,2) , p_num_new_path_points )  ;
+        zeros(1,p_num_new_path_points)  ]  ;
+    
+    num_its = 11;
+    new_path_points_0 = new_path_points  ;
+    new_path_points_keep = []  ;
+    new_path_points_keep_count = zeros(1,num_its) ; 
+    
+    for ii_ = 1: num_its
+        new_path_points_0 = new_path_points_0+repmat(offset_vec,1,size(new_path_points_0,2));
+
+        % Part 2. Cull if outside field of view
+        new_path_points_uv = camera.project(   new_path_points_0  )  ;
+        % figure;  hold on; grid on; axis equal; plot2_rows(  camera.project(    new_path_points  )  ) ;  plot2_rows( [ 0 0 ; 0 1024 ; 1024 1024 ; 1024 0 ]', 'bo' )  % check: eyeball
+        new_path_points_indices_1  =  ( new_path_points_uv(1,:)>=0 & new_path_points_uv(1,:) <= 1024 & new_path_points_uv(2,:)>=0 & new_path_points_uv(2,:) <= 1024 )  ;
+        new_path_points_uv_1 = new_path_points_uv( : , new_path_points_indices_1 )  ;
+        new_path_points_1 = new_path_points_0( : , new_path_points_indices_1 )  ;
+        new_path_points_1 = [ new_path_points_1 zeros( 3, 100-size(new_path_points_1,2)) ]  ;
+        %  2D figure  -  plot2_rows(  new_path_points_uv_1   , 'gx' )    %  eyeball
+        %  3D figure  -  plot3_rows(  new_path_points_1   , 'gx' )    %  eyeball
+        plot3_rows(  new_path_points_1   , 'rx' )    %  eyeball
+        if size(new_path_points_uv_1,2)>0
+            new_path_points_keep = cat( 3, new_path_points_keep , new_path_points_1 )  ;            
+            new_path_points_keep_count(1,ii_) =  size(new_path_points_uv_1,2);
+        end
+        drawnow
+        pause
+    end
+    
+    
     %%
     %--   DONE:  Test camera aiming process :  generate one camera pointing at each of the datapoints, project the 3D->2D 
     fig_3d_handle = figure; axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
