@@ -17,6 +17,7 @@ function [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_
             
             % For each node, the cost of getting from the start node to that node.
             g_score = inf( size(map) )    ;
+             %  current_row_ = open_set(open_set_index,1)    ;    current_col_ = open_set(open_set_index,2)    ; 
             g_score(  open_set(1,1),open_set(1,2)  ) = 0    ;
             
             % For each node, the total cost of getting from the start node to the goal 
@@ -29,10 +30,17 @@ function [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_
                 
                 f_score_lowest = inf;    open_set_index = -1;
                 for ii_ = 1:size(open_set,1)
-                    if f_score(open_set(ii_,1), open_set(ii_,2)) < f_score_lowest
-                        open_set_index = ii_    ;
-                        f_score_lowest = f_score(open_set(ii_,1), open_set(ii_,2))    ;
-                    end
+%                     if round(ii_/2) < 0
+                        if f_score(open_set(ii_,1), open_set(ii_,2)) < f_score_lowest
+                            open_set_index = ii_    ;
+                            f_score_lowest = f_score(open_set(ii_,1), open_set(ii_,2))    ;
+                        end
+%                     else
+%                         if f_score(open_set(ii_,1), open_set(ii_,2)) <= f_score_lowest
+%                             open_set_index = ii_    ;
+%                             f_score_lowest = f_score(open_set(ii_,1), open_set(ii_,2))    ;
+%                         end
+%                     end
                 end
                 current_node = [ open_set(open_set_index,1), open_set(open_set_index,2) ]    ;
                 current_row_ = open_set(open_set_index,1)    ;    current_col_ = open_set(open_set_index,2)    ; 
@@ -44,8 +52,25 @@ function [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_
                 closed_set( size( closed_set,1)+1 , : ) = current_node    ;
                 
                 
-                for ii_row_ = current_node(1)-1:current_node(1)+1  
-                    for jj_col_ = current_node(2)-1:current_node(2)+1  %     for each neighbor of current
+                
+                ii_start = current_node(1)-1 ;
+                ii_end = current_node(1)+1;
+                ii_step = 1;
+                jj_start = current_node(2)-1 ;
+                jj_end = current_node(2)+1 ;
+                jj_step = 1;
+                if round(ii_/2) ~= 0
+                    ii_start = current_node(1)+1;
+                    ii_end = current_node(1)-1 ;
+                    ii_step = -1;
+                    jj_start = current_node(2)+1 ;
+                    jj_end = current_node(2)-1 ;
+                    jj_step = -1;
+                end
+                %  for ii_row_ = current_node(1)-1:current_node(1)+1  
+                for ii_row_ = ii_start:ii_step:ii_end
+                    %for jj_col_ = current_node(2)-1:current_node(2)+1  %     for each neighbor of current
+                    for jj_col_ = jj_start: jj_step: jj_end  %     for each neighbor of current
                         if ii_row_ < 1 || ii_row_ >= size(map,1) || jj_col_ < 1 || jj_col_ >= size(map,2) ;  continue  ;   end 
                         if 0 == ii_row_ && 0 == jj_col_  ;  continue  ;   end
                         if sum ( closed_set (  : , 1 ) == ii_row_  &  closed_set (  : , 2 ) == jj_col_ )  > 0 ;  continue  ;   end      % if neighbor in closedSet
@@ -57,6 +82,7 @@ function [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_
                             + 1 ....
                             + cost_map_( ii_row_ , jj_col_ )   ;   %  tentative_gScore := gScore[current] + dist_between(current, neighbor)
                         %tentative_gScore = tentative_gScore + path_planning__manhattan_distance(current_node , [ ii_row_, jj_col_] )    ;
+                        %if tentative_gScore >= g_score( ii_row_, jj_col_ )  ;    continue  ;   end      
                         if tentative_gScore > g_score( ii_row_, jj_col_ )  ;    continue  ;   end      
                         
                         came_from( : , ii_row_ , jj_col_ ) =   current_node   ;

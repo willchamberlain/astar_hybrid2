@@ -26,8 +26,10 @@ axis_speed_limits = [1 1 1]  ;  %-- 0_003_6   :  sqrt(1.4^2 / 2) = 0.989949 ~~ 1
 time_under_acc = 0.5  ;
 start_posn = [ 0.0 , 0.0 , 0.0]  ;
 end_posn = [6.0 , 0.0 , 0.0]  ; 
+deviate = [ 0.0 , 1.2 , 0.0 ]  ;  
 deviate = [ 0.0 , 0.6 , 0.0 ]  ;  
 via_posns = [   [ 1 , 0.0 , 0.0].*1+deviate  ; [ 1.0 , 0.0 , 0.0].*2 ; [ 1.0 , 0.0 , 0.0].*3-deviate ; [ 1.0 , 0.0 , 0.0].*4 ; [ 1.0 , 0.0 , 0.0].*5+deviate   ];
+% via_posns = [   [ 1 , 0.0 , 0.0]  ; [ 2 , 0 , 0 ] ; [ 3.0 , -1.0 , 0.0] ; [ 4.0 , 0.0 , 0.0]  ; [ 4.0 , 1.0 , 0.0]  ];
 via_posns = [ via_posns ; end_posn ]  ;  
 %{ 
     eyeball: check:  
@@ -55,11 +57,13 @@ display(strcat(' Finished: trajectory generated'));
 %%    
 display( 'Set up true and latency feature positions --> 3D data' )
 latency_time_steps = 5 ; %-- 0_003_16
-latency_time_steps = 5 ; %-- 0_003_16
 latency_time_steps = 10 ; %-- 0_003_16
+latency_time_steps = 2 ; %-- 0_003_16
+latency_time_steps = 5 ; %-- 0_003_16
 latency_s = latency_time_steps*time_step  ;
 %--   latency_time_steps = ceil(latency_s/time_step)  ;
 num_obs = 50 ;  
+num_obs = floor(50/3) ;  
 feat_1_lim = size(feature_1_positions,2) - latency_time_steps   ;
 % points_3D_f1_indices = [ round([1:(feat_1_lim/( (num_obs/3) -1)):feat_1_lim]) feat_1_lim]   ; %-- 0_003 % even variable-size distribution of points
 points_3D_f1_indices = sort(randperm(feat_1_lim,num_obs))  ;
@@ -88,13 +92,19 @@ num_points = size(points_3D_preconditioned,2)  ;
 %%
 % {
      fig_3d_handle = figure('Name',strcat(exp_num, time_string_for_figuretitle() ,' : ','3D scene')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
-     plot3_rows(points_3D_f1,'rx')  ;  pts_ = points_3D_f1; for ii_ = 1:size(pts_,2) ;  text(pts_(1,ii_),pts_(2,ii_),pts_(3,ii_),num2str(ii_));  end
-     plot3_rows(points_3D_f2,'bx')  ; pts_ = points_3D_f2; for ii_ = 1:size(pts_,2) ;  text(pts_(1,ii_),pts_(2,ii_),pts_(3,ii_),num2str(ii_));  end
-     plot3_rows(points_3D_f3,'mx')  ;  pts_ = points_3D_f2; for ii_ = 1:size(pts_,2) ;  text(pts_(1,ii_),pts_(2,ii_),pts_(3,ii_),num2str(ii_));  end
+     plot3_rows(points_3D_f1,'rx')  ;   
+     plot3_rows(points_3D_f2,'bx')  ;  
+     plot3_rows(points_3D_f3,'mx')  ;  
+     %  DONT_TEXT_POINTS_3D = 'DONT_TEXT_POINTS_3D'
+     if ~exist( 'DONT_TEXT_POINTS_3D' , 'var' )
+       pts_ = points_3D_f1;  for ii_ = 1:size(pts_,2) ;  text(pts_(1,ii_),pts_(2,ii_),pts_(3,ii_),num2str(ii_));  end
+       pts_ = points_3D_f2; for ii_ = 1:size(pts_,2) ;  text(pts_(1,ii_),pts_(2,ii_),pts_(3,ii_),num2str(ii_));  end
+       pts_ = points_3D_f3;  for ii_ = 1:size(pts_,2) ;  text(pts_(1,ii_),pts_(2,ii_),pts_(3,ii_),num2str(ii_));  end
+     end
      plot3_rows(points_3D_f1_latency,'ro')  ;  
      plot3_rows(points_3D_f2_latency,'bo')  ; 
      plot3_rows(points_3D_f3_latency,'mo')  ;
-     plot3_rows(qb','m')  ;   
+     plot3_rows(qb','m')  ;        
      
      axis equal   ;  legend('points_3D_f1', 'points_3D_f2','points_3D_f3', 'points_3D_f1_latency', 'points_3D_f2_latency', 'points_3D_f3_latency','qb')  ;
 % } 
@@ -111,6 +121,7 @@ num_points = size(points_3D_preconditioned,2)  ;
         % Orient camera orthogonal to the x axis, and zero roll
         %  see camera_extrinsics__place_camera_2.m
         cam_pose_xyz = target_point3D + [ 0.0 -3.0 2.0 ]'  ;  % 3m away, 2m up
+        cam_pose_xyz = target_point3D + [ -1.0 -2.2 2.0 ]'  ;  % 3m away, 2m up
         cam_pose_xyz = target_point3D + [ -2.0 -2.2 2.0 ]'  ;  % 3m away, 2m up
         cam_direction_vector = target_point3D - cam_pose_xyz ;
         cam_desired_up_vector = cam_direction_vector + [ 0.0 , 0.0 , 2.0]'  ; % camera vertical in-plane with world vertical
@@ -151,7 +162,10 @@ num_points = size(points_3D_preconditioned,2)  ;
                     plot2_rows( [ u_0  u_max  ;  v_0  v_max ] ,'bo')  ;
                     plot2_rows( [ u_0  u_max  ;  v_max  v_0  ] ,'bo')  ;
                     axis equal
-                    for ii_ = 1:size(points_2D_preconditioned,2) ; text(points_2D_preconditioned(1,ii_),points_2D_preconditioned(2,ii_),num2str(ii_));  end
+                    %  DONT_TEXT_POINTS_3D = 'DONT_TEXT_POINTS_3D'
+                    if ~exist( 'DONT_TEXT_POINTS_3D' , 'var' )
+                        for ii_ = 1:size(points_2D_preconditioned,2) ; text(points_2D_preconditioned(1,ii_),points_2D_preconditioned(2,ii_),num2str(ii_));  end
+                    end
 %                 end
             % }       
     
@@ -166,8 +180,8 @@ num_points = size(points_3D_preconditioned,2)  ;
            %--   RUN EPNP 
             p_model_size = 5;
             p_model_size = 12; %-- 0_003_11
-            p_model_size = 12; %-- 0_003_13
             p_model_size = 24; %-- 0_003_12
+            p_model_size = 12; %-- 0_003_13
             p_num_RANSAC_iterations = 5000;   % otten 100-1000, but papers imply can be significantly less 
             p_num_RANSAC_iterations = min(500 , 5*size(points_2D_preconditioned_in_fov,2) )  ;
             p_num_RANSAC_iterations = 1000;  
@@ -279,21 +293,73 @@ num_points = size(points_3D_preconditioned,2)  ;
         %      fig_now_=gcf
         %      fig_now_.Position=[808 460 907 414]
         
+    %    
+    camera_orientation_quat = Quaternion(camera.T(1:3,1:3))  ;
+    estimated_orientations_SO3 = models_extrinsic_estimate_as_local_to_world(1:3,1:3,:)   ;    
+    estimated_orientations_quat = repmat(Quaternion(),  1, p_num_RANSAC_iterations);    
+    estimated_orientation_diffs = zeros(p_num_RANSAC_iterations,1)   ;     
+    estimated_orientation_diffs_b = zeros(p_num_RANSAC_iterations,1)   ;     
+    estimated_orientation_diffs_c = zeros(p_num_RANSAC_iterations,1)   ;    
+    for ii_ = 1:p_num_RANSAC_iterations
+        estimated_orientations_quat(ii_) =  Quaternion( estimated_orientations_SO3(:,:,ii_)  )  ;
+        estimated_orientation_diff = quaternion_distance(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
+        estimated_orientation_diffs(ii_) = estimated_orientation_diff  ;
+        
+        estimated_orientation_diffs_2 = estimated_orientation_diffs  ;
+        estimated_orientation_diffs_2(estimated_orientation_diffs_2(:,1)<pi*-1) = estimated_orientation_diffs_2(estimated_orientation_diffs_2(:,1)<pi*-1)+2*pi  ;       
+        
+        estimated_orientation_diffs_reprojection_Euclidean_totalb(ii_) = quaternion_distance_b(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
+        estimated_orientation_diffs_c(ii_) = quaternion_distance_c(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );        
+    end
+    estimated_orientation_diffs_under_reproj_10 = estimated_orientation_diffs(reprojection_Euclidean_mean <= 20,: )  ;   
+    %
         
     estimated_positions = models_extrinsic_estimate_as_local_to_world(1:3,4,:)   ;
     estimated_positions = reshape(estimated_positions, [3 p_num_RANSAC_iterations])   ;
-    
+        
     estimated_position_diffs_under_reproj_5 = estimated_positions(:,reprojection_Euclidean_mean <= 5 )  ;   
     estimated_position_diffs_under_reproj_5 =  estimated_position_diffs_under_reproj_5 - repmat(camera_position, 1, size(estimated_position_diffs_under_reproj_5,2))   ;
+        
+    estimated_position_diffs_under_reproj_20 = estimated_positions(:,reprojection_Euclidean_mean <= 20 )  ;   
+    estimated_position_diffs_under_reproj_20 =  estimated_position_diffs_under_reproj_20 - repmat(camera_position, 1, size(estimated_position_diffs_under_reproj_20,2))   ;
+
 
     estimated_position_diffs_under_dist = estimated_positions( : , posn_euclidean_dist_error < 0.1 )  ;
     estimated_position_diffs_under_dist =  estimated_position_diffs_under_dist - repmat(camera_position, 1, size(estimated_position_diffs_under_dist,2))   ;
     
-if size(estimated_position_diffs_under_reproj_5,2) > 5
-     figure('Name',strcat(exp_num,' : #',sprintf('%d',ii_ii_),': error distribution under reprojection: ', sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) ));  
+if size(estimated_position_diffs_under_reproj_20,2) > 5
+     fig_now_ = figure('Name',strcat(exp_num,' : #',sprintf('%d',ii_ii_), sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) ,': error distribution under reprojection 20: '));  
+     set(fig_now_, 'Position',  [155   165   655  785] ) ;
+     mre_xlim = ceil(max(reprojection_Euclidean_mean) / 100)*100  ;
+         if ceil(max(reprojection_Euclidean_mean) / 10) > 10 && mre_xlim>1 ; mre_xlim = ceil(max(reprojection_Euclidean_mean) / 10)*10;  end;
+     subplot(3,3,1:3); histogram(reprojection_Euclidean_mean, 100); title('Mean reprojection error'); xlabel(' pixels '); xlim([0 mre_xlim]);     
      ylim_ = [0 350]  ;
      ylim_ = [0 min(p_num_RANSAC_iterations, 100)]  ;
-     subplot(3,3,1); histogram(estimated_position_diffs_under_reproj_5(1,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' x(m) '); ylim(ylim_);
+     subplot(3,3,4:6); histogram(estimated_orientation_diffs_under_reproj_10(:,1) );  xlim([0 0.2]);  title({'','Orientation error for mean reprojection error <= 20px'}); xlabel(' quaternion distance '); % ylim(ylim_);    
+%      norm_dist_q(ii_ii_) = fitdist(estimated_orientation_diffs_under_reproj_10(1,:)','normal') ;
+%      conf_bound_q(ii_ii_,:) = [ norm_dist_q(ii_ii_).mu - norm_dist_q(ii_ii_).sigma*3 , norm_dist_q(ii_ii_).mu + norm_dist_q(ii_ii_).sigma*3  ]    ;
+    
+     A = histcounts(estimated_position_diffs_under_reproj_20(1,:), 'BinLimits',[-0.2, 0.2]);
+     ylim_ = [0 min(min(p_num_RANSAC_iterations, 100), max(max(A),10))]  ;
+         subplot(3,3,7); histogram(estimated_position_diffs_under_reproj_20(1,:), 'BinLimits',[-0.2, 0.2]); xlabel(' x(m) '); ylim(ylim_); set(gca,'XTick',[-0.2:0.02:0.2]) ;  set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ;
+         subplot(3,3,8); histogram(estimated_position_diffs_under_reproj_20(2,:), 'BinLimits',[-0.2, 0.2]); xlabel(' y(m) '); ylim(ylim_); set(gca,'XTick',[-0.2:0.02:0.2]) ;  set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ; 
+         title({'','Position error for mean reprojection error <= 20px'}); 
+         subplot(3,3,9); histogram(estimated_position_diffs_under_reproj_20(3,:), 'BinLimits',[-0.2, 0.2]); xlabel(' z(m) '); ylim(ylim_); set(gca,'XTick',[-0.2:0.02:0.2]) ;  set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ;             
+    norm_dist_x(ii_ii_) = fitdist(estimated_position_diffs_under_reproj_20(1,:)','normal') ;
+    conf_bound_x(ii_ii_,:) = [ norm_dist_x(ii_ii_).mu - norm_dist_x(ii_ii_).sigma*3 , norm_dist_x(ii_ii_).mu + norm_dist_x(ii_ii_).sigma*3  ]    ;
+    norm_dist_y(ii_ii_) = fitdist(estimated_position_diffs_under_reproj_20(2,:)','normal') ;
+    conf_bound_y(ii_ii_,:) = [ norm_dist_y(ii_ii_).mu - norm_dist_y(ii_ii_).sigma*3 , norm_dist_y(ii_ii_).mu + norm_dist_y(ii_ii_).sigma*3  ] ;
+    norm_dist_z(ii_ii_) = fitdist(estimated_position_diffs_under_reproj_20(3,:)','normal') ;
+    conf_bound_z(ii_ii_,:) = [ norm_dist_z(ii_ii_).mu - norm_dist_z(ii_ii_).sigma*3 , norm_dist_z(ii_ii_).mu + norm_dist_z(ii_ii_).sigma*3  ] ;
+end
+%{
+if false && size(estimated_position_diffs_under_reproj_5,2) > 5
+     fig_now_ = figure('Name',strcat(exp_num,' : #',sprintf('%d',ii_ii_), sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) , ': error distribution under reprojection: ' ));  
+     set(fig_now_, 'Position',  [155   165   655  785] ) ;
+     ylim_ = [0 350]  ;
+     ylim_ = [0 min(p_num_RANSAC_iterations, 100)]  ;
+     subplot(3,3,1); histogram(estimated_position_diffs_under_reproj_5(1,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]);  title('Position error for reprojection error <= 5px'); xlabel(' x(m) '); ylim(ylim_);
+    %      subplot(3,3,1); histogram(estimated_position_diffs(1,:)); xlim('auto')
      subplot(3,3,2); histogram(estimated_position_diffs_under_reproj_5(2,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' y(m) '); ylim(ylim_);  
      subplot(3,3,3); histogram(estimated_position_diffs_under_reproj_5(3,:), [-0.5:0.02:0.5]); xlim([-0.5 0.5]); xlabel(' z(m) '); ylim(ylim_);
      A = histcounts(estimated_position_diffs_under_reproj_5(1,:), 100);
@@ -301,8 +367,9 @@ if size(estimated_position_diffs_under_reproj_5,2) > 5
          subplot(3,3,4); histogram(estimated_position_diffs_under_reproj_5(1,:), 100); xlabel(' x(m) '); ylim(ylim_);
          subplot(3,3,5); histogram(estimated_position_diffs_under_reproj_5(2,:), 100); xlabel(' y(m) '); ylim(ylim_);  
          subplot(3,3,6); histogram(estimated_position_diffs_under_reproj_5(3,:), 100); xlabel(' z(m) '); ylim(ylim_); 
-     subplot(3,3,7); histogram(reprojection_Euclidean_mean, 100); title('reprojection\_Euclidean\_mean')
-elseif size(estimated_position_diffs_under_dist,2) > 5
+     subplot(3,3,7); histogram(reprojection_Euclidean_mean, 100); title('Mean reprojection error'); xlabel(' pixels '); xlim([0 100]);
+end     
+if size(estimated_position_diffs_under_dist,2) > 5
      figure('Name',strcat(exp_num,' : #',sprintf('%d',ii_ii_),': error distribution under distance: ', sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) ));  
      ylim_ = [0 350]  ;
      ylim_ = [0 min(p_num_RANSAC_iterations, 100)]  ;
@@ -325,24 +392,8 @@ else
      subplot(3,3,6); histogram(estimated_position_diffs(3,:), 100); xlabel(' z(m) '); ylim([0 350]); 
      subplot(3,3,7); histogram(reprojection_Euclidean_mean, 100); title('reprojection\_Euclidean\_mean')
 end       
-        
-    camera_orientation_quat = Quaternion(camera.T(1:3,1:3))  ;
-    estimated_orientations_SO3 = models_extrinsic_estimate_as_local_to_world(1:3,1:3,:)   ;    
-    estimated_orientations_quat = repmat(Quaternion(),  1, p_num_RANSAC_iterations);    
-    estimated_orientation_diffs = zeros(p_num_RANSAC_iterations,1)   ;     
-    estimated_orientation_diffs_b = zeros(p_num_RANSAC_iterations,1)   ;     
-    estimated_orientation_diffs_c = zeros(p_num_RANSAC_iterations,1)   ;    
-    for ii_ = 1:p_num_RANSAC_iterations
-        estimated_orientations_quat(ii_) =  Quaternion( estimated_orientations_SO3(:,:,ii_)  )  ;
-        estimated_orientation_diff = quaternion_distance(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
-        estimated_orientation_diffs(ii_) = estimated_orientation_diff  ;
-        
-        estimated_orientation_diffs_2 = estimated_orientation_diffs  ;
-        estimated_orientation_diffs_2(estimated_orientation_diffs_2(:,1)<pi*-1) = estimated_orientation_diffs_2(estimated_orientation_diffs_2(:,1)<pi*-1)+2*pi  ;       
-        
-        estimated_orientation_diffs_reprojection_Euclidean_totalb(ii_) = quaternion_distance_b(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
-        estimated_orientation_diffs_c(ii_) = quaternion_distance_c(  estimated_orientations_quat(ii_) ,  camera_orientation_quat  );
-    end
+%}
+
 % %     figure('Name' , strcat( exp_num , ' : ' , 'orientation error distribution' ) )  ;  
 % %     histogram(estimated_orientation_diffs, 1000)  ;
 % %     

@@ -25,6 +25,8 @@ function total_path_smoothed__ = path_planning__smooth_path_lineofsight(total_pa
     total_path_smoothed__ = total_path_start_to_goal_    ;
     checkfromPointIndex = 1;                                            %  checkPoint = starting point of path
     currentToPointIndex =  checkfromPointIndex + 1;       %  currentPoint = next point in path
+    total_path_ignore_ =  false( 1 , size(total_path_smoothed__,2)  )  ;
+    
     while currentToPointIndex < size(total_path_smoothed__,2)
         %  checkPoint = starting point of path
         checkfromPoint = total_path_smoothed__(:,checkfromPointIndex);
@@ -71,20 +73,26 @@ function total_path_smoothed__ = path_planning__smooth_path_lineofsight(total_pa
          end
         
         if is_walkable
-                node_from_xy = flip( total_path_smoothed__(:,checkfromPointIndex),1)  ;
-                node_to_remove_xy = flip(total_path_smoothed__(:,currentToPointIndex),1)  ;
-                plot( [node_from_xy(1) node_to_remove_xy(1) ] , [node_from_xy(2) node_to_remove_xy(2)] , 'g')
-%             last_node_removed = total_path_smoothed__(:,currentToPointIndex)  ;    
-            total_path_smoothed__(:,currentToPointIndex) = []    ;
-%             total_path_ignore_(:,currentToPointIndex) = true;
-%             currentToPointIndex = currentToPointIndex+1
-%             pause
+            node_from_xy = flip( total_path_smoothed__(:,checkfromPointIndex),1)  ;
+            node_to_remove_xy = flip(total_path_smoothed__(:,currentToPointIndex),1)  ;
+            plot( [node_from_xy(1) node_to_remove_xy(1) ] , [node_from_xy(2) node_to_remove_xy(2)] , 'g')
+            %             last_node_removed = total_path_smoothed__(:,currentToPointIndex)  ;    
+            %             total_path_smoothed__(:,currentToPointIndex) = []  ;
+            total_path_ignore_(:,currentToPointIndex) = true  ;
+            currentToPointIndex = currentToPointIndex+1  ;
         else
+            total_path_ignore_(:,currentToPointIndex-1) = false  ;
+            
+            
+            node_from_putback_xy = flip( total_path_smoothed__(:,currentToPointIndex-1),1)  ;
+            node_cannot_remove_xy = flip(total_path_smoothed__(:,currentToPointIndex),1)  ;
+            plot( [node_from_putback_xy(1) node_cannot_remove_xy(1) ] , [node_from_putback_xy(2) node_cannot_remove_xy(2)] , 'c')
+            
             checkfromPointIndex = currentToPointIndex     ;
             currentToPointIndex =  checkfromPointIndex + skip_     ;
-%             pause(0.1)
         end
     end
+    total_path_smoothed__ = total_path_smoothed__(:,~total_path_ignore_)  ;
 end
 
 % 
