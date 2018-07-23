@@ -597,13 +597,14 @@ end
         new_path_points_1 = [ new_path_points_1 zeros( 3, 100-size(new_path_points_1,2)) ]  ;
         %  2D figure  -  plot2_rows(  new_path_points_uv_1   , 'gx' )    %  eyeball
         %  3D figure  -  plot3_rows(  new_path_points_1   , 'gx' )    %  eyeball
-        plot3_rows(  new_path_points_1   , 'rx' )    %  eyeball
+        plot3_rows(  new_path_points_1   , 'gx' )    %  eyeball
+        plot3_rows(  new_path_points_1   , 'go' )    %  eyeball
         if size(new_path_points_uv_1,2)>0
             new_path_points_keep = cat( 3, new_path_points_keep , new_path_points_1 )  ;            
             new_path_points_keep_count(1,ii_) =  size(new_path_points_uv_1,2);
         end
-        drawnow
-        pause
+%         drawnow
+%         pause
     end
     
     

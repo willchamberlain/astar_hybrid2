@@ -242,6 +242,9 @@ backup file
 edit file       -->     https://xcorr.net/2010/05/07/getting-gcc-to-work-with-matlab-r2009b-on-linux-ubuntu-karmic-to-compile-mex-files/
          ~/.matlab/R2016a/mex_C++_glnxa64.xml
         -ansi       -->     -std=c99
+
+        and in Matlab
+            addpath( '/mnt/nixbig/downloads/MachineVisionToolkit/vision-3.4/rvctools/vision/mex/' )
 and _that_ finally worked
 
 /mnt/nixbig/downloads/MachineVisionToolkit/vision-3.4/rvctools/startup_rvc.m

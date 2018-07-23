@@ -1,11 +1,15 @@
 addpath('/mnt/nixbig/ownCloud/project_code/')
 
+addpath( '/mnt/nixbig/downloads/MachineVisionToolkit/vision-3.4/rvctools/vision/mex/' )
+
 im_ = imread('/mnt/nixbig/data/project_AA1_backup_pioneer2/2018_01_06_0012_vrep/2018_01_06_0012_vrep/pioneer2/maps/lvl11_map2/cost_map.png')  ;
 
 test_name_what = 'bob'  ;
 factor_what = '-9000'  ;
     %   figure_name = strcat(test_name_what,': ',sprintf(' factor %7.f',factor_what))  ;
 figure_name = 'figuuuuuuuuuure'  ;
+
+
 
 %%
 
