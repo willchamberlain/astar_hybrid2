@@ -10,7 +10,9 @@ Summary:
 %}
 
 %% 
-addpath( '/mnt/nixbig/ownCloud/project_code/temp__plain_grid_into_map.m' )
+addpath( '/mnt/nixbig/ownCloud/project_code/' )
+
+addpath( '/mnt/nixbig/downloads/MachineVisionToolkit/vision-3.4/rvctools/vision/mex/' )
 
 %%    Project out a grid 
 %           So far mostly just a refresher on linspace and meshgrid and reshape .
@@ -27,6 +29,92 @@ axis_aligned_map_(6:30 , 65:85) = 1  ;
 
 figure;  idisp(axis_aligned_map_)
 
+%%
+
+circularRobotRadius = 3;
+circulatStructuringElement = kcircle(circularRobotRadius)  ;
+unsafe_regions_map = idilate(axis_aligned_map_, circulatStructuringElement) ;
+figure_named('insage regions for a circular robot') ; idisp(unsafe_regions_map)
+
+longRobotStructuringElement = repmat([ 0  1  0 ] , 4,1)  ;
+unsafe_regions_map = idilate(axis_aligned_map_, longRobotStructuringElement) ;
+figure_named('unsafe regions for a long robot'); idisp(unsafe_regions_map)
+
+
+longRobotStructuringElement_45=[ 1 0 0 ; 0 1 0 ; 0 0 1 ]  ;
+unsafe_regions_map_45 = idilate(axis_aligned_map_, longRobotStructuringElement_45) ;
+figure_named('unsafe regions for a long robot on an angle'); idisp(unsafe_regions_map_45)
+
+longRobotStructuringElement_135=[ 0 0 1 ; 0 1 0 ; 1 0 0 ]  ;
+unsafe_regions_map_135 = idilate(axis_aligned_map_, longRobotStructuringElement_135) ;
+figure_named('unsafe regions for a long robot on another angle'); idisp(unsafe_regions_map_135)
+
+figure_named('overlay');  idisp( cat(3,unsafe_regions_map, unsafe_regions_map_45, unsafe_regions_map_135) ) 
+
+unsafe_in_general = unsafe_regions_map | unsafe_regions_map_45 | unsafe_regions_map_135  ;
+idisp(unsafe_in_general)
+idisp(unsafe_in_general - axis_aligned_map_)
+
+%       show as a volume
+%   demos for volume displays in Matlab :  [matlab dir]/demos/volvec.m 
+
+%% try with cubes 
+% show as a _simple_ volume
+vert = [0 0 0;1 0 0;1 1 0;0 1 0;0 0 1;1 0 1;1 1 1;0 1 1];   %   define the vertices
+fac = [1 2 6 5;2 3 7 6;3 4 8 7;4 1 5 8;1 2 3 4;5 6 7 8];    %   define the set and order to use nodes as faces
+h_patch_handle = patch('Vertices',vert,'Faces',fac,...  %   draw the patches using the definitions of vertices and faces
+'FaceVertexCData',ones(6,3),'FaceColor','flat')  ;
+h_patch_handle.EdgeColor = [ 0 0 1 ]  ;
+hold on ; grid on ; axis equal ;
+
+
+vert = [0 0 0;1 0 0;2 1 0;0 1 0;0 0 1;2 0 1;2 1 1;0 1 1];   %   define the vertices: x,y,z columnwise 
+fac = [1 2 6 5;2 3 7 6;3 4 8 7;4 1 5 8;1 2 3 4;5 6 7 8];    %   define the set and order to use nodes as faces
+h_patch_handle = patch('Vertices',vert,'Faces',fac,...  %   draw the patches using the definitions of vertices and faces
+'FaceVertexCData',ones(6,3),'FaceColor','flat')  ;
+h_patch_handle.EdgeColor = [ 0 0 1 ]  ;
+hold on ; grid on ; axis equal ;
+
+
+vert = [0 0 0;1 0 0;1 1 0;0 1 0;0 0 1;2 0 1;2 1 1;0 1 1];   %   define the vertices: x,y,z columnwise 
+fac = [1 2 6 5;2 3 7 6;3 4 8 7;4 1 5 8;1 2 3 4;5 6 7 8];    %   define the set and order to use nodes as faces
+h_patch_handle = patch('Vertices',vert,'Faces',fac,...  %   draw the patches using the definitions of vertices and faces
+'FaceVertexCData',ones(6,3),'FaceColor','flat')  ;
+h_patch_handle.EdgeColor = [ 0 0 1 ]  ;
+hold on ; grid on ; axis equal ;
+
+%%  scatter3
+%   Example
+      [x,y,z] = sphere(8);
+      X = [x(:)*.5 x(:)*.75 x(:)];
+      Y = [y(:)*.5 y(:)*.75 y(:)];
+      Z = [z(:)*.5 z(:)*.75 z(:)];
+      S = repmat([1 .75 .5]*10,numel(x),1);
+      C = repmat([1 2 3],numel(x),1);
+      scatter3(X(:),Y(:),Z(:),S(:),C(:),'x'), view(-60,60)
+      hold on; grid on; axis equal
+
+%%  _now_ can draw using patch to put down voxels 
+
+%%
+addpath( '/mnt/nixbig/downloads/matlab_voxelSurf_V1.07' )
+
+VoxelSurfDemo
+
+figure; 
+voxels_ = zeros(4,4,4)  ;
+voxels_(:,:,3) = eye(4)  ;
+% hh % patch handle
+% TT=[];%vector of triangle indices
+% CC=[];%vector of color values
+% AA=[];%vector of alpha values
+ [hh,TT,X,Y,Z,CC,AA] = voxelSurf(voxels_, false)  ;
+      hold on; grid on; axis equal ; xlabel('x') ; ylabel('y') ; zlabel('z') ;
+
+
+
+%% 
+%  old stuff follows: see  /mnt/nixbig/ownCloud/project_code/temp__plain_grid_into_map.m 
 %%
 
 axis_aligned_grid_x = linspace(x_extent(1), x_extent(2), x_num_cells/x_sample_spacing)  ;
