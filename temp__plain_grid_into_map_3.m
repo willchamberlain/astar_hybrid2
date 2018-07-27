@@ -93,7 +93,8 @@ end
 %%    Project a grid of pixels --> 
 %           So far mostly just a refresher on linspace and meshgrid and reshape .
 
-x_extent = [1 100]  ; 
+grid_scale = 0.1  ;  % 1 cell = 0.1m 
+x_extent = [1 100]  ;   % e.g. 10mx10.7m 
 y_extent = [1 107]  ;
 x_num_cells = x_extent(2)+1-x_extent(1)  ;
 y_num_cells = y_extent(2)+1-y_extent(1)  ;
@@ -111,6 +112,67 @@ circularRobotRadius = 3;
 circulatStructuringElement = kcircle(circularRobotRadius)  ;
 unsafe_regions_map = idilate(axis_aligned_map_, circulatStructuringElement) ;
 figure_named('insage regions for a circular robot') ; idisp(unsafe_regions_map)
+
+size(unsafe_regions_map)
+for xx_=x_extent(1):x_extent(2)
+    for yy_ = y_extent(1):y_extent(2)
+        xx_*1/x_extent
+        yy_*1/y_extent
+    end
+end
+
+%   x_extent(1)*grid_scale:grid_scale:x_extent(2)*grid_scale
+%   y_extent(1)*grid_scale:grid_scale:y_extent(2)*grid_scale
+%  Gives the bounds of the cells 
+[meshgrid_x_ , meshgrid_y_] = meshgrid(  x_extent(1)*grid_scale:grid_scale:x_extent(2)*grid_scale  , ...
+                    y_extent(1)*grid_scale:grid_scale:y_extent(2)*grid_scale )   ;
+grid_cell_bounds = zeros(  [ size(meshgrid_x_) 4 ]  );                size(grid_cell_bounds)
+grid_cell_bounds(:,:,1)  = meshgrid_x_(:,:)-grid_scale  ;
+grid_cell_bounds(:,:,2)  = meshgrid_y_(:,:)-grid_scale  ;
+grid_cell_bounds(:,:,3)  = meshgrid_x_(:,:)  ;
+grid_cell_bounds(:,:,4)  = meshgrid_y_(:,:)  ;
+
+% camera rays intercepting the ground, in world coordinates                
+%  see  /mnt/nixbig/ownCloud/project_code/camera_extrinsics__generate_path_3D_data_loop_pose_003.m
+z_eq_0_intercept_ = reshape(z_eq_0_intercept, [121,3] )'  ;
+
+% find the subset of rays through pixels that intersect the floor plane witihin the floorplan 
+z_eq_0_intercepts_in_floorplan = ...
+         (z_eq_0_intercept_(1,:)  >= (x_extent(1)*grid_scale)-grid_scale)  ...
+     &  (z_eq_0_intercept_(1,:)  <= x_extent(2)*grid_scale)  ...
+     &  (z_eq_0_intercept_(2,:)  >= (y_extent(1)*grid_scale)-grid_scale)  ...
+     &  (z_eq_0_intercept_(2,:)  <= (y_extent(2)*grid_scale))   ;  
+ 
+ plot3_rows(z_eq_0_intercept_(:,z_eq_0_intercepts_in_floorplan),'bs')
+ 
+ % find the subset of rays that additionally are not within an obstacle 
+    % check which points are in which cells
+    % then check whether the cells are occupied 
+ size(z_eq_0_intercept)
+ size(z_eq_0_intercept_)
+ size( z_eq_0_intercepts_in_floorplan )
+ grid_cell_num = zeros( size(z_eq_0_intercept_,2) , 2)  ;
+ grid_cell_num_is_an_intercept = zeros( size(z_eq_0_intercept_,2) , 1)  ;
+ for ii_ = 1:size(z_eq_0_intercept_,2)
+    [t_cell_num_i,t_cell_num_j] = ...
+        find( ...
+         grid_cell_bounds(:,:,1) <= z_eq_0_intercept_(1,ii_)   & ...
+         grid_cell_bounds(:,:,2) <= z_eq_0_intercept_(2,ii_)   & ...
+         grid_cell_bounds(:,:,3) >= z_eq_0_intercept_(1,ii_)   & ...
+         grid_cell_bounds(:,:,4) >= z_eq_0_intercept_(2,ii_)  )  ;     
+     if ~isempty(t_cell_num_i)
+         grid_cell_num(ii_,1) = t_cell_num_i ;
+         grid_cell_num(ii_,2) = t_cell_num_j ;
+         grid_cell_num_is_an_intercept(ii_) = 1;
+     end
+ end
+ 
+ % HERE - trying to check whether its inside an obstacle or not : need to check whether the floorplan is non-zero at thos coordinates
+ %    figure;  plot(cell_num(:,1),cell_num(:,2),'rs')
+ axis_aligned_map_( ... size(axis_aligned_map_)  =   100   107
+     grid_cell_num(grid_cell_num_is_an_intercept>0,2) , ...size(  grid_cell_num(grid_cell_num_is_an_intercept>0,2)  ) = 63x1
+     grid_cell_num(grid_cell_num_is_an_intercept>0,1) )  >= 0.0000001
+                
 
 %%  extended-shape robot
 
