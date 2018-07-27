@@ -435,9 +435,8 @@ end
         %  set(gca, 'CameraTarget' , [ 3.0 2.0 1.5] )
         %  set(gca, 'CameraPosition', [100 5000 2000]);
         
-plot3_rows(  reshape(z_eq_0_intercept, [121,3] )'+repmat([0;0;2],1,121)     , 'ms' )
+    plot3_rows(  reshape(z_eq_0_intercept, [121,3] )'+repmat([0;0;2],1,121)     , 'ms' )
 
-z_eq_0_intercept(11,11,:)
     
     
 %%

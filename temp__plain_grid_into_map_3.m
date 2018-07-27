@@ -105,12 +105,14 @@ axis_aligned_map_(6:30 , 65:85) = 1  ;
 
 figure;  idisp(axis_aligned_map_)
 
-%%
+%%  circular robot 
 
 circularRobotRadius = 3;
 circulatStructuringElement = kcircle(circularRobotRadius)  ;
 unsafe_regions_map = idilate(axis_aligned_map_, circulatStructuringElement) ;
 figure_named('insage regions for a circular robot') ; idisp(unsafe_regions_map)
+
+%%  extended-shape robot
 
 longRobotStructuringElement = repmat([ 0  1  0 ] , 4,1)  ;
 unsafe_regions_map = idilate(axis_aligned_map_, longRobotStructuringElement) ;
