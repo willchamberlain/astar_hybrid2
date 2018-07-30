@@ -360,7 +360,8 @@ end
     
     end
     
-%%      drop points in, and path plan on them : 
+    
+    %%      drop points in, and path plan on them :
 %{
 --- Version 1: 
     take the best estimate
@@ -469,11 +470,13 @@ end
     
     %-- convert from world points to grid axis - nothing to do as we're using an axis-aligned grid
     
-    %-- determine which grid point they're in
+    %-- occupancy grid cells
+    % determine which grid point they're in
     grid_scale = 0.1 ;  %0.1m per grid cell
     grid_cell_indices_for_intercepts = ceil(ground_points./grid_scale)  ;
     %  figure; histogram2(grid_cell_indices_for_intercepts(1,:),grid_cell_indices_for_intercepts(2,:))  % eyeball 
     
+    %-- objective function --
     %   objective function - information utility of the points to be passed through / of the trajectory to 
     %       information utility of the observations 
     %           --> of the trajectory poses & velocity 
@@ -481,15 +484,15 @@ end
     %  distance is unbounded - how to deal with ?
     %  image is bounded 
     %  distance from the existing observations in image space 
-    
+    %
     % for each potential observation, have the pixel coordinate from the ray, and the 3D coordinate
     % from the ray intersect the plane at height of the feature 
     % for each ray, for each feature, determine whether the robot pose is in free space - calibrating one camera, so limit to what that camera can observe
     %   ? Class of RayFeatureGrid .p0 .dir .feature_grid_cells ?   -  data structure to store this genericly
     feature_0 = [0;0;0]  ;
     feature_2 = [0;0;2]  ;
-    feature_0_distance_3D = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
-    feature_2_distance_3D = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
+    feature_0_3Ddist_per_px = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
+    feature_2_3Ddist_per_px = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
     distance_from_other_pixels = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
     row_num_ = 0 ; col_num_ = 0 ;
     for uu_ = 0 : uu_step_ : uu_num_rows_*uu_step_
@@ -501,15 +504,106 @@ end
              diffs = points_2D_preconditioned - repmat( pixel_coordinate,1, size(points_2D_preconditioned,2))  ;
              distance_from_other_pixels(row_num_,col_num_) = min( norm_2(diffs,1) ); 
              
-             diffs_feature_0_3D = points_3D_preconditioned - repmat(squeeze(z_eq_0_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned,2))  ;
-             feature_0_distance_3D(row_num_,col_num_) = min(norm_2(diffs_feature_0_3D,1))  ;
-             diffs_feature_2_3D = points_3D_preconditioned - repmat(squeeze(z_eq_2_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned,2))  ;
-             feature_2_distance_3D(row_num_,col_num_) = min(norm_2(diffs_feature_2_3D,1))  ;             
+             points_3D_preconditioned_z0 = points_3D_preconditioned ( :,(...
+                 points_3D_preconditioned(3,:) >=  feature_2_pose_SE3(3,4)-0.1 ...
+                    &  points_3D_preconditioned(3,:) <=  feature_2_pose_SE3(3,4)+0.1)   );
+             points_3D_preconditioned_z2 = points_3D_preconditioned (:, ( ...
+                 points_3D_preconditioned(3,:) >=  feature_1_pose_SE3(3,4)-0.1 ...
+                    &  points_3D_preconditioned(3,:) <=  feature_1_pose_SE3(3,4)+0.1)   );
+                
+             diffs_feature_0_3D = points_3D_preconditioned_z0 ...
+                 - repmat(squeeze(z_eq_0_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned_z0,2))  ;
+             feature_0_3Ddist_per_px(row_num_,col_num_) = min(norm_2(diffs_feature_0_3D,1))  ;
+             diffs_feature_2_3D = points_3D_preconditioned_z2 - repmat(squeeze(z_eq_2_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned_z2,2))  ;
+             feature_2_3Ddist_per_px(row_num_,col_num_) = min(norm_2(diffs_feature_2_3D,1))  ;             
+        end
+    end        
+    % per ray --> WRONG for this, as SHOULD have value per 3D-2D observation, and then SUM per grid cell / pose to plan to
+%     figure; surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
+%         (feature_0_distance_3D./max(max(feature_0_distance_3D)) ...
+%         + feature_2_distance_3D./max(max(feature_2_distance_3D)) ...
+%         )./2 ...
+%         + distance_from_other_pixels./max(max(distance_from_other_pixels)))  ;    
+    figure_named('1*feature_0_distance_3D + 1*distance_from_other_pixels'); surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
+        feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px)) ...
+        + distance_from_other_pixels./max(max(distance_from_other_pixels)))  ;    
+    figure_named('1*feature_2_distance_3D + 1*distance_from_other_pixels'); surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
+        feature_2_3Ddist_per_px./max(max(feature_2_3Ddist_per_px)) ...
+        + distance_from_other_pixels./max(max(distance_from_other_pixels)))  ;
+    % this shows that the nearby cells will dominate in a summation over observations per ray per cell because they get more rays passing through the grid cells
+    % on the plane
+    %  --> need to find the biggest-benefit per cell : can only observe once per frame per ray per pose 
+    %       --> OR find the biggest-benefit per pixel : 
+    figure; histogram2(z_eq_0_intercept(:,:,1)./grid_scale,z_eq_0_intercept(:,:,2)./grid_scale)
+    
+    feature_0_3Ddist_per_px_normalised = feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px))  ;
+    feature_2_3Ddist_per_px_normalised = feature_2_3Ddist_per_px./max(max(feature_2_3Ddist_per_px))  ;
+    distance_from_other_pixels_normalised = distance_from_other_pixels./max(max(distance_from_other_pixels))  ;
+    %  figure_named('feature_0_3Ddist_per_px_normalised'),surf(feature_0_3Ddist_per_px_normalised);
+    %  figure_named('feature_2_3Ddist_per_px_normalised'),surf(feature_2_3Ddist_per_px_normalised);
+    figure_named('distance_from_other_pixels_normalised '); surf(distance_from_other_pixels_normalised);
+    
+    
+    best_feature_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
+    best_feature_per_ray(feature_0_3Ddist_per_px > feature_2_3Ddist_per_px) = 0  ;    % ??
+    best_feature_per_ray(feature_0_3Ddist_per_px <= feature_2_3Ddist_per_px) = 2  ;  % ??
+    best_feature_per_ray(feature_0_3Ddist_per_px_normalised > feature_2_3Ddist_per_px_normalised) = 0  ;  % ??
+    best_feature_per_ray(feature_0_3Ddist_per_px_normalised <= feature_2_3Ddist_per_px_normalised) = 2  ;  % ??
+    figure; surf(best_feature_per_ray)
+    
+    best_3Ddist_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
+    best_3Ddist_per_ray(best_feature_per_ray==0) =  feature_0_3Ddist_per_px_normalised(best_feature_per_ray==0);
+    best_3Ddist_per_ray(best_feature_per_ray==2) =  feature_2_3Ddist_per_px_normalised(best_feature_per_ray==2);
+    figure; surf(best_3Ddist_per_ray)
+    
+    payoff_per_ray = best_3Ddist_per_ray + distance_from_other_pixels_normalised ;
+    figure_named('payoff_per_ray');  surf(payoff_per_ray)
+    
+    %-- the grid location of the best feature in each ray/pixel 
+    robot_posn_per_ray = zeros( [ size(feature_0_3Ddist_per_px ) , 3 ]) ;
+    [xxx_,yyy_]=find(best_feature_per_ray==2)  ;
+    robot_posn_per_ray( xxx_,yyy_ , :   ) = z_eq_2_intercept( xxx_,yyy_ , : )  ;
+    [xxx_,yyy_]=find(best_feature_per_ray==0)  ;
+    robot_posn_per_ray( xxx_,yyy_ , :   ) = z_eq_0_intercept( xxx_,yyy_ , : )  ;
+    %  figure; surf(robot_posn_per_ray(:,:,3))
+    
+    robot_posn_per_ray_xy = robot_posn_per_ray(:,:,1:2)  ; 
+    figure;  histogram2(robot_posn_per_ray_xy(:,:,1),robot_posn_per_ray_xy(:,:,2))
+    
+    %  per ray/pixel find the grid cell it adds to, and cache the best payoff for that grid cell 
+    map_limits_cells=[-200 -200 200 200]   ;
+    offset_x = 200 ;
+    offset_y = 200 ;
+    grid_cells_best_payoffs = zeros(abs(map_limits_cells(1))+map_limits_cells(3),abs(map_limits_cells(2))+map_limits_cells(4))  ;
+    grid_cells_best_payoffs_rays = zeros(abs(map_limits_cells(1))+map_limits_cells(3),abs(map_limits_cells(2))+map_limits_cells(4), 2, 'uint32')  ;
+    num_outside = 0;
+    row_num_ = 0 ; col_num_ = 0 ;
+    for uu_ = 0 : uu_step_ : uu_num_rows_*uu_step_
+        row_num_ = row_num_ + 1 ; 
+        col_num_ = 0  ;
+        for vv_ = 0 : vv_step_ : vv_num_cols_*vv_step_ 
+            col_num_ = col_num_ + 1 ;       
+            pixel_coordinate = [ uu_ ; vv_ ]  ;
+            grid_cell_xy = ceil( squeeze(robot_posn_per_ray_xy(row_num_,col_num_  , :))./grid_scale )  ;
+            if grid_cell_xy(1)+offset_x > map_limits_cells(3)+offset_x ; display('over x'); display(grid_cell_xy(1)+offset_x);  num_outside=num_outside+1; 
+            elseif grid_cell_xy(2)+offset_y > map_limits_cells(4)+offset_y ; display('over y'); display(grid_cell_xy(2)+offset_y);   num_outside=num_outside+1; 
+            elseif grid_cell_xy(1)+offset_x < map_limits_cells(1)+offset_x ; display('under x'); display(grid_cell_xy(1)+offset_x);   num_outside=num_outside+1; 
+            elseif grid_cell_xy(2)+offset_y < map_limits_cells(2)+offset_y ; display('under y'); display(grid_cell_xy(2)+offset_y);  num_outside=num_outside+1; 
+            else
+                if grid_cells_best_payoffs( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y) < payoff_per_ray(row_num_,col_num_) ...
+                    || ...
+                	grid_cells_best_payoffs( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y) == payoff_per_ray(row_num_,col_num_) && rand>=0.5
+                    grid_cells_best_payoffs( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y) = payoff_per_ray(row_num_,col_num_);
+                    grid_cells_best_payoffs_rays( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y,:) = [row_num_,col_num_]  ;
+                end
+            end
         end
     end
+    %    figure; surf(grid_cells_best_payoffs)
     
     
-    
+    %% -----------------------------------------------------------------
+    %%
 %%
     %  see  camera_extrinsics__test_optical_axis_intercept_plane.m  -  section  "use the refactored functions to flip the camera"
     display( 'do PCA' )    
