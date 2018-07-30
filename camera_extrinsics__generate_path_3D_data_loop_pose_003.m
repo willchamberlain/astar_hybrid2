@@ -535,7 +535,7 @@ end
     % on the plane
     %  --> need to find the biggest-benefit per cell : can only observe once per frame per ray per pose 
     %       --> OR find the biggest-benefit per pixel : 
-    figure; histogram2(z_eq_0_intercept(:,:,1)./grid_scale,z_eq_0_intercept(:,:,2)./grid_scale)
+    figure_named('histogram2(z_eq_0_intercept'); histogram2(z_eq_0_intercept(:,:,1)./grid_scale,z_eq_0_intercept(:,:,2)./grid_scale)
     
     feature_0_3Ddist_per_px_normalised = feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px))  ;
     feature_2_3Ddist_per_px_normalised = feature_2_3Ddist_per_px./max(max(feature_2_3Ddist_per_px))  ;
@@ -550,12 +550,12 @@ end
     best_feature_per_ray(feature_0_3Ddist_per_px <= feature_2_3Ddist_per_px) = 2  ;  % ??
     best_feature_per_ray(feature_0_3Ddist_per_px_normalised > feature_2_3Ddist_per_px_normalised) = 0  ;  % ??
     best_feature_per_ray(feature_0_3Ddist_per_px_normalised <= feature_2_3Ddist_per_px_normalised) = 2  ;  % ??
-    figure; surf(best_feature_per_ray)
+    figure_named('surf(best_feature_per_ray)'); surf(best_feature_per_ray)
     
     best_3Ddist_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
     best_3Ddist_per_ray(best_feature_per_ray==0) =  feature_0_3Ddist_per_px_normalised(best_feature_per_ray==0);
     best_3Ddist_per_ray(best_feature_per_ray==2) =  feature_2_3Ddist_per_px_normalised(best_feature_per_ray==2);
-    figure; surf(best_3Ddist_per_ray)
+    figure_named('surf(best_3Ddist_per_ray)'); surf(best_3Ddist_per_ray)
     
     payoff_per_ray = best_3Ddist_per_ray + distance_from_other_pixels_normalised ;
     figure_named('payoff_per_ray');  surf(payoff_per_ray)
@@ -569,7 +569,7 @@ end
     %  figure; surf(robot_posn_per_ray(:,:,3))
     
     robot_posn_per_ray_xy = robot_posn_per_ray(:,:,1:2)  ; 
-    figure;  histogram2(robot_posn_per_ray_xy(:,:,1),robot_posn_per_ray_xy(:,:,2))
+    figure_named('histogram2(robot_posn_per_ray_xy(:,:,1)');  histogram2(robot_posn_per_ray_xy(:,:,1),robot_posn_per_ray_xy(:,:,2))
     
     %  per ray/pixel find the grid cell it adds to, and cache the best payoff for that grid cell 
     map_limits_cells=[-200 -200 200 200]   ;
@@ -634,16 +634,29 @@ end
         end    
     end
     %   figure;surf(used_cells);  figure; histogram(used_cells,100); set(gca, 'YScale', 'log')
-    figure;  surf( used_cells.*grid_cells_best_payoffs ) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
-        plot3_rows(points_3D_f1.*(1/grid_scale)+repmat([offset_x;offset_y;0],1,size(points_3D_f1,2)),'rx')
-        plot3_rows(points_3D_f2.*(1/grid_scale)+repmat([offset_x;offset_y;0],1,size(points_3D_f2,2)),'mx')
-        plot3_rows(points_3D_f3.*(1/grid_scale)+repmat([offset_x;offset_y;0],1,size(points_3D_f3,2)),'gx')
-        axes_scale = 1;
-        draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,best_model_id).*(1/grid_scale) , models_extrinsic_estimate_as_local_to_world(1:3,4,best_model_id) , '' ,  axes_scale*(1/grid_scale) , 'k'    )  ;                    
-        
-    figure; histogram( used_cells.*grid_cells_best_payoffs );  set(gca, 'YScale', 'log')
+    
+    vector_scaling_for_figure=     [1/grid_scale;1/grid_scale;1.0]  ;
+    figure_named('surf( used_cells.*grid_cells_best_payoffs )');  surf( used_cells.*grid_cells_best_payoffs ) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
+        plot3_rows(points_3D_f1.*repmat(vector_scaling_for_figure,1,size(points_3D_f1,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f1,2)),'rx')
+        plot3_rows(points_3D_f2.*repmat(vector_scaling_for_figure,1,size(points_3D_f2,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f2,2)),'mx')
+        plot3_rows(points_3D_f3.*repmat(vector_scaling_for_figure,1,size(points_3D_f3,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f3,2)),'gx')
+        axes_scale = 1;   draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,best_model_id).*(1/grid_scale) , models_extrinsic_estimate_as_local_to_world(1:3,4,best_model_id) , '' ,  axes_scale , 'r'    )  ;                    
+        zlim([-0.1,5])               
+    ray_length=1.0 ; %1/grid_scale;
+    ray_scaling_for_figure=     [ray_length/grid_scale;ray_length/grid_scale;1.0]  ;
+    for row_num_ = 1:10:size(ray_stack_P0_,1)
+        for col_num_ = 1:10:size(ray_stack_P0_,2)
+                    plot3_rows(  ... %  plot the rays through the pixel centres 
+                [ ...
+                (squeeze(  ray_stack_P0_(row_num_,col_num_,:)).*[1/grid_scale;1/grid_scale;1.0])'+[offset_x,offset_y,0] ; 
+                (squeeze(z_eq_0_intercept(row_num_,col_num_,:)).*ray_scaling_for_figure+[offset_x;offset_y;0])'  ...
+                %(   (  squeeze(  ray_stack_d_(row_num_,col_num_,:)).*ray_scaling_for_figure+squeeze( ray_stack_P0_(row_num_,col_num_,:)).*[1/grid_scale;1/grid_scale;1.0] )+[offset_x;offset_y;0] )'   ...
+                ]' , 'r' )  ;
+        end
+    end
+    figure_named('histogram( used_cells.*grid_cells_best_payoffs )'); histogram( used_cells.*grid_cells_best_payoffs );  set(gca, 'YScale', 'log')
     sum(sum(used_cells))
-    figure; handle_ = surf(grid_cells_best_payoffs) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
+    figure_named('surf(grid_cells_best_payoffs)'); handle_ = surf(grid_cells_best_payoffs) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
     
     
     %% -----------------------------------------------------------------
