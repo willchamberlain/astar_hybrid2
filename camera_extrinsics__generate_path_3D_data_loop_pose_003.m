@@ -385,6 +385,7 @@ end
     best_model_id = intersect(best_model_by_total_reprojection_error,best_model_by_consensus_size) ;
     best_pose = models_extrinsic_estimate_as_local_to_world(:,:, best_model_id)  ;
     
+    axes_scale = 1;
         draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,best_model_id) , models_extrinsic_estimate_as_local_to_world(1:3,4,best_model_id) , '' ,  axes_scale , 'k'    )  ;                    
         zlim( [-0.2 3.5] )
              
@@ -600,6 +601,49 @@ end
         end
     end
     %    figure; surf(grid_cells_best_payoffs)
+    %   figure; histogram(grid_cells_best_payoffs,100);  set(gca,'YScale','log')
+    max(max(grid_cells_best_payoffs))
+    size(sort(grid_cells_best_payoffs(:)))
+    
+    [sorted_payoffs,sorted_payoffs_indices]=sort(grid_cells_best_payoffs(:),'descend')  ;
+    [sorted_payoffs_rows_,sorted_payoffs_cols_]=ind2sub(size(grid_cells_best_payoffs),sorted_payoffs_indices)  ;
+    
+    threshold_utility = 1.2;  %  0.8 ;
+    suppression_radius_m = 1.5 ;
+    suppression_radius = ceil(suppression_radius_m/grid_scale)  ;
+    suppressed = zeros(abs(map_limits_cells(1))+map_limits_cells(3),abs(map_limits_cells(2))+map_limits_cells(4))  ;
+    used_cells = zeros(abs(map_limits_cells(1))+map_limits_cells(3),abs(map_limits_cells(2))+map_limits_cells(4))  ;
+    for ii_=1:size(sorted_payoffs)
+        this_r = sorted_payoffs_rows_(ii_);
+        this_c = sorted_payoffs_cols_(ii_)  ;
+        if ~suppressed(this_r,this_c)
+            neighbours=[ this_r-suppression_radius , this_r+suppression_radius...
+                this_c-suppression_radius , this_c+suppression_radius  ] ;
+            if neighbours(1)<1; neighbours(1)=1; end
+            if neighbours(2)>size(grid_cells_best_payoffs,1); neighbours(2)=size(grid_cells_best_payoffs,1); end;
+            if neighbours(3)<1;neighbours(3)=1; end;
+            if neighbours(4)>size(grid_cells_best_payoffs,2); neighbours(4)=size(grid_cells_best_payoffs,2); end;
+            suppressed(neighbours(1):neighbours(2),neighbours(3):neighbours(4)) = 1  ;
+            if grid_cells_best_payoffs(this_r,this_c) > threshold_utility
+                used_cells(this_r,this_c) = 1  ;
+            end
+            % display(' !  CLICK TO CONTINUE  ! ')
+            %pause
+        else
+            % display('skipped')
+        end    
+    end
+    %   figure;surf(used_cells);  figure; histogram(used_cells,100); set(gca, 'YScale', 'log')
+    figure;  surf( used_cells.*grid_cells_best_payoffs ) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
+        plot3_rows(points_3D_f1.*(1/grid_scale)+repmat([offset_x;offset_y;0],1,size(points_3D_f1,2)),'rx')
+        plot3_rows(points_3D_f2.*(1/grid_scale)+repmat([offset_x;offset_y;0],1,size(points_3D_f2,2)),'mx')
+        plot3_rows(points_3D_f3.*(1/grid_scale)+repmat([offset_x;offset_y;0],1,size(points_3D_f3,2)),'gx')
+        axes_scale = 1;
+        draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,best_model_id).*(1/grid_scale) , models_extrinsic_estimate_as_local_to_world(1:3,4,best_model_id) , '' ,  axes_scale*(1/grid_scale) , 'k'    )  ;                    
+        
+    figure; histogram( used_cells.*grid_cells_best_payoffs );  set(gca, 'YScale', 'log')
+    sum(sum(used_cells))
+    figure; handle_ = surf(grid_cells_best_payoffs) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
     
     
     %% -----------------------------------------------------------------
