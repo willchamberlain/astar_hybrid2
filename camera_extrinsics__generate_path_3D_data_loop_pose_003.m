@@ -391,8 +391,8 @@ end
     dummy_ray = Ray3D( [0,0] , [1 1 1] )  ;
     row_num_ = 0  ;
     col_num_ = 0  ;
-    uu_step_ = 100  ;
-    vv_step_ = 100  ;
+    uu_step_ = 10  ;
+    vv_step_ = 10  ;
     uu_num_rows_ = floor( best_pose_camera.limits(2) / uu_step_ )  ;
     vv_num_cols_ = floor( best_pose_camera.limits(4) / vv_step_ )  ;
     ray_stack_ = repmat( dummy_ray , uu_num_rows_+1 , vv_num_cols_+1 )  ;
@@ -400,6 +400,9 @@ end
     ray_stack_P0_ = zeros( uu_num_rows_+1 , vv_num_cols_+1 , 3 )  ;
     z_eq_0_intercept = zeros( uu_num_rows_+1 , vv_num_cols_+1 , 3 )  ;
     scaling_factor_for_vector_along_line_to_intercept = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
+    z_eq_2_intercept = zeros( uu_num_rows_+1 , vv_num_cols_+1 , 3 )  ;
+    scaling_factor_for_vector_along_line_to_intercept_2 = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
+    % for each pixel in the camera image ...
     for uu_ = 0 : uu_step_ : uu_num_rows_*uu_step_
         row_num_ = row_num_ + 1 ; 
         col_num_ = 0  ;
@@ -408,35 +411,103 @@ end
             ray_  = best_pose_camera.ray( [ uu_ ; vv_ ] )  ;
             ray_stack_(row_num_,col_num_) = ray_  ;
             ray_stack_d_(row_num_,col_num_,:) = ray_.d  ;
-            ray_stack_P0_(row_num_,col_num_,:) = ray_.P0  ;  
-            plot3_rows( [ ...
-                squeeze( ray_stack_P0_(row_num_,col_num_,:) )  ...
-                squeeze( ray_stack_d_(row_num_,col_num_,:) ) ] )   ;
+            ray_stack_P0_(row_num_,col_num_,:) = ray_.P0  ;             
+            %{
             plot3_rows(  ... %  plot the rays through the pixel centres 
                 [ ...
                 squeeze(  ray_stack_P0_(row_num_,col_num_,:))' ; 
                 ( 5.0*squeeze(  ray_stack_d_(row_num_,col_num_,:))+squeeze( ray_stack_P0_(row_num_,col_num_,:)) )'   ...
                 ]' , 'm' )  ;
+            %}
+            % calculate intercept with bottom of robot / floor 
             [ z_eq_0_intercept( row_num_ , col_num_ , : ) , ...
               scaling_factor_for_vector_along_line_to_intercept( row_num_ , col_num_ ) ]  ...
                 = geom__z_plane_intercept(  ...
                     squeeze(ray_stack_P0_(row_num_,col_num_,:)) , ...
-                    squeeze(ray_stack_d_(row_num_,col_num_,:))   )  ;
-            plot3_rows( z_eq_0_intercept , 'ms' )  ;
+                    squeeze(ray_stack_d_(row_num_,col_num_,:))  , 0 )  ;
+%             plot3_rows( z_eq_0_intercept , 'bs' )  ;
+            % calculate intercept with top of robot
+            [ z_eq_2_intercept( row_num_ , col_num_ , : ) , ...
+              scaling_factor_for_vector_along_line_to_intercept_2( row_num_ , col_num_ ) ]  ...
+                = geom__z_plane_intercept(  ...
+                    squeeze(ray_stack_P0_(row_num_,col_num_,:)) , ...
+                    squeeze(ray_stack_d_(row_num_,col_num_,:))  , 2 )  ;
+%             plot3_rows( z_eq_2_intercept , 'rs' )  ;
         end
     end
     %  figure; histogram2( ray_stack_P0_(:,:,1) , ray_stack_P0_(:,:,2) ) ;    figure; histogram2( ray_stack_P0_(:,:,3) , ray_stack_P0_(:,:,2) ) ;
         
     xlim( [-1,12] )  ;  ylim( [-3,10] )  ;  zlim( [0,3] )  ;
 
-    graph_cameraposition = get(gca, 'CameraPosition')  ;
-    graph_cameratarget = get(gca, 'CameraTarget')  ;
-        %  set( gca , 'CameraPosition' , graph_cameraposition+[10 15 15] )
-        %  set(gca, 'CameraTarget' , [ 3.0 2.0 1.5] )
-        %  set(gca, 'CameraPosition', [100 5000 2000]);
+%     graph_cameraposition = get(gca, 'CameraPosition')  ;
+%     graph_cameratarget = get(gca, 'CameraTarget')  ;
+%         %  set( gca , 'CameraPosition' , graph_cameraposition+[10 15 15] )
+%         %  set(gca, 'CameraTarget' , [ 3.0 2.0 1.5] )
+%         %  set(gca, 'CameraPosition', [100 5000 2000]);
         
-    plot3_rows(  reshape(z_eq_0_intercept, [121,3] )'+repmat([0;0;2],1,121)     , 'ms' )
-
+    % draw the z=0 intercept points at 2m height    
+%     plot3_rows(  reshape(z_eq_0_intercept, [121,3] )'+repmat([0;0;0],1,121)     , 'mx' )
+%     plot3_rows(  reshape(z_eq_2_intercept, [121,3] )'+repmat([0;0;0],1,121)     , 'rx' )
+    
+    
+    %{
+    Now have the intercepts with top and bottom of robot volume (ignoring intermmediate obstacles for now) , 
+        project those to the planning grid/occupancy grid/map
+        identify the set of planning grid nodes that we can see
+        score them by information utility
+        plan paths through them 
+        ALT 
+            ask the robot to do its thing again, but go 1m to its left 
+    Information utility score ~ approx as difference from existing pixels + difference from existing 3D    
+    %}
+    
+    %-- as points on the ground (z=0) so that I can see them 
+   
+    ground_points = reshape(z_eq_0_intercept, [  size(z_eq_0_intercept,1) * size(z_eq_0_intercept,2)  ,3] )'  ;
+    ground_points = [ ground_points  reshape(z_eq_2_intercept, [ size(z_eq_0_intercept,1) * size(z_eq_0_intercept,2) ,3] )' ]  ;
+    plot3(ground_points(1,:),ground_points(2,:), repmat(  -0.01  , 1, size(ground_points,2) ), 'ro')    
+    
+    %-- convert from world points to grid axis - nothing to do as we're using an axis-aligned grid
+    
+    %-- determine which grid point they're in
+    grid_scale = 0.1 ;  %0.1m per grid cell
+    grid_cell_indices_for_intercepts = ceil(ground_points./grid_scale)  ;
+    %  figure; histogram2(grid_cell_indices_for_intercepts(1,:),grid_cell_indices_for_intercepts(2,:))  % eyeball 
+    
+    %   objective function - information utility of the points to be passed through / of the trajectory to 
+    %       information utility of the observations 
+    %           --> of the trajectory poses & velocity 
+    %               --> of the points/poses passed through
+    %  distance is unbounded - how to deal with ?
+    %  image is bounded 
+    %  distance from the existing observations in image space 
+    
+    % for each potential observation, have the pixel coordinate from the ray, and the 3D coordinate
+    % from the ray intersect the plane at height of the feature 
+    % for each ray, for each feature, determine whether the robot pose is in free space - calibrating one camera, so limit to what that camera can observe
+    %   ? Class of RayFeatureGrid .p0 .dir .feature_grid_cells ?   -  data structure to store this genericly
+    feature_0 = [0;0;0]  ;
+    feature_2 = [0;0;2]  ;
+    feature_0_distance_3D = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
+    feature_2_distance_3D = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
+    distance_from_other_pixels = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
+    row_num_ = 0 ; col_num_ = 0 ;
+    for uu_ = 0 : uu_step_ : uu_num_rows_*uu_step_
+        row_num_ = row_num_ + 1 ; 
+        col_num_ = 0  ;
+        for vv_ = 0 : vv_step_ : vv_num_cols_*vv_step_ 
+            col_num_ = col_num_ + 1 ;       
+            pixel_coordinate = [ uu_ ; vv_ ]  ;
+             diffs = points_2D_preconditioned - repmat( pixel_coordinate,1, size(points_2D_preconditioned,2))  ;
+             distance_from_other_pixels(row_num_,col_num_) = min( norm_2(diffs,1) ); 
+             
+             diffs_feature_0_3D = points_3D_preconditioned - repmat(squeeze(z_eq_0_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned,2))  ;
+             feature_0_distance_3D(row_num_,col_num_) = min(norm_2(diffs_feature_0_3D,1))  ;
+             diffs_feature_2_3D = points_3D_preconditioned - repmat(squeeze(z_eq_2_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned,2))  ;
+             feature_2_distance_3D(row_num_,col_num_) = min(norm_2(diffs_feature_2_3D,1))  ;             
+        end
+    end
+    
     
     
 %%

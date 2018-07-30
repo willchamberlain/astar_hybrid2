@@ -1,5 +1,5 @@
 function [z_plane_intercept_vec__ , scaling_factor_for_vector_along_line_to_intercept__] ...
-    = geom__z_plane_intercept(  l_point_on_line_  ,  line_direction_vector_  )
+    = geom__z_plane_intercept(  l_point_on_line_  ,  line_direction_vector_  , height_)
 %% camera optical axis intercept on the floor plain 
 % simplified case of the general line-plane intercept 
 % camera_to_world = camera.T(1:3,1:3)  ; 
@@ -12,7 +12,7 @@ l_vector_along_line = line_direction_vector_  ; % vector in direction of the lin
 
 % Plane :  xy plane in this case
 point_on_plane_xy = l_point_on_line_(1:2);
-point_on_plane =  [ point_on_plane_xy ; 0 ]  ; %  a point on the plane: use camera position with z=0 ; it is as good as any other
+point_on_plane =  [ point_on_plane_xy ; height_ ]  ; %  a point on the plane: use camera position with z=0 ; it is as good as any other
 % p = % set of points in the plane
 normal_to_plane = [ 0 0 1 ] ; % vector in direction normal to the plane
 
