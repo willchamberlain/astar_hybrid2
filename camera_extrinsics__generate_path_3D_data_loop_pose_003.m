@@ -501,9 +501,11 @@ end
     feature_0_3Ddist_per_px = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
     feature_2_3Ddist_per_px = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
     distance_from_other_pixels = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
-   uncertainty_from_imgForm_alg =  zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;  % multiplier 
+   uncertainty_from_imgForm_alg_f0 =  zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;  % multiplier 
+   uncertainty_from_imgForm_alg_f2 =  zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;  % multiplier 
    % ??  uncertainty_normalised =  ?? do I want to normalise this : it's not a trade-off, it's a limit ?? 
-   free_space =   ; % probability: 1|0  = free|obstacle  : multiplier 
+   % NOW: cull these by (1) image formation + algorithm maximum resolution  (2) obstacles on floor plan  (3) non-free space
+   % !! free_space =   ; % probability: 1|0  = free|obstacle  : multiplier 
     row_num_ = 0 ; col_num_ = 0 ;
     for uu_ = 0 : uu_step_ : uu_num_rows_*uu_step_
         row_num_ = row_num_ + 1 ; 
@@ -524,13 +526,24 @@ end
              diffs_feature_0_3D = points_3D_preconditioned_z0 ...
                  - repmat(squeeze(z_eq_0_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned_z0,2))  ;
              feature_0_3Ddist_per_px(row_num_,col_num_) = min(norm_2(diffs_feature_0_3D,1))  ;
-             diffs_feature_2_3D = points_3D_preconditioned_z2 - repmat(squeeze(z_eq_2_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned_z2,2))  ;
+             
+             diffs_feature_2_3D = points_3D_preconditioned_z2 ...
+                 - repmat(squeeze(z_eq_2_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned_z2,2))  ;
              feature_2_3Ddist_per_px(row_num_,col_num_) = min(norm_2(diffs_feature_2_3D,1))  ;      
              
-             uncertainty_from_imgForm_alg(row_num_,col_num_) = 
+             extrinsics_approximate_uncertainty_distance_func(norm_2(squeeze(z_eq_2_intercept(row_num_,col_num_,:)) - camera.T(1:3,4),1));             
+                
+             uncertainty_from_imgForm_alg_f0(row_num_,col_num_) = ...
+                 extrinsics_approximate_uncertainty_distance_func( ...
+                    norm_2(squeeze(z_eq_0_intercept(row_num_,col_num_,:)) - best_pose(1:3,4),1));
+                
+             uncertainty_from_imgForm_alg_f2(row_num_,col_num_) = ...
+                 extrinsics_approximate_uncertainty_distance_func( ...
+                    norm_2(squeeze(z_eq_2_intercept(row_num_,col_num_,:)) - best_pose(1:3,4),1));
         end
     end        
-   prob_good_detection = 1 - uncertainty_from_imgForm_alg  ;  % multiplier  in range 1:0 = accurate detection:inaccurate detection 
+   pgood_detection_f0 = 1 - uncertainty_from_imgForm_alg_f0  ;  % multiplier  in range 1:0 = accurate detection:inaccurate detection 
+   pgood_detection_f2 = 1 - uncertainty_from_imgForm_alg_f2  ;
     % per ray --> WRONG for this, as SHOULD have value per 3D-2D observation, and then SUM per grid cell / pose to plan to
 %     figure; surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
 %         (feature_0_distance_3D./max(max(feature_0_distance_3D)) ...
@@ -552,7 +565,7 @@ end
    % NOW: cull these by (1) image formation + algorithm maximum resolution  (2) obstacles on floor plan  (3) non-free space
 
    
-   feature_0_3Ddist_per_px_normalised = feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px))  ;
+    feature_0_3Ddist_per_px_normalised = feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px))  ;
     feature_2_3Ddist_per_px_normalised = feature_2_3Ddist_per_px./max(max(feature_2_3Ddist_per_px))  ;
     distance_from_other_pixels_normalised = distance_from_other_pixels./max(max(distance_from_other_pixels))  ;
     %  figure_named('feature_0_3Ddist_per_px_normalised'),surf(feature_0_3Ddist_per_px_normalised);
@@ -563,16 +576,24 @@ end
     best_feature_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
     best_feature_per_ray(feature_0_3Ddist_per_px > feature_2_3Ddist_per_px) = 0  ;    % ??
     best_feature_per_ray(feature_0_3Ddist_per_px <= feature_2_3Ddist_per_px) = 2  ;  % ??
-    best_feature_per_ray(feature_0_3Ddist_per_px_normalised > feature_2_3Ddist_per_px_normalised) = 0  ;  % ??
-    best_feature_per_ray(feature_0_3Ddist_per_px_normalised <= feature_2_3Ddist_per_px_normalised) = 2  ;  % ??
+    best_feature_per_ray(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0 > feature_2_3Ddist_per_px_normalised.*pgood_detection_f2) = 0  ;  % ??
+    best_feature_per_ray(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0 <= feature_2_3Ddist_per_px_normalised.*pgood_detection_f2) = 2  ;  % ??
+    figure_named('surf(best_feature_per_ray)'); surf(best_feature_per_ray)
+    
+    best_feature_per_ray(feature_0_3Ddist_per_px.*pgood_detection_f0 <= feature_2_3Ddist_per_px.*pgood_detection_f2) = 2  ;  % ??
+    best_feature_per_ray(feature_0_3Ddist_per_px.*pgood_detection_f0 > feature_2_3Ddist_per_px.*pgood_detection_f2) = 0  ;  % ??
     figure_named('surf(best_feature_per_ray)'); surf(best_feature_per_ray)
     
     best_3Ddist_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
-    best_3Ddist_per_ray(best_feature_per_ray==0) =  feature_0_3Ddist_per_px_normalised(best_feature_per_ray==0);
-    best_3Ddist_per_ray(best_feature_per_ray==2) =  feature_2_3Ddist_per_px_normalised(best_feature_per_ray==2);
-    figure_named('surf(best_3Ddist_per_ray)'); surf(best_3Ddist_per_ray)
+    best_3Ddist_per_ray(best_feature_per_ray==0) =  feature_0_3Ddist_per_px_normalised(best_feature_per_ray==0).*pgood_detection_f0(best_feature_per_ray==0);
+    best_3Ddist_per_ray(best_feature_per_ray==2) =  feature_2_3Ddist_per_px_normalised(best_feature_per_ray==2).*pgood_detection_f2(best_feature_per_ray==2);
     
-    payoff_per_ray = best_3Ddist_per_ray + distance_from_other_pixels_normalised ;
+    figure_named('surf(best_3Ddist_per_ray)'); surf(best_3Ddist_per_ray)
+    figure_named('feature_0_3Ddist_per_px_normalised.*pgood_detection_f0');  surf(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0)
+    figure_named('feature_2_3Ddist_per_px_normalised.*pgood_detection_f2');  surf(feature_2_3Ddist_per_px_normalised.*pgood_detection_f2)
+        hold on ;  surf(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0) ;
+    
+    payoff_per_ray = 3.0*best_3Ddist_per_ray + distance_from_other_pixels_normalised ;  % What is the balance here? 
     figure_named('payoff_per_ray');  surf(payoff_per_ray)
     
     %-- the grid location of the best feature in each ray/pixel 
@@ -624,7 +645,7 @@ end
     [sorted_payoffs_rows_,sorted_payoffs_cols_]=ind2sub(size(grid_cells_best_payoffs),sorted_payoffs_indices)  ;
     
     threshold_utility = 1.2;  %  0.8 ;
-    suppression_radius_m = 1.5 ;
+    suppression_radius_m = 1.2 ;
     suppression_radius = ceil(suppression_radius_m/grid_scale)  ;
     suppressed = zeros(abs(map_limits_cells(1))+map_limits_cells(3),abs(map_limits_cells(2))+map_limits_cells(4))  ;
     used_cells = zeros(abs(map_limits_cells(1))+map_limits_cells(3),abs(map_limits_cells(2))+map_limits_cells(4))  ;
@@ -648,7 +669,12 @@ end
             % display('skipped')
         end    
     end
-    %   figure;surf(used_cells);  figure; histogram(used_cells,100); set(gca, 'YScale', 'log')
+    figure_named('used_cells');surf(used_cells);  
+        hold on; plot3_rows( best_pose(1:3,4).*[1/grid_scale;1/grid_scale;1] + [offset_x;offset_y;0],'rx' )
+        hold on; plot3_rows( best_pose(1:3,4).*[1/grid_scale;1/grid_scale;0] + [offset_x;offset_y;0],'ro' )
+    figure_named('histogram(used_cells'); histogram(used_cells,100); set(gca, 'YScale', 'log')
+    figure_named('used_cells.*grid_cells_best_payoffs');surf(used_cells.*grid_cells_best_payoffs);  
+    figure_named('histogram(used_cells.*grid_cells_best_payoffs'); histogram(used_cells(used_cells>0).*grid_cells_best_payoffs(used_cells>0),100); xlabel('used\_cells.*grid\_cells\_best\_payoffs')
     
     vector_scaling_for_figure=     [1/grid_scale;1/grid_scale;1.0]  ;
     figure_named('surf( used_cells.*grid_cells_best_payoffs )');  surf( used_cells.*grid_cells_best_payoffs ) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
@@ -671,7 +697,58 @@ end
     end
     figure_named('histogram( used_cells.*grid_cells_best_payoffs )'); histogram( used_cells.*grid_cells_best_payoffs );  set(gca, 'YScale', 'log')
     sum(sum(used_cells))
-    figure_named('surf(grid_cells_best_payoffs)'); handle_ = surf(grid_cells_best_payoffs) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
+    figure_named('surf(grid_cells_best_payoffs)'); handle_ = surf(grid_cells_best_payoffs) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' ); xlabel('x'); ylabel('y')
+    
+    plot3_rows( [offset_x ; offset_y ; 0]-best_pose(1:3,4).*[1/grid_scale;1/grid_scale;0]   , 'mx' );    
+    %  !!!  COORDINATE  DIRECTIONS  ARE  SWAPPED  !!! : work out how to get SURF to use the other coordinate direction or some such 
+    
+    %%
+    %{ 
+    We have the grid cells to use, now determine some trajectories, the utility of those to the camera, and the approx length/cost to the robot. 
+    (1) directional - want same traversal to deal with latency 
+    (2) assume same path 
+    (3) KISS, JFDI 
+    %}
+    % Put the cells in order of payoff
+    
+    % Find paths through them
+    %     if n < 6    % exhaustive - up to 120 - but for ALL 
+    %         %  perms
+    %     else  
+    %         for ii_ = 1:120 % stochastic - 120 - but for ALL 
+    %             % randperm
+    %         end
+    %     end
+    ti=find(used_cells>0)  ;
+    [tr,tc]=find(used_cells>0)  ;
+    grid_cells_best_payoffs(ti)  ;
+    num_paths = 100 ;
+    max_num_waypoints = 4  ;
+    waypoints_set = zeros(num_paths, max_num_waypoints)  ;
+    for ii_ = 1:num_paths
+        ti2 = ti ;
+        path_size = 1;
+        ti2_order_to_pick =  randperm( size(ti2,1) )  ; 
+        waypoints = zeros(1,max_num_waypoints) ;
+        waypoints(path_size) = ti2(ti2_order_to_pick(path_size)) ;
+        if rand >= 0.5
+            path_size = 2;
+            waypoints(path_size) = ti2(ti2_order_to_pick(path_size)) ;
+            if rand >= 0.5 
+                path_size = 3;                                
+                waypoints(path_size) = ti2(ti2_order_to_pick(path_size)) ;
+                if rand >= 0.5 
+                    path_size = 4;                            
+                    waypoints(path_size) = ti2(ti2_order_to_pick(path_size)) ;
+                end
+            end
+        end
+        waypoints_set(ii_,:) = waypoints;
+    end
+    waypoints_set = unique(waypoints_set,'rows') ;
+    
+    
+    mstraj
     
     
     %% -----------------------------------------------------------------
