@@ -19,6 +19,7 @@ addpath( '/mnt/nixbig/ownCloud/project_code/' )
 
 %%
 %  DONT_DRAW = 'DONT_DRAW'
+% exp_num='now' ; description=exp_num ;
 display(strcat(' Generate the trajectory for exp', exp_num, ': ', description))
 time_step = 0.005  ;
 
@@ -414,13 +415,15 @@ end
             ray_stack_(row_num_,col_num_) = ray_  ;
             ray_stack_d_(row_num_,col_num_,:) = ray_.d  ;
             ray_stack_P0_(row_num_,col_num_,:) = ray_.P0  ;             
-            %{
-            plot3_rows(  ... %  plot the rays through the pixel centres 
-                [ ...
-                squeeze(  ray_stack_P0_(row_num_,col_num_,:))' ; 
-                ( 5.0*squeeze(  ray_stack_d_(row_num_,col_num_,:))+squeeze( ray_stack_P0_(row_num_,col_num_,:)) )'   ...
-                ]' , 'm' )  ;
-            %}
+            % {
+            if mod(col_num_-1,10)==0 && mod(row_num_-1,10) ==0
+                plot3_rows(  ... %  plot the rays through the pixel centres - every 10th*10th to keep it reasonable 
+                    [ ...
+                    squeeze(  ray_stack_P0_(row_num_,col_num_,:))' ; 
+                    ( 5.0*squeeze(  ray_stack_d_(row_num_,col_num_,:))+squeeze( ray_stack_P0_(row_num_,col_num_,:)) )'   ...
+                    ]' , 'm' )  ;
+            end
+            % }
             % calculate intercept with bottom of robot / floor 
             [ z_eq_0_intercept( row_num_ , col_num_ , : ) , ...
               scaling_factor_for_vector_along_line_to_intercept( row_num_ , col_num_ ) ]  ...
@@ -465,6 +468,7 @@ end
     
     %-- as points on the ground (z=0) so that I can see them 
    
+    % NOW: cull these by (1) image formation + algorithm maximum resolution  (2) obstacles on floor plan  (3) non-free space
     ground_points = reshape(z_eq_0_intercept, [  size(z_eq_0_intercept,1) * size(z_eq_0_intercept,2)  ,3] )'  ;
     ground_points = [ ground_points  reshape(z_eq_2_intercept, [ size(z_eq_0_intercept,1) * size(z_eq_0_intercept,2) ,3] )' ]  ;
     plot3(ground_points(1,:),ground_points(2,:), repmat(  -0.01  , 1, size(ground_points,2) ), 'ro')    
@@ -490,11 +494,16 @@ end
     % from the ray intersect the plane at height of the feature 
     % for each ray, for each feature, determine whether the robot pose is in free space - calibrating one camera, so limit to what that camera can observe
     %   ? Class of RayFeatureGrid .p0 .dir .feature_grid_cells ?   -  data structure to store this genericly
+    
+    % NOW: cull these by (1) image formation + algorithm maximum resolution  (2) obstacles on floor plan  (3) non-free space
     feature_0 = [0;0;0]  ;
     feature_2 = [0;0;2]  ;
     feature_0_3Ddist_per_px = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
     feature_2_3Ddist_per_px = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
     distance_from_other_pixels = zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;
+   uncertainty_from_imgForm_alg =  zeros( uu_num_rows_+1 , vv_num_cols_+1 )  ;  % multiplier 
+   % ??  uncertainty_normalised =  ?? do I want to normalise this : it's not a trade-off, it's a limit ?? 
+   free_space =   ; % probability: 1|0  = free|obstacle  : multiplier 
     row_num_ = 0 ; col_num_ = 0 ;
     for uu_ = 0 : uu_step_ : uu_num_rows_*uu_step_
         row_num_ = row_num_ + 1 ; 
@@ -516,9 +525,12 @@ end
                  - repmat(squeeze(z_eq_0_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned_z0,2))  ;
              feature_0_3Ddist_per_px(row_num_,col_num_) = min(norm_2(diffs_feature_0_3D,1))  ;
              diffs_feature_2_3D = points_3D_preconditioned_z2 - repmat(squeeze(z_eq_2_intercept(row_num_,col_num_,:)),1,size(points_3D_preconditioned_z2,2))  ;
-             feature_2_3Ddist_per_px(row_num_,col_num_) = min(norm_2(diffs_feature_2_3D,1))  ;             
+             feature_2_3Ddist_per_px(row_num_,col_num_) = min(norm_2(diffs_feature_2_3D,1))  ;      
+             
+             uncertainty_from_imgForm_alg(row_num_,col_num_) = 
         end
     end        
+   prob_good_detection = 1 - uncertainty_from_imgForm_alg  ;  % multiplier  in range 1:0 = accurate detection:inaccurate detection 
     % per ray --> WRONG for this, as SHOULD have value per 3D-2D observation, and then SUM per grid cell / pose to plan to
 %     figure; surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
 %         (feature_0_distance_3D./max(max(feature_0_distance_3D)) ...
@@ -537,7 +549,10 @@ end
     %       --> OR find the biggest-benefit per pixel : 
     figure_named('histogram2(z_eq_0_intercept'); histogram2(z_eq_0_intercept(:,:,1)./grid_scale,z_eq_0_intercept(:,:,2)./grid_scale)
     
-    feature_0_3Ddist_per_px_normalised = feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px))  ;
+   % NOW: cull these by (1) image formation + algorithm maximum resolution  (2) obstacles on floor plan  (3) non-free space
+
+   
+   feature_0_3Ddist_per_px_normalised = feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px))  ;
     feature_2_3Ddist_per_px_normalised = feature_2_3Ddist_per_px./max(max(feature_2_3Ddist_per_px))  ;
     distance_from_other_pixels_normalised = distance_from_other_pixels./max(max(distance_from_other_pixels))  ;
     %  figure_named('feature_0_3Ddist_per_px_normalised'),surf(feature_0_3Ddist_per_px_normalised);
