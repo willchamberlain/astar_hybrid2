@@ -11,6 +11,7 @@ vrep.simstop()
     %  cam_603_vrepcamera = vrep.camera('cam_603_vrepcamera')
 cam603sensor = vrep.camera('cam603sensor')
 cam603sensor0 = vrep.camera('cam603sensor0')
+cam603sensor0.getpose
 
 %  marker detection --> 2D pixel point
 figure_named('cam603sensor0.grab')  ;  
@@ -89,12 +90,14 @@ pioneer_pose__orig_local = pioneer_object.getpose
 
 pioneer_object.setpos(single([0 0 0])) ;  pioneer_object.setorient(eye(3))
 pioneer_object.setpose( pioneer_pose__orig) ; pioneer_object.setorient(eye(3))
-
+%  [x_old,y_old] = [x,y]
 [x,y] = map_to_world(total_path_smoothed__(2,:)',total_path_smoothed__(1,:)') ;
 way_pts = [x y].*100  ;
 pp = temp__pure_pursuit_vrep_waypoints( ...
     pioneer_z_ , pioneer2_ , ...
     way_pts , vrep ,  pioneer_object )
+
+way_pts
 
 %{  
     RESET THE POSE
@@ -117,3 +120,8 @@ pp = temp__pure_pursuit_vrep_waypoints( ...
 figure_named('pose_3D'); plot3_rows(pose_3D','rx'); hold on; grid on; axis equal; xlabel('x'); ylabel('y')
 figure_named('pixels 2D'); plot_rows(marker_2D_uv','rx'); hold on; grid on; axis equal; xlabel('x'); ylabel('y')
 
+
+    time_stamp_old = time_stamp  ;
+    detected_old = detected;
+    marker_2D_uv_old = marker_2D_uv  ;
+    pose_3D_old = pose_3D  ;

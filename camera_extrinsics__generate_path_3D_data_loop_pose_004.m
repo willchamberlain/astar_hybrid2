@@ -92,55 +92,45 @@ points_3D_preconditioned = [  points_3D_f1_latency  points_3D_f2_latency points_
 num_points = size(points_3D_preconditioned,2)  ;
 %}
 
+
+%%
+    global time_stamp
+    global detected
+    global marker_2D_uv
+    global pose_3D
+    size(pose_3D(detected>0,1:3)') 
+    size(pose_3D') 
+    size(detected(detected>0))
+% points_3D_preconditioned = pose_3D'
+points_3D_preconditioned_in_fov = pose_3D(detected>0,1:3)'
+points_2D_preconditioned_in_fov = marker_2D_uv(detected>0,1:2)'
+
+
+%  PARAMETER  TO  PASS    
+cam603sensor0 = vrep.camera('cam603sensor0') ;
+vrep_camera_pose = cam603sensor0.getorient  ;
+vrep_camera_pose(1:3,4) = cam603sensor0.getpos'  ;
+cam_SE3 = double(vrep_camera_pose) ;
+
+    cam_position = cam_SE3(1:3,4)
+        target_point = [3.0463 ; 4.0007 ; 0]
+        cam_direction_vector = target_point - cam_position ;
+        camera_rdf_coord_sys = camera_rdf_coordinate_system( cam_direction_vector, [ cam_direction_vector(1:2) ; cam_direction_vector(3)+2 ] )  ;
+        cam_T =  rt2tr(  camera_rdf_coord_sys , cam_position)  ;
+        draw_axes_direct( camera_rdf_coord_sys,  cam_position, '', 5 )  ;
+        cam_SE3 = cam_T;
+camera = CentralCamera_default(cam_SE3) ;
+
+
 %%
 display(  'Run the pose estimation'  )
 % {
      fig_3d_handle = figure('Name',strcat(exp_num, time_string_for_figuretitle() ,' : ','3D scene')); axis equal; grid on; hold on;  xlabel('x'); ylabel('y'); zlabel('z');
-     plot3_rows(points_3D_f1,'rx')  ;   
-     plot3_rows(points_3D_f2,'bx')  ;  
-     plot3_rows(points_3D_f3,'mx')  ;  
-     %  DONT_TEXT_POINTS_3D = 'DONT_TEXT_POINTS_3D'
-     if ~exist( 'DONT_TEXT_POINTS_3D' , 'var' )
-       pts_ = points_3D_f1;  for ii_ = 1:size(pts_,2) ;  text(pts_(1,ii_),pts_(2,ii_),pts_(3,ii_),num2str(ii_));  end
-       pts_ = points_3D_f2; for ii_ = 1:size(pts_,2) ;  text(pts_(1,ii_),pts_(2,ii_),pts_(3,ii_),num2str(ii_));  end
-       pts_ = points_3D_f3;  for ii_ = 1:size(pts_,2) ;  text(pts_(1,ii_),pts_(2,ii_),pts_(3,ii_),num2str(ii_));  end
-     end
-     plot3_rows(points_3D_f1_latency,'ro')  ;  
-     plot3_rows(points_3D_f2_latency,'bo')  ; 
-     plot3_rows(points_3D_f3_latency,'mo')  ;
-     plot3_rows(qb','m')  ;        
-     
-     axis equal   ;  legend('points_3D_f1', 'points_3D_f2','points_3D_f3', 'points_3D_f1_latency', 'points_3D_f2_latency', 'points_3D_f3_latency','qb')  ;
-% }    
+     plot3_rows(points_3D_preconditioned_in_fov,'mo')  ;
+     % }    
   
     %-- Camera 
-    %-- Camera pose setup - place a camera looking at one datapointdescription
-    num_camera_posn = 4  ;
-    rat_ = (size(points_3D_f1,2)-1) / (num_camera_posn-1)  ; 
-    indices_ = floor(  [1:num_camera_posn].*rat_ -  rat_ + 1) ;
-    points_2D_preconditioned_in_fov_hist = zeros(num_camera_posn,num_points, 'uint32')  ;
-    for ii_ii_ = 1: 1
-        target_point3D = points_3D_f1(:,indices_(ii_ii_) )  ;
-        target_point3D = points_3D_f1(:,round(size(points_3D_f1,2)/2))  ;
-        target_point3D = [ 3.5 ; 0.25 ; 0.645 ]  ;
-        % Orient camera orthogonal to the x axis, and zero roll
-        %  see camera_extrinsics__place_camera_2.m
-        cam_pose_xyz = target_point3D + [ -2.0 -2.2 2.0 ]'  ;  % 3m away, 2m up
-        cam_pose_xyz = target_point3D + [ 0.0 -3.0 2.0 ]'  ;  % 3m away, 2m up
-        cam_pose_xyz = target_point3D + [ -1.0 -2.2 2.0 ]'  ;  % 3m away, 2m up
-        cam_direction_vector = target_point3D - cam_pose_xyz ;
-        cam_desired_up_vector = cam_direction_vector + [ 0.0 , 0.0 , 2.0]'  ; % camera vertical in-plane with world vertical
-        cam_rdf_coord_sys = camera_rdf_coordinate_system(...
-            cam_direction_vector, ...
-            cam_desired_up_vector )  ;   %  vector_along_x_axis_ , vector_in_z_axis_plane_ )
-        cam_SE3 =  rt2tr(  cam_rdf_coord_sys , cam_pose_xyz)  ;
-        figure(fig_3d_handle) ;   draw_axes_direct(cam_SE3(1:3,1:3),cam_SE3(1:3,4), '', 0.5)  ;
-
-%         camera = CentralCamera('default','centre',[512 512],'pose',cam_SE3); 
-        camera = CentralCamera_default(cam_SE3) ;
-        figure( fig_3d_handle )  ; 
-        draw_axes_direct_SE3(camera.T, '', 5)  ;
-        text(camera.T(1,4),camera.T(2,4),camera.T(3,4), int2str(ii_ii_))  ;            
+             
 
     % % %
     display( 'Try EPnP on the good data or latency data')  %-- see  /mnt/nixbig/ownCloud/project_code/camera_extrinsics__generate_perfect_data.m         
@@ -153,35 +143,13 @@ display(  'Run the pose estimation'  )
            % add noise to 2D data
             p_pts_2D_noise_magnitude = 2  ;  
             p_pts_2D_noise_mean =  0  ; 
-            points_2D_noise_u = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) ,  p_pts_2D_noise_magnitude ,  p_pts_2D_noise_mean , 1 )    ;
-            points_2D_noise_v = camera_extrinsics__generate_noise_for_points_2D( size(points_2D,2) ,  p_pts_2D_noise_magnitude ,  p_pts_2D_noise_mean , 1 )    ;
-            points_2D_preconditioned(1,:) = points_2D_preconditioned(1,:) + points_2D_noise_u ;
-            points_2D_preconditioned(2,:) = points_2D_preconditioned(2,:) + points_2D_noise_v ;            
+            points_2D_noise_u = camera_extrinsics__generate_noise_for_points_2D( size(points_2D_preconditioned_in_fov,2) ,  p_pts_2D_noise_magnitude ,  p_pts_2D_noise_mean , 1 )    ;
+            points_2D_noise_v = camera_extrinsics__generate_noise_for_points_2D( size(points_2D_preconditioned_in_fov,2) ,  p_pts_2D_noise_magnitude ,  p_pts_2D_noise_mean , 1 )    ;
+            points_2D_preconditioned_in_fov(1,:) = points_2D_preconditioned_in_fov(1,:) + points_2D_noise_u ;
+            points_2D_preconditioned_in_fov(2,:) = points_2D_preconditioned_in_fov(2,:) + points_2D_noise_v ;            
 
-            % {
-%                 if 1 == ii_ii_ 
-                    fig_handle_2D_no_latency = figure('Name',strcat(exp_num,' : ',sprintf('#%d: 2D latency_time_steps = %f',ii_ii_,latency_time_steps)));  grid on; hold on;
-                    plot2_rows(points_2D_preconditioned, 'rx')  ;
-                    u_0 = camera.limits(1) ; u_max = camera.limits(2) ; v_0 = camera.limits(3) ; v_max = camera.limits(4)  ;
-                    plot2_rows( [ u_0  u_max  ;  v_0  v_max ] ,'bo')  ;
-                    plot2_rows( [ u_0  u_max  ;  v_max  v_0  ] ,'bo')  ;
-                    axis equal
-                    %  DONT_TEXT_POINTS_3D = 'DONT_TEXT_POINTS_3D'
-                    if ~exist( 'DONT_TEXT_POINTS_3D' , 'var' )
-                        for ii_ = 1:size(points_2D_preconditioned,2) ; text(points_2D_preconditioned(1,ii_),points_2D_preconditioned(2,ii_),num2str(ii_));  end
-                    end
-%                 end
-            % }       
-    
-            figure(fig_handle_2D_no_latency) ;  plot2_rows(points_2D_preconditioned,'rx')
-            points_2D_preconditioned_in_fov_hist(ii_ii_,:)  = ...
-                    points_2D_preconditioned(1,:) >= camera.limits(1) ...
-                    & points_2D_preconditioned(1,:) <= camera.limits(2) ...                
-                    & points_2D_preconditioned(2,:) >= camera.limits(3) ...
-                    & points_2D_preconditioned(2,:) <= camera.limits(4)  ;
-            points_2D_preconditioned_in_fov = points_2D_preconditioned(:, points_2D_preconditioned_in_fov_hist(ii_ii_,:) > 0)  ;
-            points_3D_preconditioned_in_fov = points_3D_preconditioned(:, points_2D_preconditioned_in_fov_hist(ii_ii_,:) > 0)  ;
-           %--   RUN EPNP 
+            
+           %---- RUN EPNP -------
             p_model_size = 5;
             p_model_size = 12; %-- 0_003_11
             p_model_size = 24; %-- 0_003_12
@@ -194,7 +162,9 @@ display(  'Run the pose estimation'  )
                     points_2D_preconditioned_in_fov,    points_3D_preconditioned_in_fov  , camera_K_default, ...
                     p_num_RANSAC_iterations, p_model_size, ...
                     camera.get_pose_transform);    
+           %---- RUN EPNP -------
 
+                
         % fig_3d_handle = gcf 
         if ~exist('DONT_DRAW','var') 
             camera_extrinsics__plot_3d_estimated_poses   (fig_3d_handle, models_extrinsic_estimate_as_local_to_world)        
@@ -276,6 +246,7 @@ display(  'Run the pose estimation'  )
     posn_euclidean_dist_error = norm_2( estimated_position_diffs, 1)  ;
     %
     
+
     camera_orientation_quat = Quaternion(camera.T(1:3,1:3))  ;
     estimated_orientations_SO3 = models_extrinsic_estimate_as_local_to_world(1:3,1:3,:)   ;    
     estimated_orientations_quat = repmat(Quaternion(),  1, p_num_RANSAC_iterations);    
@@ -302,13 +273,15 @@ display(  'Run the pose estimation'  )
     estimated_position_diffs_under_reproj_5 = estimated_positions(:,reprojection_Euclidean_mean <= 5 )  ;   
     estimated_position_diffs_under_reproj_5 =  estimated_position_diffs_under_reproj_5 - repmat(camera_position, 1, size(estimated_position_diffs_under_reproj_5,2))   ;
         
-    estimated_position_diffs_under_reproj_20 = estimated_positions(:,reprojection_Euclidean_mean <= 20 )  ;   
+    estimated_position_diffs_under_reproj_20 = estimated_positions; %(:,reprojection_Euclidean_mean <= 20 )  ;   
     estimated_position_diffs_under_reproj_20 =  estimated_position_diffs_under_reproj_20 - repmat(camera_position, 1, size(estimated_position_diffs_under_reproj_20,2))   ;
 
 
     estimated_position_diffs_under_dist = estimated_positions( : , posn_euclidean_dist_error < 0.1 )  ;
     estimated_position_diffs_under_dist =  estimated_position_diffs_under_dist - repmat(camera_position, 1, size(estimated_position_diffs_under_dist,2))   ;
     
+    figure_named('Mean reprojection error (Euclidean distance)'); plot(reprojection_Euclidean_mean,'rx') ; hold on; grid on 
+
 if size(estimated_position_diffs_under_reproj_20,2) > 5
      fig_now_ = figure('Name',strcat(exp_num,' : #',sprintf('%d',ii_ii_), sprintf('x=%3.3f, y=%3.3f, z=%3.3f', camera.T(1,4), camera.T(2,4), camera.T(3,4)) ,': error distribution under reprojection 20: '));  
      set(fig_now_, 'Position',  [155   165   655  785] ) ;
@@ -323,10 +296,13 @@ if size(estimated_position_diffs_under_reproj_20,2) > 5
     
      A = histcounts(estimated_position_diffs_under_reproj_20(1,:), 'BinLimits',[-0.2, 0.2]);
      ylim_ = [0 min(min(p_num_RANSAC_iterations, 100), max(max(A),10))]  ;
-         subplot(3,3,7); histogram(estimated_position_diffs_under_reproj_20(1,:), 'BinLimits',[-0.2, 0.2]); xlabel(' x(m) '); ylim(ylim_); set(gca,'XTick',[-0.2:0.02:0.2]) ;  set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ;
-         subplot(3,3,8); histogram(estimated_position_diffs_under_reproj_20(2,:), 'BinLimits',[-0.2, 0.2]); xlabel(' y(m) '); ylim(ylim_); set(gca,'XTick',[-0.2:0.02:0.2]) ;  set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ; 
-         title({'','Position error for mean reprojection error <= 20px'}); 
-         subplot(3,3,9); histogram(estimated_position_diffs_under_reproj_20(3,:), 'BinLimits',[-0.2, 0.2]); xlabel(' z(m) '); ylim(ylim_); set(gca,'XTick',[-0.2:0.02:0.2]) ;  set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ;             
+         subplot(3,3,7); histogram(estimated_position_diffs_under_reproj_20(1,:),100, 'BinLimits',[-0.2, 0.2]); xlabel(' x(m) '); ylim(ylim_); %set(gca,'XTick',[-0.2:0.02:0.2]) ;  %set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ;
+         subplot(3,3,8); histogram(estimated_position_diffs_under_reproj_20(2,:), 100,'BinLimits',[-0.2, 0.2]); xlabel(' y(m) '); ylim(ylim_); %set(gca,'XTick',[-0.2:0.02:0.2]) ;  %set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ; 
+         subplot(3,3,7); histogram(estimated_position_diffs_under_reproj_20(1,:),100, 'BinLimits',[-2, 2]); xlabel(' x(m) '); ylim(ylim_); %set(gca,'XTick',[-0.2:0.02:0.2]) ;  
+         subplot(3,3,8); histogram(estimated_position_diffs_under_reproj_20(2,:), 100,'BinLimits',[-2, 2]); xlabel(' y(m) '); ylim(ylim_); %set(gca,'XTick',[-0.2:0.02:0.2]) ;  
+         title({'','Position error for mean reprojection error '}); 
+         subplot(3,3,9); histogram(estimated_position_diffs_under_reproj_20(3,:), 'BinLimits',[-0.2, 0.2]); xlabel(' z(m) '); ylim(ylim_); %set(gca,'XTick',[-0.2:0.02:0.2]) ;  %set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ;          
+         subplot(3,3,9); histogram(estimated_position_diffs_under_reproj_20(3,:),100, 'BinLimits',[-0.2, 0.2]); xlabel(' z(m) '); ylim(ylim_); %set(gca,'XTick',[-2:0.02:2]) ;            
     norm_dist_x(ii_ii_) = fitdist(estimated_position_diffs_under_reproj_20(1,:)','normal') ;
     conf_bound_x(ii_ii_,:) = [ norm_dist_x(ii_ii_).mu - norm_dist_x(ii_ii_).sigma*3 , norm_dist_x(ii_ii_).mu + norm_dist_x(ii_ii_).sigma*3  ]    ;
     norm_dist_y(ii_ii_) = fitdist(estimated_position_diffs_under_reproj_20(2,:)','normal') ;
@@ -506,21 +482,22 @@ end
    % ??  uncertainty_normalised =  ?? do I want to normalise this : it's not a trade-off, it's a limit ?? 
    % NOW: cull these by (1) image formation + algorithm maximum resolution  (2) obstacles on floor plan  (3) non-free space
    % !! free_space =   ; % probability: 1|0  = free|obstacle  : multiplier 
+   points_2D_preconditioned = points_2D_preconditioned_in_fov;
     row_num_ = 0 ; col_num_ = 0 ;
     for uu_ = 0 : uu_step_ : uu_num_rows_*uu_step_
         row_num_ = row_num_ + 1 ; 
         col_num_ = 0  ;
-        for vv_ = 0 : vv_step_ : vv_num_cols_*vv_step_ 
+        for vv_ = 0 : vv_step_ : vv_num_cols_*vv_step_             
             col_num_ = col_num_ + 1 ;       
             pixel_coordinate = [ uu_ ; vv_ ]  ;
              diffs = points_2D_preconditioned - repmat( pixel_coordinate,1, size(points_2D_preconditioned,2))  ;
              distance_from_other_pixels(row_num_,col_num_) = min( norm_2(diffs,1) ); 
              
              points_3D_preconditioned_z0 = points_3D_preconditioned ( :,(...
-                 points_3D_preconditioned(3,:) >=  feature_2_pose_SE3(3,4)-0.1 ...
+                 points_3D_preconditioned(3,:) >= 0 ...  feature_2_pose_SE3(3,4)-0.1 ...
                     &  points_3D_preconditioned(3,:) <=  feature_2_pose_SE3(3,4)+0.1)   );
              points_3D_preconditioned_z2 = points_3D_preconditioned (:, ( ...
-                 points_3D_preconditioned(3,:) >=  feature_1_pose_SE3(3,4)-0.1 ...
+                 points_3D_preconditioned(3,:) >= 0 ...  feature_1_pose_SE3(3,4)-0.1 ...
                     &  points_3D_preconditioned(3,:) <=  feature_1_pose_SE3(3,4)+0.1)   );
                 
              diffs_feature_0_3D = points_3D_preconditioned_z0 ...
@@ -978,7 +955,14 @@ e.g.
         pause 
     end
          
-        
+    
+    
+    cam_position = camera.T(1:3,4)
+        target_point = [3.0463 ; 4.0007 ; 0]
+        cam_direction_vector = target_point - cam_position ;
+        camera_rdf_coord_sys = camera_rdf_coordinate_system( cam_direction_vector, [ cam_direction_vector(1:2) ; cam_direction_vector(3)+2 ] )  ;
+        cam_T =  rt2tr(  camera_rdf_coord_sys , cam_position)  ;
+        draw_axes_direct( camera_rdf_coord_sys,  cam_position, '', 5 )  ;
         
 %%         
 %--  Try drawing the camera field of view intersections with the XY plane
