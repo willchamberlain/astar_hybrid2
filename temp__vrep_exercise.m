@@ -1,9 +1,21 @@
 
 
 vrep = VREP();
-
+%{
+vrep.simstart()
+vrep.simstop()
+%}
+vrep.client
 
 cam = vrep.camera('DefaultCamera');
+
+    %  cam_603_vrepcamera = vrep.camera('cam_603_vrepcamera')
+cam603sensor = vrep.camera('cam603sensor')
+cam603sensor0 = vrep.camera('cam603sensor0')
+
+figure_named('cam603sensor0.grab')  ;  
+im =  cam603sensor0.grab  ;
+idisp(im)
 
 % then get the camera position
 p = cam.getpos
@@ -33,4 +45,6 @@ pioneer2.setorient( r2t(rotz(pi/2)) , pioneer2)
 pioneer2.setpos( [0.1 0.1 0.0] , pioneer2)
 pioneer1.setpos( [0.1 0.1 0.0] , pioneer2)
 pioneer1.setpos( [0.1 0.1 pioneer_z] )
+
+
 
