@@ -22,7 +22,7 @@ load_pp = 0;
         pp.X_OFF = 0;
         pp.Y_OFF = 0;
         pp.CRUMB_SZ = 1000;
-        pp.NUM_WP = 5;
+        %         pp.NUM_WP = 5;
         pp.X = 1;
         pp.Y = 2;
         pp.DIM = 2;
@@ -50,7 +50,9 @@ load_pp = 0;
         
         % double[][] way_pts = {{300.0,500.0},{100.0, 500.0},{100.0,100.0}, {500.0,100.0},{500.0, 500.0}};
         % pp.way_pts = [300.0, 500.0 ; 100.0, 500.0 ; 120.0, 400.0 ; 90.0, 80.0 ; 100, 10 ; 500.0, 500.0];
-        pp.way_pts = way_points_; 
+        pos_now = double(pp.pioneer2.getpos)  ;
+        pp.way_pts = [ pos_now(1)*100, pos_now(2)*100 ; way_points_]; 
+        pp.NUM_WP =  size(pp.way_pts,1)  ;
         pp.cur_way_pt = 1; % current waypoint index
         pp.vrep=vrep_  ;
         pp.pioneer_handle = pioneer_handle_  ;
@@ -179,13 +181,16 @@ end
 
 function pp = initSim(pp) 
     pp.cur_way_pt = 1;
-    %pp = setFollow(pp, 280.0, 500);
-    pp = setPosition(pp, 300.0, 400.0);
+    %pp.cur_way_pt = 2;
+    %     pp = setFollow(pp, 280.0, 500);
+    %     pp = setPosition(pp, 300.0, 400.0);
     pos_now = pp.pioneer2.getpos  ;
     pp = setPosition(pp, pos_now(1)*100, pos_now(2)*100 );
     
     waypoint_1 = pp.way_pts(pp.cur_way_pt,:) 
     pp = setFollow(pp, waypoint_1(1), waypoint_1(2));
+    %     pp = updateWaypoint(pp, pp.sim_xp, pp.sim_yp);
+    %     pp = updatePursuit(pp, pp.sim_xp, pp.sim_yp);
     
     pp = setVelocity(pp, 4);
     pp = setVelocity(pp, 1.4);  % 1.4m/s
@@ -323,11 +328,11 @@ function pp = drawWayPoints(pp)
 fill(0, 0, 250);
 % for (int i=0; i<NUM_WP; i++)
 for i = 1:pp.NUM_WP
-    %         display(sprintf('%i of %i', i, pp.NUM_WP ))
-    %         display(sprintf('%i of %i : pp.way_pts(i, pp.X) =  pp.way_pts(%i, %d) ', i, pp.NUM_WP, i, pp.X ))
-    %         display(sprintf('size( pp.way_pts) = %i %i', size( pp.way_pts,1), size( pp.way_pts,2)  ))
-    x = calcDrawX(pp, pp.way_pts(i, pp.X));
-    y = calcDrawY(pp, pp.way_pts(i, pp.Y));
+             display(sprintf('%i of %i', i, pp.NUM_WP ))
+             display(sprintf('%i of %i : pp.way_pts(i, pp.X) =  pp.way_pts(%i, %d) ', i, pp.NUM_WP, i, pp.X ))
+             display(sprintf('size( pp.way_pts) = %i %i', size( pp.way_pts,1), size( pp.way_pts,2)  ))
+    x = calcDrawX(pp, pp.way_pts(i, pp.X))
+    y = calcDrawY(pp, pp.way_pts(i, pp.Y))
     if i == pp.cur_way_pt
         d = calcDraw(pp, pp.WP_DIST);
         filledCircle([x y], 5, 100, 'b');
