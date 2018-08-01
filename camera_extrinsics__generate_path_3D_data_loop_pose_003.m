@@ -747,8 +747,30 @@ end
     end
     waypoints_set = unique(waypoints_set,'rows') ;
     
+    grid_scale_inv = 1/grid_scale  ;
+    [waypoints_set_grid_cells_r waypoints_set_grid_cells_c] = ind2sub(size(grid_cells_best_payoffs), waypoints_set)  ;
+    waypoints_set_grid_cells_c(waypoints_set_grid_cells_r == 0) = 0
+    waypoints_set_grid_cells_y = waypoints_set_grid_cells_r./grid_scale_inv
+    waypoints_set_grid_cells_x = waypoints_set_grid_cells_c./grid_scale_inv
+    waypoints_set_grid_cells_xy=cat(3,waypoints_set_grid_cells_x,waypoints_set_grid_cells_y)
     
-    mstraj
+    waypoints_ = waypoints_set_grid_cells_y(64,waypoints_set_grid_cells_y(64,:)~=0)
+    robot_entry = 0
+    robot_exit = 10 
+    robot_motion_model_vel_limits = [ 1 1 ]
+    robot_motion_model_acc_limits = [ 0.5 0.5 ]
+    start_point = robot_entry 
+    via_points = [ waypoints_ robot_exit ]
+    num_via_points = size(via_points)
+    %  TRAJ = MSTRAJ(P, QDMAX, TSEG, Q0, DT, TACC, OPTIONS)
+    mstraj( via_points , robot_motion_model_acc_limits , [] , start_point , 0.1 , robot_motion_model_acc_limits )
+
+e.g.
+    traj_ = mstraj( [ 1 1 ; 2 1 ; 3 0  ], [1.2 1.2]  , [] , [ 0 0 ] , 0.1 , 1  )
+    size(traj_)
+    traj_ = mstraj( [ 1 1 ; 2 1 ; 3 0  ], [1.2 1.2]  , [] , [ 0 0 ] , 0.2 , 1  )
+    size(traj_)
+    traj_ = mstraj( [ 1 1 ; 2 1 ; 3 0  ], [0.2 0.2]  , [] , [ 0 0 ] , 0.2 , 1  )
     
     
     %% -----------------------------------------------------------------
