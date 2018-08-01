@@ -19,7 +19,7 @@ addpath( '/mnt/nixbig/ownCloud/project_code/' )
 
 %%
 %  DONT_DRAW = 'DONT_DRAW'
-% exp_num='now' ; description=exp_num ;
+%  exp_num='now' ; description=exp_num ;
 display(strcat(' Generate the trajectory for exp', exp_num, ': ', description))
 time_step = 0.005  ;
 
@@ -710,14 +710,52 @@ end
     %{
         grid_cells_best_payoffs  -->  AStar planning 
     %}
+    robot_last_entry_point = [200,250,0]  ;
+    robot_last_exit_point  = [200,225,0]  ;
+    robot_last_exit_point  = [250,225,0]  ;
     size(grid_cells_best_payoffs)
     figure_named('grid_cells_best_payoffs') ;  surf(grid_cells_best_payoffs) ; 
-        hold on; plot3(200,225,0,'rx') ;
-        plot3(200,250,0,'rx') ;
-        robot_last_entry_point = [200,250,0]  ;
-        robot_last_exit_point  = [200,225,0]  ;
-    start = robot_last_entry_point(1:2)  
-    goal = robot_last_exit_point(1:2)
+        hold on; 
+        plot3_rows(robot_last_entry_point','mo') ;
+        plot3_rows(robot_last_exit_point','rx') ;
+    start = robot_last_entry_point(1:2)     % maybe with some variation to generate several paths
+    goal = robot_last_exit_point(1:2)        % maybe with some variation to generate several paths
+    
+    %   flip the payoff to a cost for AStar, so that 
+    %       (1) low payoff = high cost 
+    %       (2) robot steers clear of boundaries - (2.1) Walls  (2.2) FoV limits
+    grid_cells_best_payoffs_inverted = ones(size(grid_cells_best_payoffs) ).*max(max(grid_cells_best_payoffs))+1 - grid_cells_best_payoffs ;
+    
+    figure_named('grid_cells_best_payoffs_inverted') ;  surf(grid_cells_best_payoffs_inverted) ; hold on; grid on; xlabel('x'); ylabel('y')
+    figure_named('flipped grid_cells_best_payoffs_inverted') ;  surf(flip(flip(grid_cells_best_payoffs_inverted,1),2)) ;  hold on; grid on; xlabel('x'); ylabel('y')
+        hold on; 
+        plot3_rows(robot_last_entry_point','mo') ;
+        plot3_rows(robot_last_exit_point','rx') ;
+
+
+    [ path__ , f_score, g_score , came_from, open_set, closed_set ] = ...
+        path_planning__astar(grid_cells_best_payoffs_inverted, robot_last_entry_point(1:2), robot_last_exit_point(1:2))    ;
+    [ total_path_goal_to_start__  , total_path_start_to_goal__ ] = path_planning__reconstruct_path(came_from, robot_last_exit_point(1:2))    ;    
+
+    figure_name='came_from'  ;
+    h_fig_came_from = path_planning__draw_came_from(came_from ,  figure_name  )    ;    
+    
+    h_fig_map = figure_named('total_path_start_to_goal__');
+    path_planning__draw_path( total_path_start_to_goal__ )    ;
+    path_planning__draw_path_yx( total_path_start_to_goal__ )    ;
+        plot3_rows(robot_last_entry_point','bo') ;
+        plot3_rows(robot_last_exit_point','bx') ;
+        plot3(robot_last_entry_point(2),robot_last_entry_point(1),robot_last_entry_point(3),'go')  ;  
+        plot3(robot_last_exit_point(2),robot_last_exit_point(1),robot_last_exit_point(3),'gx')  ;  
+    
+    total_path_smoothed__ = path_planning__smooth_path_lineofsight( total_path_start_to_goal__ , map_2, 'Threshold', 0.1 )    ;
+
+    figure(h_fig_map); hold on ;
+    path_planning__draw_path( total_path_smoothed__ )    ;        
+    
+    
+    
+    
     
     
     
