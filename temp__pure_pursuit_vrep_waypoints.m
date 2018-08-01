@@ -66,6 +66,7 @@ load_pp = 0;
     
     fig_pp = figure(1);
     set(fig_pp, 'KeyPressFcn', @temp__vrep_waypoints_callback);
+    set(fig_pp, 'closeRequestFcn' , @temp__vrep_waypoints_closeRequestFcn_callback );
     %      hAx = axes;
     %      set(hAx, 'ButtonDownFcn', @(~,~) disp('clicked axes'));
     
@@ -178,8 +179,14 @@ end
 
 function pp = initSim(pp) 
     pp.cur_way_pt = 1;
-    pp = setFollow(pp, 280.0, 500);
+    %pp = setFollow(pp, 280.0, 500);
     pp = setPosition(pp, 300.0, 400.0);
+    pos_now = pp.pioneer2.getpos  ;
+    pp = setPosition(pp, pos_now(1)*100, pos_now(2)*100 );
+    
+    waypoint_1 = pp.way_pts(pp.cur_way_pt,:) 
+    pp = setFollow(pp, waypoint_1(1), waypoint_1(2));
+    
     pp = setVelocity(pp, 4);
     pp = setVelocity(pp, 1.4);  % 1.4m/s
     pp = setSteering(pp, 4);
@@ -316,6 +323,9 @@ function pp = drawWayPoints(pp)
 fill(0, 0, 250);
 % for (int i=0; i<NUM_WP; i++)
 for i = 1:pp.NUM_WP
+    %         display(sprintf('%i of %i', i, pp.NUM_WP ))
+    %         display(sprintf('%i of %i : pp.way_pts(i, pp.X) =  pp.way_pts(%i, %d) ', i, pp.NUM_WP, i, pp.X ))
+    %         display(sprintf('size( pp.way_pts) = %i %i', size( pp.way_pts,1), size( pp.way_pts,2)  ))
     x = calcDrawX(pp, pp.way_pts(i, pp.X));
     y = calcDrawY(pp, pp.way_pts(i, pp.Y));
     if i == pp.cur_way_pt
