@@ -15,8 +15,12 @@ load_pp = 0;
         pp.pioneer2 = pioneer2 ;
         pp.STEP_TIME = 0.1;
         pp.STEP_TIME = 0.05;
+        pp.STEP_TIME = 0.5;
+        pp.STEP_TIME = 2.0;
         pp.SCALE_P = 1.0;
+        %pp.SCALE_P = 2.0;
         pp.SCALE_V = 8.0;
+        pp.SCALE_V = 18.0;
         pp.WP_DIST = 20.0;         
         pp.FOLLOW_DIST = 40.0;     
         pp.X_OFF = 0;
@@ -74,7 +78,7 @@ load_pp = 0;
     
     %----   main loop here  ----
     while 1 
-        clf;  fig_pp = figure(1);   hold on;    % clear then re-draw each iteration
+        fig_pp = figure(1);   clf;  hold on;    % clear then re-draw each iteration
         pp = draw(pp);
         title(sprintf('Pure pursuit control [%d]', loop.iter));
         hold off;   
@@ -194,6 +198,7 @@ function pp = initSim(pp)
     
     pp = setVelocity(pp, 4);
     pp = setVelocity(pp, 1.4);  % 1.4m/s
+    pp = setVelocity(pp,   6.0*1.4   );  % 1.4m/s
     pp = setSteering(pp, 4);
     pp = updateRover(pp);
 end
@@ -299,9 +304,19 @@ plot([x xd], [y yd], 'b-');
 text(50, 550, sprintf(' max steering: %.4f \n vel: %.4f \n sim_d: %4f', pp.valmax, pp.sim_v, pp.sim_d ) ...
     , 'BackgroundColor',[.3 .9 .7], 'FontSize', 7);
 % vrep : pp.pioneer2 is a  VREP_obj  from Peter Corke's Robotics Toolbox
-pp.pioneer2.setpos( [ x/100 y/100 pp.pioneer_z ] )  ;
+pp.pioneer2.setpos( [ (x/100 +1.15) y/100 pp.pioneer_z ] )  ;
 pp.pioneer2.setorient( rotz(pp.sim_d) )  ;
 %pp.vrep.setpos(pp.pioneer_handle, pioneer_pose__orig(1:3,4)+[0;-1;0])
+
+    [detected__, marker_2D_uv__,pose_3D__] = detect_marker_and_request_posn( pp.vrep ) ;
+    global time_stamp
+    global detected
+    global marker_2D_uv
+    global pose_3D
+    time_stamp(end+1) = pp.sim_t  ;
+    detected(end+1) = detected__  ;
+    marker_2D_uv(end+1,1:2) = marker_2D_uv__  ;
+    pose_3D(end+1,1:3) = pose_3D__  ;
 end
 
 function pp_ = drawPursuit(pp_)   

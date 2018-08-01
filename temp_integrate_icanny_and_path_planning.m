@@ -80,6 +80,13 @@ goal_2 = ceil([ 32 216 ])  ;  % !!!!! is in matrix coordinates: [ y , x ]
 hold on; plot2_rows( [ start_2(2) ; start_2(1) ] , 'rx' )
 hold on; plot2_rows( [ goal_2(2) ; goal_2(1)  ] , 'gx' )
 
+start_2 = [ 285 700 ]  ;
+start_2 = [  75 180 ] ;
+goal_2 = [ 530 650 ]  ;
+goal_2 = [ 135 160 ]  ;
+hold on; plot2_rows( [ start_2(2) ; start_2(1) ] , 'rx' )
+hold on; plot2_rows( [ goal_2(2) ; goal_2(1)  ] , 'gx' )
+
 [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_planning__astar(map_2, start_2, goal_2)    ;
 [ total_path_goal_to_start__  , total_path_start_to_goal__ ] = path_planning__reconstruct_path(came_from, goal_2)    ;    
 
