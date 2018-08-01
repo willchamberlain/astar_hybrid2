@@ -36,6 +36,8 @@ function camera_extrinsics_data_analysis__keyboard_callback( src , event )
             subplot(2,1,1); hold on;
                 delete(datapoint_handles_3D(current_idx))   %  remove the graphics object : saves memory 
         current_idx = current_idx - 1  ;
+    else
+        disp( sprintf('You pressed %s',event.Key) )
    end
 end
 
