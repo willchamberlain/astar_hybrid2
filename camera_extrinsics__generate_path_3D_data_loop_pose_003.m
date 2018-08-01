@@ -535,7 +535,7 @@ end
                 
              uncertainty_from_imgForm_alg_f0(row_num_,col_num_) = ...
                  extrinsics_approximate_uncertainty_distance_func( ...
-                    norm_2(squeeze(z_eq_0_intercept(row_num_,col_num_,:)) - best_pose(1:3,4),1));
+                    norm_2(squeeze(z_eq_0_intercept(row_num_,col_num_,:)) - best_pose(1:3,4),1))  ;
                 
              uncertainty_from_imgForm_alg_f2(row_num_,col_num_) = ...
                  extrinsics_approximate_uncertainty_distance_func( ...
@@ -545,22 +545,22 @@ end
    pgood_detection_f0 = 1 - uncertainty_from_imgForm_alg_f0  ;  % multiplier  in range 1:0 = accurate detection:inaccurate detection 
    pgood_detection_f2 = 1 - uncertainty_from_imgForm_alg_f2  ;
     % per ray --> WRONG for this, as SHOULD have value per 3D-2D observation, and then SUM per grid cell / pose to plan to
-%     figure; surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
-%         (feature_0_distance_3D./max(max(feature_0_distance_3D)) ...
-%         + feature_2_distance_3D./max(max(feature_2_distance_3D)) ...
-%         )./2 ...
-%         + distance_from_other_pixels./max(max(distance_from_other_pixels)))  ;    
-    figure_named('1*feature_0_distance_3D + 1*distance_from_other_pixels'); surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
-        feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px)) ...
-        + distance_from_other_pixels./max(max(distance_from_other_pixels)))  ;    
-    figure_named('1*feature_2_distance_3D + 1*distance_from_other_pixels'); surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
-        feature_2_3Ddist_per_px./max(max(feature_2_3Ddist_per_px)) ...
-        + distance_from_other_pixels./max(max(distance_from_other_pixels)))  ;
-    % this shows that the nearby cells will dominate in a summation over observations per ray per cell because they get more rays passing through the grid cells
-    % on the plane
-    %  --> need to find the biggest-benefit per cell : can only observe once per frame per ray per pose 
-    %       --> OR find the biggest-benefit per pixel : 
-    figure_named('histogram2(z_eq_0_intercept'); histogram2(z_eq_0_intercept(:,:,1)./grid_scale,z_eq_0_intercept(:,:,2)./grid_scale)
+        %     figure; surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
+        %         (feature_0_distance_3D./max(max(feature_0_distance_3D)) ...
+        %         + feature_2_distance_3D./max(max(feature_2_distance_3D)) ...
+        %         )./2 ...
+        %         + distance_from_other_pixels./max(max(distance_from_other_pixels)))  ;    
+        figure_named('1*feature_0_distance_3D + 1*distance_from_other_pixels'); surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
+            feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px)) ...
+            + distance_from_other_pixels./max(max(distance_from_other_pixels)))  ;    
+        figure_named('1*feature_2_distance_3D + 1*distance_from_other_pixels'); surf( ... % balance equally between the 3D and 2D gain - is this a good thing w.r.t. EPnP ?
+            feature_2_3Ddist_per_px./max(max(feature_2_3Ddist_per_px)) ...
+            + distance_from_other_pixels./max(max(distance_from_other_pixels)))  ;
+        % this shows that the nearby cells will dominate in a summation over observations per ray per cell because they get more rays passing through the grid cells
+        % on the plane
+        %  --> need to find the biggest-benefit per cell : can only observe once per frame per ray per pose 
+        %       --> OR find the biggest-benefit per pixel : 
+        figure_named('histogram2(z_eq_0_intercept'); histogram2(z_eq_0_intercept(:,:,1)./grid_scale,z_eq_0_intercept(:,:,2)./grid_scale)
     
    % NOW: cull these by (1) image formation + algorithm maximum resolution  (2) obstacles on floor plan  (3) non-free space
 
@@ -568,9 +568,9 @@ end
     feature_0_3Ddist_per_px_normalised = feature_0_3Ddist_per_px./max(max(feature_0_3Ddist_per_px))  ;
     feature_2_3Ddist_per_px_normalised = feature_2_3Ddist_per_px./max(max(feature_2_3Ddist_per_px))  ;
     distance_from_other_pixels_normalised = distance_from_other_pixels./max(max(distance_from_other_pixels))  ;
-    %  figure_named('feature_0_3Ddist_per_px_normalised'),surf(feature_0_3Ddist_per_px_normalised);
-    %  figure_named('feature_2_3Ddist_per_px_normalised'),surf(feature_2_3Ddist_per_px_normalised);
-    figure_named('distance_from_other_pixels_normalised '); surf(distance_from_other_pixels_normalised);
+        %  figure_named('feature_0_3Ddist_per_px_normalised'),surf(feature_0_3Ddist_per_px_normalised);
+        %  figure_named('feature_2_3Ddist_per_px_normalised'),surf(feature_2_3Ddist_per_px_normalised);
+        figure_named('distance_from_other_pixels_normalised '); surf(distance_from_other_pixels_normalised);
     
     
     best_feature_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
@@ -578,23 +578,27 @@ end
     best_feature_per_ray(feature_0_3Ddist_per_px <= feature_2_3Ddist_per_px) = 2  ;  % ??
     best_feature_per_ray(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0 > feature_2_3Ddist_per_px_normalised.*pgood_detection_f2) = 0  ;  % ??
     best_feature_per_ray(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0 <= feature_2_3Ddist_per_px_normalised.*pgood_detection_f2) = 2  ;  % ??
-    figure_named('surf(best_feature_per_ray)'); surf(best_feature_per_ray)
+        figure_named('surf(best_feature_per_ray)'); surf(best_feature_per_ray)
+
+        figure_named('pgood_detection_f0');surf(pgood_detection_f0)
+        hold on; surf(pgood_detection_f2)
+    
     
     best_feature_per_ray(feature_0_3Ddist_per_px.*pgood_detection_f0 <= feature_2_3Ddist_per_px.*pgood_detection_f2) = 2  ;  % ??
     best_feature_per_ray(feature_0_3Ddist_per_px.*pgood_detection_f0 > feature_2_3Ddist_per_px.*pgood_detection_f2) = 0  ;  % ??
-    figure_named('surf(best_feature_per_ray)'); surf(best_feature_per_ray)
+        figure_named('surf(best_feature_per_ray)'); surf(best_feature_per_ray)
     
     best_3Ddist_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
     best_3Ddist_per_ray(best_feature_per_ray==0) =  feature_0_3Ddist_per_px_normalised(best_feature_per_ray==0).*pgood_detection_f0(best_feature_per_ray==0);
     best_3Ddist_per_ray(best_feature_per_ray==2) =  feature_2_3Ddist_per_px_normalised(best_feature_per_ray==2).*pgood_detection_f2(best_feature_per_ray==2);
     
-    figure_named('surf(best_3Ddist_per_ray)'); surf(best_3Ddist_per_ray)
-    figure_named('feature_0_3Ddist_per_px_normalised.*pgood_detection_f0');  surf(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0)
-    figure_named('feature_2_3Ddist_per_px_normalised.*pgood_detection_f2');  surf(feature_2_3Ddist_per_px_normalised.*pgood_detection_f2)
-        hold on ;  surf(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0) ;
+        figure_named('surf(best_3Ddist_per_ray)'); surf(best_3Ddist_per_ray)
+        figure_named('feature_0_3Ddist_per_px_normalised.*pgood_detection_f0');  surf(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0)
+        figure_named('feature_2_3Ddist_per_px_normalised.*pgood_detection_f2');  surf(feature_2_3Ddist_per_px_normalised.*pgood_detection_f2)
+            hold on ;  surf(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0) ;
     
     payoff_per_ray = 3.0*best_3Ddist_per_ray + distance_from_other_pixels_normalised ;  % What is the balance here? 
-    figure_named('payoff_per_ray');  surf(payoff_per_ray)
+        figure_named('payoff_per_ray');  surf(payoff_per_ray)
     
     %-- the grid location of the best feature in each ray/pixel 
     robot_posn_per_ray = zeros( [ size(feature_0_3Ddist_per_px ) , 3 ]) ;
@@ -605,7 +609,7 @@ end
     %  figure; surf(robot_posn_per_ray(:,:,3))
     
     robot_posn_per_ray_xy = robot_posn_per_ray(:,:,1:2)  ; 
-    figure_named('histogram2(robot_posn_per_ray_xy(:,:,1)');  histogram2(robot_posn_per_ray_xy(:,:,1),robot_posn_per_ray_xy(:,:,2))
+        figure_named('histogram2(robot_posn_per_ray_xy(:,:,1)');  histogram2(robot_posn_per_ray_xy(:,:,1),robot_posn_per_ray_xy(:,:,2))
     
     %  per ray/pixel find the grid cell it adds to, and cache the best payoff for that grid cell 
     map_limits_cells=[-200 -200 200 200]   ;
@@ -669,20 +673,20 @@ end
             % display('skipped')
         end    
     end
-    figure_named('used_cells');surf(used_cells);  
-        hold on; plot3_rows( best_pose(1:3,4).*[1/grid_scale;1/grid_scale;1] + [offset_x;offset_y;0],'rx' )
-        hold on; plot3_rows( best_pose(1:3,4).*[1/grid_scale;1/grid_scale;0] + [offset_x;offset_y;0],'ro' )
-    figure_named('histogram(used_cells'); histogram(used_cells,100); set(gca, 'YScale', 'log')
-    figure_named('used_cells.*grid_cells_best_payoffs');surf(used_cells.*grid_cells_best_payoffs);  
-    figure_named('histogram(used_cells.*grid_cells_best_payoffs'); histogram(used_cells(used_cells>0).*grid_cells_best_payoffs(used_cells>0),100); xlabel('used\_cells.*grid\_cells\_best\_payoffs')
+        figure_named('used_cells');surf(used_cells);  
+            hold on; plot3_rows( best_pose(1:3,4).*[1/grid_scale;1/grid_scale;1] + [offset_x;offset_y;0],'rx' )
+            hold on; plot3_rows( best_pose(1:3,4).*[1/grid_scale;1/grid_scale;0] + [offset_x;offset_y;0],'ro' )
+        figure_named('histogram(used_cells'); histogram(used_cells,100); set(gca, 'YScale', 'log')
+        figure_named('used_cells.*grid_cells_best_payoffs');surf(used_cells.*grid_cells_best_payoffs);  
+        figure_named('histogram(used_cells.*grid_cells_best_payoffs'); histogram(used_cells(used_cells>0).*grid_cells_best_payoffs(used_cells>0),100); xlabel('used\_cells.*grid\_cells\_best\_payoffs')
     
     vector_scaling_for_figure=     [1/grid_scale;1/grid_scale;1.0]  ;
-    figure_named('surf( used_cells.*grid_cells_best_payoffs )');  surf( used_cells.*grid_cells_best_payoffs ) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
-        plot3_rows(points_3D_f1.*repmat(vector_scaling_for_figure,1,size(points_3D_f1,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f1,2)),'rx')
-        plot3_rows(points_3D_f2.*repmat(vector_scaling_for_figure,1,size(points_3D_f2,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f2,2)),'mx')
-        plot3_rows(points_3D_f3.*repmat(vector_scaling_for_figure,1,size(points_3D_f3,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f3,2)),'gx')
-        axes_scale = 1;   draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,best_model_id).*(1/grid_scale) , models_extrinsic_estimate_as_local_to_world(1:3,4,best_model_id) , '' ,  axes_scale , 'r'    )  ;                    
-        zlim([-0.1,5])               
+        figure_named('surf( used_cells.*grid_cells_best_payoffs )');  surf( used_cells.*grid_cells_best_payoffs ) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' )
+            plot3_rows(points_3D_f1.*repmat(vector_scaling_for_figure,1,size(points_3D_f1,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f1,2)),'rx')
+            plot3_rows(points_3D_f2.*repmat(vector_scaling_for_figure,1,size(points_3D_f2,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f2,2)),'mx')
+            plot3_rows(points_3D_f3.*repmat(vector_scaling_for_figure,1,size(points_3D_f3,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f3,2)),'gx')
+            axes_scale = 1;   draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,best_model_id).*(1/grid_scale) , models_extrinsic_estimate_as_local_to_world(1:3,4,best_model_id) , '' ,  axes_scale , 'r'    )  ;                    
+            zlim([-0.1,5])               
     ray_length=1.0 ; %1/grid_scale;
     ray_scaling_for_figure=     [ray_length/grid_scale;ray_length/grid_scale;1.0]  ;
     for row_num_ = 1:10:size(ray_stack_P0_,1)
@@ -695,12 +699,27 @@ end
                 ]' , 'r' )  ;
         end
     end
-    figure_named('histogram( used_cells.*grid_cells_best_payoffs )'); histogram( used_cells.*grid_cells_best_payoffs );  set(gca, 'YScale', 'log')
-    sum(sum(used_cells))
-    figure_named('surf(grid_cells_best_payoffs)'); handle_ = surf(grid_cells_best_payoffs) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' ); xlabel('x'); ylabel('y')
+        figure_named('histogram( used_cells.*grid_cells_best_payoffs )'); histogram( used_cells.*grid_cells_best_payoffs );  set(gca, 'YScale', 'log')
+        sum(sum(used_cells))
+        figure_named('surf(grid_cells_best_payoffs)'); handle_ = surf(grid_cells_best_payoffs) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' ); xlabel('x'); ylabel('y')
     
     plot3_rows( [offset_x ; offset_y ; 0]-best_pose(1:3,4).*[1/grid_scale;1/grid_scale;0]   , 'mx' );    
     %  !!!  COORDINATE  DIRECTIONS  ARE  SWAPPED  !!! : work out how to get SURF to use the other coordinate direction or some such 
+    
+    %%
+    %{
+        grid_cells_best_payoffs  -->  AStar planning 
+    %}
+    size(grid_cells_best_payoffs)
+    figure_named('grid_cells_best_payoffs') ;  surf(grid_cells_best_payoffs) ; 
+        hold on; plot3(200,225,0,'rx') ;
+        plot3(200,250,0,'rx') ;
+        robot_last_entry_point = [200,250,0]  ;
+        robot_last_exit_point  = [200,225,0]  ;
+    start = robot_last_entry_point(1:2)  
+    goal = robot_last_exit_point(1:2)
+    
+    
     
     %%
     %{ 
