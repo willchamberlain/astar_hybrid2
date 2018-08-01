@@ -597,6 +597,8 @@ end
         figure_named('feature_2_3Ddist_per_px_normalised.*pgood_detection_f2');  surf(feature_2_3Ddist_per_px_normalised.*pgood_detection_f2)
             hold on ;  surf(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0) ;
     
+    payoff_per_ray = 2.0*best_3Ddist_per_ray + distance_from_other_pixels_normalised ;  % What is the balance here? 
+    payoff_per_ray = 4.0*best_3Ddist_per_ray + distance_from_other_pixels_normalised ;  % What is the balance here? 
     payoff_per_ray = 3.0*best_3Ddist_per_ray + distance_from_other_pixels_normalised ;  % What is the balance here? 
         figure_named('payoff_per_ray');  surf(payoff_per_ray)
     
@@ -686,19 +688,19 @@ end
             plot3_rows(points_3D_f2.*repmat(vector_scaling_for_figure,1,size(points_3D_f2,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f2,2)),'mx')
             plot3_rows(points_3D_f3.*repmat(vector_scaling_for_figure,1,size(points_3D_f3,2))+repmat([offset_x;offset_y;0],1,size(points_3D_f3,2)),'gx')
             axes_scale = 1;   draw_axes_direct_c( models_extrinsic_estimate_as_local_to_world(1:3,1:3,best_model_id).*(1/grid_scale) , models_extrinsic_estimate_as_local_to_world(1:3,4,best_model_id) , '' ,  axes_scale , 'r'    )  ;                    
-            zlim([-0.1,5])               
-    ray_length=1.0 ; %1/grid_scale;
-    ray_scaling_for_figure=     [ray_length/grid_scale;ray_length/grid_scale;1.0]  ;
-    for row_num_ = 1:10:size(ray_stack_P0_,1)
-        for col_num_ = 1:10:size(ray_stack_P0_,2)
-                    plot3_rows(  ... %  plot the rays through the pixel centres 
-                [ ...
-                (squeeze(  ray_stack_P0_(row_num_,col_num_,:)).*[1/grid_scale;1/grid_scale;1.0])'+[offset_x,offset_y,0] ; 
-                (squeeze(z_eq_0_intercept(row_num_,col_num_,:)).*ray_scaling_for_figure+[offset_x;offset_y;0])'  ...
-                %(   (  squeeze(  ray_stack_d_(row_num_,col_num_,:)).*ray_scaling_for_figure+squeeze( ray_stack_P0_(row_num_,col_num_,:)).*[1/grid_scale;1/grid_scale;1.0] )+[offset_x;offset_y;0] )'   ...
-                ]' , 'r' )  ;
-        end
-    end
+            zlim([-0.1,5])                   
+            ray_length=1.0 ; %1/grid_scale;
+            ray_scaling_for_figure=     [ray_length/grid_scale;ray_length/grid_scale;1.0]  ;
+            for row_num_ = 1:10:size(ray_stack_P0_,1)
+                for col_num_ = 1:10:size(ray_stack_P0_,2)
+                        plot3_rows(  ... %  plot the rays through the pixel centres 
+                            [ ...
+                            (squeeze(  ray_stack_P0_(row_num_,col_num_,:)).*[1/grid_scale;1/grid_scale;1.0])'+[offset_x,offset_y,0] ; 
+                            (squeeze(z_eq_0_intercept(row_num_,col_num_,:)).*ray_scaling_for_figure+[offset_x;offset_y;0])'  ...
+                            %(   (  squeeze(  ray_stack_d_(row_num_,col_num_,:)).*ray_scaling_for_figure+squeeze( ray_stack_P0_(row_num_,col_num_,:)).*[1/grid_scale;1/grid_scale;1.0] )+[offset_x;offset_y;0] )'   ...
+                            ]' , 'r' )  ;
+                end
+            end
         figure_named('histogram( used_cells.*grid_cells_best_payoffs )'); histogram( used_cells.*grid_cells_best_payoffs );  set(gca, 'YScale', 'log')
         sum(sum(used_cells))
         figure_named('surf(grid_cells_best_payoffs)'); handle_ = surf(grid_cells_best_payoffs) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' ); xlabel('x'); ylabel('y')
@@ -713,51 +715,77 @@ end
     robot_last_entry_point = [200,250,0]  ;
     robot_last_exit_point  = [200,225,0]  ;
     robot_last_exit_point  = [250,225,0]  ;
+    robot_last_exit_point  = [240,225,0]  ;
+    start = robot_last_entry_point(1:2)     % maybe with some variation to generate several paths
+    goal = robot_last_exit_point(1:2)        % maybe with some variation to generate several paths
     size(grid_cells_best_payoffs)
     figure_named('grid_cells_best_payoffs') ;  surf(grid_cells_best_payoffs) ; 
         hold on; 
         plot3_rows(robot_last_entry_point','mo') ;
         plot3_rows(robot_last_exit_point','rx') ;
-    start = robot_last_entry_point(1:2)     % maybe with some variation to generate several paths
-    goal = robot_last_exit_point(1:2)        % maybe with some variation to generate several paths
     
     %   flip the payoff to a cost for AStar, so that 
     %       (1) low payoff = high cost 
     %       (2) robot steers clear of boundaries - (2.1) Walls  (2.2) FoV limits
-    grid_cells_best_payoffs_inverted = ones(size(grid_cells_best_payoffs) ).*max(max(grid_cells_best_payoffs))+1 - grid_cells_best_payoffs ;
     
-    figure_named('grid_cells_best_payoffs_inverted') ;  surf(grid_cells_best_payoffs_inverted) ; hold on; grid on; xlabel('x'); ylabel('y')
-    figure_named('flipped grid_cells_best_payoffs_inverted') ;  surf(flip(flip(grid_cells_best_payoffs_inverted,1),2)) ;  hold on; grid on; xlabel('x'); ylabel('y')
-        hold on; 
-        plot3_rows(robot_last_entry_point','mo') ;
-        plot3_rows(robot_last_exit_point','rx') ;
+    % plan path 0  -  cost map 
+    grid_cells_best_payoffs_inverted = ...
+        ones(size(grid_cells_best_payoffs) ).*max(max(grid_cells_best_payoffs))+1 - grid_cells_best_payoffs ;
+    
+    
+        figure_named('grid_cells_best_payoffs_inverted') ;  surf(grid_cells_best_payoffs_inverted) ; hold on; grid on; xlabel('x'); ylabel('y')
+        %     figure_named('flipped grid_cells_best_payoffs_inverted') ;  surf(flip(flip(grid_cells_best_payoffs_inverted,1),2)) ;  hold on; grid on; xlabel('x'); ylabel('y')
+        %         hold on; 
+        %         plot3_rows(robot_last_entry_point','mo') ;
+        %         plot3_rows(robot_last_exit_point','rx') ;
 
-
+    % plan path 1    
     [ path__ , f_score, g_score , came_from, open_set, closed_set ] = ...
-        path_planning__astar(grid_cells_best_payoffs_inverted, robot_last_entry_point(1:2), robot_last_exit_point(1:2))    ;
-    [ total_path_goal_to_start__  , total_path_start_to_goal__ ] = path_planning__reconstruct_path(came_from, robot_last_exit_point(1:2))    ;    
+        path_planning__astar( grid_cells_best_payoffs_inverted, robot_last_entry_point(1:2), robot_last_exit_point(1:2))    ;
+    % plan path 2
+    [ total_path_goal_to_start__  , total_path_start_to_goal__ ] = ...
+        path_planning__reconstruct_path( came_from, robot_last_exit_point(1:2))    ;    
 
     figure_name='came_from'  ;
     h_fig_came_from = path_planning__draw_came_from(came_from ,  figure_name  )    ;    
     
-    h_fig_map = figure_named('total_path_start_to_goal__');
-    path_planning__draw_path( total_path_start_to_goal__ )    ;
-    path_planning__draw_path_yx( total_path_start_to_goal__ )    ;
+        h_fig_map = figure_named('total_path_start_to_goal__');
+     % draw plan    
+        %        path_planning__draw_path( total_path_start_to_goal__ )    ;
+     % draw plan    
+     path_planning__draw_path_yx( total_path_start_to_goal__ )    ;
+        %         plot3(robot_last_entry_point(2),robot_last_entry_point(1),robot_last_entry_point(3),'go')  ;  
+        %         plot3(robot_last_exit_point(2),robot_last_exit_point(1),robot_last_exit_point(3),'gx')  ;  
         plot3_rows(robot_last_entry_point','bo') ;
         plot3_rows(robot_last_exit_point','bx') ;
-        plot3(robot_last_entry_point(2),robot_last_entry_point(1),robot_last_entry_point(3),'go')  ;  
-        plot3(robot_last_exit_point(2),robot_last_exit_point(1),robot_last_exit_point(3),'gx')  ;  
     
-    total_path_smoothed__ = path_planning__smooth_path_lineofsight( total_path_start_to_goal__ , map_2, 'Threshold', 0.1 )    ;
-
-    figure(h_fig_map); hold on ;
-    path_planning__draw_path( total_path_smoothed__ )    ;        
+    % plan path 3    
+    total_path_smoothed__ = ...
+        path_planning__smooth_path_lineofsight( total_path_start_to_goal__ , grid_cells_best_payoffs_inverted, 'Threshold', 0.1 )    ;
+        figure_named('total_path_smoothed__'); hold on ;
+        path_planning__draw_path( total_path_smoothed__ )    ;        
+        [ size(total_path_smoothed__)  size(total_path_start_to_goal__)]     
+        
+% plan path 4  -  total the potential information gain along the path       
+total_path_start_to_goal__rows =   total_path_start_to_goal__'  ;    
+total_path_start_to_goal__grid_cells_best_payoffs_inverted = ...
+    grid_cells_best_payoffs_inverted( ...
+        sub2ind(  size(grid_cells_best_payoffs_inverted), ...
+        total_path_start_to_goal__rows(:,1),total_path_start_to_goal__rows(:,2)))   ;    
+path_info_gain_for_cam__as_sum_payoff = sum(total_path_start_to_goal__grid_cells_best_payoffs_inverted)  ;    
     
+    figure_named('total_path_smoothed_grid_cells_best_payoffs_inverted'); hold on; grid on; 
+    plot(total_path_start_to_goal__grid_cells_best_payoffs_inverted','bx');  ylim([0 5])
     
+% plan path 5  -  total the approx cost to the robot as the path length 
+path_cost_to_robot__as_path_length = size(total_path_start_to_goal__ , 2)  ;
     
-    
-    
-    
+%{
+As an illustration, 
+    trace out the robot path 
+    trace out the feature paths --> intuitive filling of 3D volume
+    project the feature paths back into the camera : show where they are in the image --> intuitive filling of image area
+%}
     
     %%
     %{ 
