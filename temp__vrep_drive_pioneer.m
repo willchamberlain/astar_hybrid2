@@ -1,6 +1,7 @@
 %%
 %{ 
 Scene : /mnt/nixbig/ownCloud/project_code/vrep_QUT_S11/S11_matlab_20180801_002_one_Pioneer.ttt
+Produce data for :  camera_extrinsics__generate_path_3D_data_loop_pose_004.m
 %}
 
 vrep = VREP();

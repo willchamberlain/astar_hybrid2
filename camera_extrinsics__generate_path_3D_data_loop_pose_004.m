@@ -1,4 +1,6 @@
 %{  
+Use data from :  with temp__vrep_drive_pioneer.m
+
 Latency sources:   
 1)  shutter close to timestamp on the device
 Image.getTimeStamp() :  https://developer.android.com/reference/android/media/Image#gettimestamp
@@ -94,6 +96,8 @@ num_points = size(points_3D_preconditioned,2)  ;
 
 
 %%
+% Run with temp__vrep_drive_pioneer.m
+
     global time_stamp
     global detected
     global marker_2D_uv

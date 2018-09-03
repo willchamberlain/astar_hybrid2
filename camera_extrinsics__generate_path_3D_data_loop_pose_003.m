@@ -1,4 +1,12 @@
 %{  
+Generates a trajectory for the robot base through specified waypoints and acceleration / time limits..
+States the visual feature model of the robot as features offset from the robot base as static transforms.
+Generates observations of the features on the trajectory.
+
+Steps through num_camera_posn_visited positions relative to the path, to show the effect of the field of view on the pose estimation.
+
+
+
 Latency sources:   
 1)  shutter close to timestamp on the device
 Image.getTimeStamp() :  https://developer.android.com/reference/android/media/Image#gettimestamp
@@ -18,8 +26,8 @@ addpath( '/mnt/nixbig/ownCloud/project_code/' )
 [ camera_K_default , Focal_length_default , Principal_point_default ] = camera_extrinsics__camera_intrinsics_from_default_pctoolkit_cam();
 
 %%
-%  DONT_DRAW = 'DONT_DRAW'
-%  exp_num='now' ; description=exp_num ;
+%  DONT_DRAW = 'DONT_DRAW'    ;
+%  exp_num='now' ; description=exp_num    ;
 display(strcat(' Generate the trajectory for exp', exp_num, ': ', description))
 time_step = 0.005  ;
 
@@ -116,10 +124,12 @@ display(  'Run the pose estimation'  )
     %-- Camera 
     %-- Camera pose setup - place a camera looking at one datapointdescription
     num_camera_posn = 4  ;
+    %     num_camera_posn_visited = num_camera_posn  ;
+    num_camera_posn_visited = 1  ;
     rat_ = (size(points_3D_f1,2)-1) / (num_camera_posn-1)  ; 
     indices_ = floor(  [1:num_camera_posn].*rat_ -  rat_ + 1) ;
     points_2D_preconditioned_in_fov_hist = zeros(num_camera_posn,num_points, 'uint32')  ;
-    for ii_ii_ = 1: 1
+    for ii_ii_ = 1: num_camera_posn_visited
         target_point3D = points_3D_f1(:,indices_(ii_ii_) )  ;
         target_point3D = points_3D_f1(:,round(size(points_3D_f1,2)/2))  ;
         target_point3D = [ 3.5 ; 0.25 ; 0.645 ]  ;
@@ -384,6 +394,15 @@ end
     best_model_by_total_reprojection_error =  find( reprojection_Euclidean_total <= min(reprojection_Euclidean_total) )  ;
     best_model_by_consensus_size = find( reprojection_inliers_num_below_8px >= max(reprojection_inliers_num_below_8px) );
     best_model_id = intersect(best_model_by_total_reprojection_error,best_model_by_consensus_size) ;
+    if 0 == size(best_model_id,2) 
+        min_adffds = min(reprojection_Euclidean_total(best_model_by_consensus_size))   ;     
+        best_model_id = ...
+        find( ...
+        reprojection_inliers_num_below_8px >= max(reprojection_inliers_num_below_8px) ...
+        & ...
+        min_adffds == reprojection_Euclidean_total  ...
+        )  ;        
+    end
     best_pose = models_extrinsic_estimate_as_local_to_world(:,:, best_model_id)  ;
     
     axes_scale = 1;
@@ -576,9 +595,11 @@ end
     best_feature_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
     best_feature_per_ray(feature_0_3Ddist_per_px > feature_2_3Ddist_per_px) = 0  ;    % ??
     best_feature_per_ray(feature_0_3Ddist_per_px <= feature_2_3Ddist_per_px) = 2  ;  % ??
+    
+    
     best_feature_per_ray(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0 > feature_2_3Ddist_per_px_normalised.*pgood_detection_f2) = 0  ;  % ??
     best_feature_per_ray(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0 <= feature_2_3Ddist_per_px_normalised.*pgood_detection_f2) = 2  ;  % ??
-        figure_named('surf(best_feature_per_ray)'); surf(best_feature_per_ray)
+        figure_named('surf(best_feature_per_ray) = 3Ddist_per_px_normalised.*pgood_detection : IS normalised'); surf(best_feature_per_ray)
 
         figure_named('pgood_detection_f0');surf(pgood_detection_f0)
         hold on; surf(pgood_detection_f2)
@@ -586,16 +607,19 @@ end
     
     best_feature_per_ray(feature_0_3Ddist_per_px.*pgood_detection_f0 <= feature_2_3Ddist_per_px.*pgood_detection_f2) = 2  ;  % ??
     best_feature_per_ray(feature_0_3Ddist_per_px.*pgood_detection_f0 > feature_2_3Ddist_per_px.*pgood_detection_f2) = 0  ;  % ??
-        figure_named('surf(best_feature_per_ray)'); surf(best_feature_per_ray)
+        figure_named('surf(best_feature_per_ray) = 3Ddist_per_px.*pgood_detection_  : NOT normalised'); surf(best_feature_per_ray)
     
     best_3Ddist_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
     best_3Ddist_per_ray(best_feature_per_ray==0) =  feature_0_3Ddist_per_px_normalised(best_feature_per_ray==0).*pgood_detection_f0(best_feature_per_ray==0);
     best_3Ddist_per_ray(best_feature_per_ray==2) =  feature_2_3Ddist_per_px_normalised(best_feature_per_ray==2).*pgood_detection_f2(best_feature_per_ray==2);
     
         figure_named('surf(best_3Ddist_per_ray)'); surf(best_3Ddist_per_ray)
+        figure_named('feature_0_3Ddist_per_px_normalised');  surf(feature_0_3Ddist_per_px_normalised)
+        figure_named('pgood_detection_f0');  surf(pgood_detection_f0)
         figure_named('feature_0_3Ddist_per_px_normalised.*pgood_detection_f0');  surf(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0)
+        figure_named('pgood_detection_f2');  surf(pgood_detection_f2)
+        figure_named('feature_2_3Ddist_per_px_normalised');  surf(feature_2_3Ddist_per_px_normalised);
         figure_named('feature_2_3Ddist_per_px_normalised.*pgood_detection_f2');  surf(feature_2_3Ddist_per_px_normalised.*pgood_detection_f2)
-            hold on ;  surf(feature_0_3Ddist_per_px_normalised.*pgood_detection_f0) ;
     
     payoff_per_ray = 2.0*best_3Ddist_per_ray + distance_from_other_pixels_normalised ;  % What is the balance here? 
     payoff_per_ray = 4.0*best_3Ddist_per_ray + distance_from_other_pixels_normalised ;  % What is the balance here? 
@@ -861,7 +885,7 @@ As an illustration,
     %  TRAJ = MSTRAJ(P, QDMAX, TSEG, Q0, DT, TACC, OPTIONS)
     mstraj( via_points , robot_motion_model_acc_limits , [] , start_point , 0.1 , robot_motion_model_acc_limits )
 
-e.g.
+% e.g.
     traj_ = mstraj( [ 1 1 ; 2 1 ; 3 0  ], [1.2 1.2]  , [] , [ 0 0 ] , 0.1 , 1  )
     size(traj_)
     traj_ = mstraj( [ 1 1 ; 2 1 ; 3 0  ], [1.2 1.2]  , [] , [ 0 0 ] , 0.2 , 1  )
