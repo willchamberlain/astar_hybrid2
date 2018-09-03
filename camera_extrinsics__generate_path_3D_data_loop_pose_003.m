@@ -26,10 +26,11 @@ addpath( '/mnt/nixbig/ownCloud/project_code/' )
 [ camera_K_default , Focal_length_default , Principal_point_default ] = camera_extrinsics__camera_intrinsics_from_default_pctoolkit_cam();
 
 %%
-%  DONT_DRAW = 'DONT_DRAW'    ;
-%  exp_num='now' ; description=exp_num    ;
+ DONT_DRAW = 'DONT_DRAW'    ;
+ exp_num='now' ; description=exp_num    ;
+%%
 display(strcat(' Generate the trajectory for exp', exp_num, ': ', description))
-time_step = 0.005  ;
+time_step = 0.005  ;  %  5ms
 
 axis_speed_limits = [1 1 1]  ;  %-- 0_003_6   :  sqrt(1.4^2 / 2) = 0.989949 ~~ 1.00 :  walking speed is 1.4m/s
 time_under_acc = 0.5  ;
@@ -605,6 +606,15 @@ end
         hold on; surf(pgood_detection_f2)
     
     
+        figure_named('surf(feature_0_3Ddist_per_px.*pgood_detection_f0)') ;  surf(feature_0_3Ddist_per_px.*pgood_detection_f0)
+        figure_named('surf(feature_2_3Ddist_per_px.*pgood_detection_f2)') ;  surf(feature_2_3Ddist_per_px.*pgood_detection_f2)
+        
+        f0_benefit = feature_0_3Ddist_per_px.*pgood_detection_f0  ;
+        f2_benefit = feature_2_3Ddist_per_px.*pgood_detection_f2  ;        
+        f2_benefit_better = f2_benefit > f0_benefit  ;
+        figure_named('f2_benefit_better');  surf(double(f2_benefit_better))
+        figure_named('hist(f2_benefit)');   subplot(1,2,1) ; hist(f2_benefit);  subplot(1,2,2) ; hist(f2_benefit./max(max(f2_benefit)))
+        
     best_feature_per_ray(feature_0_3Ddist_per_px.*pgood_detection_f0 <= feature_2_3Ddist_per_px.*pgood_detection_f2) = 2  ;  % ??
     best_feature_per_ray(feature_0_3Ddist_per_px.*pgood_detection_f0 > feature_2_3Ddist_per_px.*pgood_detection_f2) = 0  ;  % ??
         figure_named('surf(best_feature_per_ray) = 3Ddist_per_px.*pgood_detection_  : NOT normalised'); surf(best_feature_per_ray)
@@ -612,6 +622,8 @@ end
     best_3Ddist_per_ray = zeros(size(feature_0_3Ddist_per_px )) ;
     best_3Ddist_per_ray(best_feature_per_ray==0) =  feature_0_3Ddist_per_px_normalised(best_feature_per_ray==0).*pgood_detection_f0(best_feature_per_ray==0);
     best_3Ddist_per_ray(best_feature_per_ray==2) =  feature_2_3Ddist_per_px_normalised(best_feature_per_ray==2).*pgood_detection_f2(best_feature_per_ray==2);
+    best_3Ddist_per_ray(best_feature_per_ray==0) =  f0_benefit(best_feature_per_ray==0)  ;
+    best_3Ddist_per_ray(best_feature_per_ray==2) =  f2_benefit(best_feature_per_ray==2)  ;
     
         figure_named('surf(best_3Ddist_per_ray)'); surf(best_3Ddist_per_ray)
         figure_named('feature_0_3Ddist_per_px_normalised');  surf(feature_0_3Ddist_per_px_normalised)
@@ -660,8 +672,8 @@ end
                 if grid_cells_best_payoffs( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y) < payoff_per_ray(row_num_,col_num_) ...
                     || ...
                 	grid_cells_best_payoffs( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y) == payoff_per_ray(row_num_,col_num_) && rand>=0.5
-                    grid_cells_best_payoffs( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y) = payoff_per_ray(row_num_,col_num_);
-                    grid_cells_best_payoffs_rays( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y,:) = [row_num_,col_num_]  ;
+                        grid_cells_best_payoffs( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y) = payoff_per_ray(row_num_,col_num_);
+                        grid_cells_best_payoffs_rays( grid_cell_xy(1)+offset_x,grid_cell_xy(2)+offset_y,:) = [row_num_,col_num_]  ;
                 end
             end
         end
@@ -729,7 +741,10 @@ end
         sum(sum(used_cells))
         figure_named('surf(grid_cells_best_payoffs)'); handle_ = surf(grid_cells_best_payoffs) ;  hold on; plot3( 0+offset_x , 0+offset_y , 0, 'bo' ); xlabel('x'); ylabel('y')
     
-    plot3_rows( [offset_x ; offset_y ; 0]-best_pose(1:3,4).*[1/grid_scale;1/grid_scale;0]   , 'mx' );    
+    plot3_rows( [offset_x ; offset_y ; 0]-best_pose(1:3,4).*[1/grid_scale;1/grid_scale;-1]   , 'mx' );    
+    plot3_rows( [offset_x ; offset_y ; 8]-best_pose(1:3,4).*[1/grid_scale;1/grid_scale;0]   , 'mx' );    
+    plot3_rows( [0;(1/grid_scale)/2;0] + [ offset_x ; offset_y ; 8]-cam_pose_xyz.*[1/grid_scale;1/grid_scale;0]   , 'rs' );    
+    %  ???
     %  !!!  COORDINATE  DIRECTIONS  ARE  SWAPPED  !!! : work out how to get SURF to use the other coordinate direction or some such 
     
     %%

@@ -1,7 +1,7 @@
 function uncertainty__ = extrinsics_approximate_uncertainty_distance_func(distances_)
     X = distances_ ;
-    %     Y = exp(X/1.1)/300;
-    Y = exp(X/2.1)/100;
+    Y = exp(X/1.1)/300;
+    %   Y = exp(X/2.1)/100;
     y_lim = Y;  y_lim(y_lim>1)=1; y_lim(y_lim<0)=0;
     uncertainty__ = y_lim  ;
     %     prob_y = 1-Y;
