@@ -13,25 +13,27 @@ function [ x , y , theta ]  =  temp__covariance_run_sim(command_list, time_step)
 
     for ii_ = 2:size(command_list,2)
         command = command_list(:,ii_)  ; %  velocity ; theta 
+        %         command_prev = command_list(:,ii_-1)  ; %  velocity ; theta 
+        %         state_diff_in_command = command-command_prev  ;
 
         %vel_in_time_step = vel*time_step
         vel_in_time_step = command(1)*time_step  ; % assume instantaneous change to commanded velocity:  manage translational acc and dec in settng up command_list
 
-        theta_in_time_step = command(2)  ; % assume instantaneous change to commanded theta:  manage rotational acc and dec in settng up command_list
-        theta_rad = deg2rad(theta_in_time_step)  ;
+        theta_vel_in_time_step = command(2)*time_step  ; % assume instantaneous change to commanded theta:  manage rotational acc and dec in settng up command_list
+        theta_vel_rad = deg2rad(theta_vel_in_time_step)  ;
+        theta(ii_) = theta(ii_-1) + theta_vel_rad  ;
 
         %    cos(theta_rad) = x_delta / vel_in_time_step  
 
-        x_delta = vel_in_time_step*cos(theta_rad)  ;
+        x_delta = vel_in_time_step*cos(theta(ii_))  ;
 
-        y_delta = vel_in_time_step*sin(theta_rad)  ;
+        y_delta = vel_in_time_step*sin(theta(ii_))  ;
 
         %  theta_delta = assume instantaneous change to commanded theta
 
         %  update the state     
         x(ii_)  =  x(ii_-1)+x_delta  ;
         y(ii_)  =  y(ii_-1)+y_delta  ;
-        theta(ii_) = theta_rad  ;
     end
 
     % 
