@@ -35,15 +35,15 @@ time_step = 0.1
 linspace( 1,1.2,10 )
 ang_rate = 5;
 command_list_pure = [ ... %  velocity ; theta 
-    [   1.0   linspace( 1.0,1.2,150 ) linspace( 1.2,1.0,50 ) ]    % velocity = lateral change
-    [   45/ang_rate   linspace( 45/ang_rate, (135-45)/ang_rate, 100)  linspace(  (135-45)/ang_rate, 45/ang_rate, 100)   ]  % angular vel = change angle from x-axis, in degrees 
+    [   1.0   linspace( 1.0,1.2,150 ) linspace( 1.2,1.0,50 )  linspace(1.0,1.2,300) ]    % velocity = lateral change
+    [   45/ang_rate   linspace( 45/ang_rate, (135-45)/ang_rate, 100)  linspace(  (135-45)/ang_rate, 45/ang_rate, 100) linspace( 45/ang_rate, (-135+45)/ang_rate, 300)   ]  % angular vel = change angle from x-axis, in degrees 
 ]  ;
 vel_range = [min(command_list_pure(1,:)),max(command_list_pure(1,:))] ;
 vel_range_magnitude = vel_range(2)-vel_range(1);
 theta_range = [min(command_list_pure(1,:)),max(command_list_pure(1,:))] ;
 theta_range_magnitude = theta_range(2)-theta_range(1);
-velocity_gaussian = [0 normrnd(0,  vel_range_magnitude , 1, 200)]  ;
-theta_gaussian = [0 normrnd(0,theta_range_magnitude, 1, 200)]  ;
+velocity_gaussian = [0 normrnd(0,  vel_range_magnitude , 1, size(command_list_pure,2)-1)]  ;
+theta_gaussian = [0 normrnd(0,theta_range_magnitude, 1, size(command_list_pure,2)-1)]  ;
 
     command_list_deltas = [ ... %  approx. derivatives velocity ; theta  
         [   0.0   command_list_pure(1,2:end)-command_list_pure(1,1:end-1)   ]    
