@@ -6,7 +6,7 @@ function [ x , y , theta ]  =  temp__covariance_run_sim(command_list, time_step)
 
     x_initial = 0;
     y_initial = 0;
-    theta_initial = command_list(2,1) ;
+    theta_initial = deg2radwrapped( command_list(2,1) );
     x(1) = x_initial  ;
     y(1) = y_initial  ;
     theta(1) = theta_initial  ;

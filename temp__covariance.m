@@ -33,9 +33,10 @@ vel = 10
 time_step = 0.1
 
 linspace( 1,1.2,10 )
+ang_rate = 5;
 command_list_pure = [ ... %  velocity ; theta 
     [   1.0   linspace( 1.0,1.2,150 ) linspace( 1.2,1.0,50 ) ]    % velocity = lateral change
-    [   45/1   linspace( 45/1, (135-45)/1, 100)  linspace(  (135-45)/1, 45/1, 100)   ]  % angular vel = change angle from x-axis, in degrees 
+    [   45/ang_rate   linspace( 45/ang_rate, (135-45)/ang_rate, 100)  linspace(  (135-45)/ang_rate, 45/ang_rate, 100)   ]  % angular vel = change angle from x-axis, in degrees 
 ]  ;
 vel_range = [min(command_list_pure(1,:)),max(command_list_pure(1,:))] ;
 vel_range_magnitude = vel_range(2)-vel_range(1);
@@ -65,12 +66,14 @@ command_list = command_list_pure + command_list_noise  ;
 
 time_string = time_string_for_figuretitle()  ;
 
+%{
 figure_named(strcat('pure (no noise): ',time_string))  ;
 subplot(1,2,1);  plot(x_pure,y_pure) ;  title('position x,y')
 subplot(1,2,2);  hold off ; plot(theta_pure); title('angle')
 for ii_ = 0:45:360
     hold on;  plot( [1, size(command_list,2)] , [ mod(deg2rad(ii_-1),2*pi), mod(deg2rad(ii_-1),2*pi) ] )
 end
+%}
 
 figure_named(strcat('with noise: ',time_string))  ;
 subplot(2,2,1);  
@@ -78,17 +81,29 @@ subplot(2,2,1);
     plot(x_pure,y_pure)  ;  
     title( 'position x,y' )
     legend( 'with noise' , 'without noise')
+    axis equal;
 subplot(2,2,2)    
     title( 'effect of noise on posiiton' )
     plot(  x-x_pure,y-y_pure)  ;  
+    effect_x = x-x_pure  ;
+    effect_y = y-y_pure  ;
+    for ii_=1:10:size(effect_x,2)
+        text( effect_x(ii_),effect_y(ii_), int2str(ii_) )
+    end    
+    xlabel('m')
+    ylabel('m')
     legend('effect of noise' )
+    axis equal;
 subplot(2,2,3)    
     plot(  x-x_pure)  ;  hold on;  
     plot( y-y_pure)  ;  
+    xlabel('time step')
+    ylabel('m')
     title ('noise magnitude')
     legend('noise magnitude x','noise magnitude y')
     
     
+%{
 figure_named('cumulative')  ;
 subplot(1,2,2);  hold off ; 
     plot(theta);  hold on;  
@@ -99,12 +114,10 @@ subplot(1,2,2);  hold off ;
     %plot(cumsum(theta) - cumsum(theta_pure))  ;
     title( 'angle' )
     legend( 'with noise' , 'without noise' , 'effect of noise','')
-
-
-
 for ii_ = 0:45:360
     hold on;  plot( [1, size(command_list,2)] , [ mod(deg2rad(ii_-1),2*pi), mod(deg2rad(ii_-1),2*pi) ] )
 end
+%}
 
 
 
