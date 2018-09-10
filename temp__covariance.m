@@ -11,7 +11,7 @@ covar_inv = inv(covar)
 command = ...
 [   1 
     1   ]
-covar*command
+covar*command+
 
 
 
