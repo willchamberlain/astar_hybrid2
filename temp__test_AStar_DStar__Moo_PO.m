@@ -26,7 +26,7 @@ map = zeros(100,120)  ;
          as.addCost(2,cost_layer_2);        % add 1st add'l cost layer L        
          
         
-         as.plan(goal,2);       % setup costmap for specified goal
+         as.plan(goal,5);       % setup costmap for specified goal
          as.path(start);        % plan solution path star-goal, animate
          P = as.path(start);    % plan solution path star-goal, return path
 %%
