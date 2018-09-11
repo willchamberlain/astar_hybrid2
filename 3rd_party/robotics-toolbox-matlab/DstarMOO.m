@@ -93,11 +93,11 @@ classdef DstarMOO < Navigation
         N         % number of objectives
 
         % info kept per cell (state)
-        b       % backpointer (0 means not set)
-        t       % tag: NEW OPEN CLOSED
+        back_pointer       % backpointer (0 means not set)
+        tag_new_open_closed       % tag: NEW OPEN CLOSED
         
         cost_g       % path distance summation
-        cost_h       % path heuristic (state to goal) cost
+        cost_heuristic       % path heuristic (state to goal) cost
         cost_01      % add'l cost layer 01 (unused)
         cost_02      % add'l cost layer 02 (unused)
         cost_03      % add'l cost layer 03 (unused)
@@ -109,7 +109,7 @@ classdef DstarMOO < Navigation
         % list of open states: 2xN matrix
         %   each open point is a column, row 1 = index of cell, row 2 = k
         openlist
-        niter
+        num_iterations
 
         changed
 
@@ -139,7 +139,7 @@ classdef DstarMOO < Navigation
             % 'metric',M    Specify the distance metric as 'euclidean' (default)
             %               or 'cityblock'.
             % 'inflate',K   Inflate all obstacles by K cells.
-            % 'quiet'       Don't display the progress spinner
+            % 'quiet'       Don'tag_new_open_closed display the progress spinner
             %
             % Other options are supported by the Navigation superclass.
             %
@@ -173,8 +173,8 @@ classdef DstarMOO < Navigation
             % of DS.plan() will perform a global replan.
 
             % build the matrices required to hold the state of each cell for D*
-            ds.b = zeros(size(ds.costmap), 'uint32');     % backpointers
-            ds.t = zeros(size(ds.costmap), 'uint8');      % tags
+            ds.back_pointer = zeros(size(ds.costmap), 'uint32');     % backpointers
+            ds.tag_new_open_closed = zeros(size(ds.costmap), 'uint8');      % tags
             ds.cost_g = Inf*ones(size(ds.costmap));       % path cost estimate
             ds.openlist = zeros(2,0);                     % the open list, one column per point
 
@@ -183,7 +183,7 @@ classdef DstarMOO < Navigation
 
         function goal_change(ds)
 
-            if isempty(ds.b)
+            if isempty(ds.back_pointer)
                 return;
             end
             goal = ds.goal;
@@ -229,7 +229,7 @@ classdef DstarMOO < Navigation
             %
             % See also Navigation.plot.
             
-            plot@Navigation(ds, 'distance', ds.cost_h, varargin{:});
+            plot@Navigation(ds, 'distance', ds.cost_heuristic, varargin{:});
         end
 
         % invoked by Navigation.step
@@ -239,7 +239,7 @@ classdef DstarMOO < Navigation
                 error('Cost map has changed, replan');
             end
             X = sub2ind(size(ds.costmap), current(2), current(1));
-            X = ds.b(X);
+            X = ds.back_pointer(X);
             if X == 0
                 n = [];
             else
@@ -276,8 +276,8 @@ classdef DstarMOO < Navigation
             
             % initializations first:
             ds.cost_g = zeros(size(ds.occgrid));
-            ds.cost_h = zeros(size(ds.occgrid)); % filled after setting goal below
-            % if add'l costs haven't been added with addCost()
+            ds.cost_heuristic = zeros(size(ds.occgrid)); % filled after setting goal below
+            % if add'l costs haven'tag_new_open_closed been added with addCost()
             if isempty(ds.cost_01)
                 display('--- ds.cost_01  IS EMPTY ---')
                 ds.cost_01 = zeros(size(ds.occgrid));
@@ -300,10 +300,10 @@ classdef DstarMOO < Navigation
                 error('must specify a goal point');
             end
 
-            % Setup cost layers DS.cost_g and DS.cost_h.
+            % Setup cost layers DS.cost_g and DS.cost_heuristic.
             % assign values to the distance cost layer, set as DS.costmap
             ds.occgrid2costmap(ds.occgrid);
-            % assign values to the heuristic cost layer, set as DS.cost_h
+            % assign values to the heuristic cost layer, set as DS.cost_heuristic
             ds.calcHeuristic(ds.occgrid, ds.goal);
             % Additional cost layers are added by the user with the
             % DS.addCost() method
@@ -312,12 +312,12 @@ classdef DstarMOO < Navigation
             ds.priority = ds.cost_g;
             ds.tie = 1; % first cost: cost_g
             
-            ds.niter = 0;
+            ds.num_iterations = 0;
             while true
-                if ~ds.quiet && mod(ds.niter, 20) == 0
+                if ~ds.quiet && mod(ds.num_iterations, 20) == 0
                     ds.spinner();
                 end
-                ds.niter = ds.niter + 1;
+                ds.num_iterations = ds.num_iterations + 1;
 
                 if ds.PROCESS_STATE() < 0
                     break;
@@ -357,7 +357,7 @@ classdef DstarMOO < Navigation
         % by Dstar.plan.
         %
         % See also Dstar.plan.
-            c = ds.cost_h;
+            c = ds.cost_heuristic;
         end
 
         function c = costmap_get(ds)
@@ -421,7 +421,7 @@ classdef DstarMOO < Navigation
                 X = sub2ind(size(ds.costmap), point(2,i), point(1,i));
                 ds.costmap(X) = newcost(i);
             end
-            if ds.t(X) == ds.CLOSED
+            if ds.tag_new_open_closed(X) == ds.CLOSED
                 ds.INSERT(X, ds.h(X), 'modifycost');
             end
             ds.changed = true;
@@ -458,8 +458,12 @@ classdef DstarMOO < Navigation
         
     end % public methods
 
+    
+    
     methods (Access=protected)
 
+        
+        
         function occgrid2costmap(ds, og, cost)
             if nargin < 3
                 cost = 1;
@@ -469,22 +473,22 @@ classdef DstarMOO < Navigation
             ds.costmap(ds.costmap==0) = cost;     % unoccupied cells have driving cost
         end
 
+        
+        
         function calcHeuristic(ds, grid, goal)
-            ds.cost_h=zeros(size(grid));
+            ds.cost_heuristic=zeros(size(grid));
             for ii=1:size(grid,1)
                 for jj=1:size(grid,2)
-                    ds.cost_h(ii,jj)=sqrt((ii-goal(1))^2+(jj-goal(2))^2);
+                    ds.cost_heuristic(ii,jj)=sqrt((ii-goal(1))^2+(jj-goal(2))^2);
                 end
             end
         end
         
         
         
-        
-        
-        % The main D* function as per the Stentz paper, revised for MOO
-        % path planning per the Lavin paper. Comments Ln are the original
-        % line numbers.
+                % The main D* function as per the Stentz paper, revised for MOO
+                % path planning per the Lavin paper. Comments Ln are the original
+                % line numbers.
         function r = PROCESS_STATE(d)
             % States with the lowest k value are removed from the
             % open list
@@ -505,7 +509,7 @@ classdef DstarMOO < Navigation
                 d.message('k_old < h(X):  %f %f\n', k_old, d.priority(X));
                 for Y=d.neighbours(X) % L5
                     if (d.priority(Y) <= k_old) && (d.priority(X) > d.updateCosts(Y,X,0))  % L6
-                        d.b(X) = Y;
+                        d.back_pointer(X) = Y;
                         d.updateCosts(X,Y,d.N); % L7
                     end
                 end
@@ -515,30 +519,30 @@ classdef DstarMOO < Navigation
             if k_old == d.priority(X) % L8
                 d.message('k_old == h(X): %f\n', k_old);
                 for Y=d.neighbours(X) % L9
-                    if (d.t(Y) == d.NEW) || ... % L10-12
-                            ( (d.b(Y) == X) && (d.priority(Y) ~= d.updateCosts(Y,X,0)) ) || ...
-                            ( (d.b(Y) ~= X) && (d.priority(Y) > d.updateCosts(Y,X,0)) )
+                    if (d.tag_new_open_closed(Y) == d.NEW) || ... % L10-12
+                            ( (d.back_pointer(Y) == X) && (d.priority(Y) ~= d.updateCosts(Y,X,0)) ) || ...
+                            ( (d.back_pointer(Y) ~= X) && (d.priority(Y) > d.updateCosts(Y,X,0)) )
                         % Update and project the costs:
                         d.updateCosts(Y,X,d.N);
                         objspace = d.projectCost(Y,X);
-                        d.b(Y) = X;
+                        d.back_pointer(Y) = X;
                         d.INSERT(Y, objspace, 'L13'); % L13
                     end
                  end
             else % L14
                 d.message('k_old > h(X)');
                 for Y=d.neighbours(X) % L15
-                    if (d.t(Y) == d.NEW) || ( (d.b(Y) == X) && (d.priority(Y) ~= d.updateCosts(Y,X,0)) )
+                    if (d.tag_new_open_closed(Y) == d.NEW) || ( (d.back_pointer(Y) == X) && (d.priority(Y) ~= d.updateCosts(Y,X,0)) )
                         d.updateCosts(Y,X,d.N);
                         objspace = d.projectCost(Y,X);
-                        d.b(Y) = X;
+                        d.back_pointer(Y) = X;
                         d.INSERT(Y, objspace, 'L18'); % L18
                     else
-                        if ( (d.b(Y) ~= X) && (d.priority(Y) > d.updateCosts(Y,X,0)) )
+                        if ( (d.back_pointer(Y) ~= X) && (d.priority(Y) > d.updateCosts(Y,X,0)) )
                             d.INSERT(X, d.projectCost(X), 'L21'); % L21
                         else
-                            if (d.b(Y) ~= X) && (d.priority(X) > d.updateCosts(Y,X,0)) && ...
-                                    (d.t(Y) == d.CLOSED) && d.priority(Y) > k_old
+                            if (d.back_pointer(Y) ~= X) && (d.priority(X) > d.updateCosts(Y,X,0)) && ...
+                                    (d.tag_new_open_closed(Y) == d.CLOSED) && d.priority(Y) > k_old
                                 d.INSERT(Y, d.projectCost(Y), 'L25'); % L25
                             end
                         end
@@ -553,16 +557,16 @@ classdef DstarMOO < Navigation
         
         
         
-        function k_new = updateCosts(ds, a, b, obj)
+        function k_new = updateCosts(ds, a, back_pointer, obj)
             % NOTE: Only for costs that accumulate (i.e. sum) over the
             % path, and for dynamic costs.
-            % E.g. the heuristic parameter DS.cost_h only needs updating
+            % E.g. the heuristic parameter DS.cost_heuristic only needs updating
             % when the goal state changes; it's values are stored for each
             % cell.
             %
-            % Location moving from state b to a.
+            % Location moving from state back_pointer to a.
             if nargout > 0
-                k_new = ds.cost_g(b) + ds.traversal_cost(b,a);
+                k_new = ds.cost_g(back_pointer) + ds.traversal_cost(back_pointer,a);
                 return
             end
             if obj == 0                        % just return what the new priority cost would be (k_new)
@@ -571,7 +575,7 @@ classdef DstarMOO < Navigation
             if obj > 1                         
                 %display(' updateCosts:  obj > 1')
                 % base cost-map case: cost map + traversal cost
-                ds.cost_g(a) = ds.cost_g(b) + ds.traversal_cost(b,a);
+                ds.cost_g(a) = ds.cost_g(back_pointer) + ds.traversal_cost(back_pointer,a);
                 % (no heuristic update needed)
             end
             if obj > 2                         
@@ -580,18 +584,18 @@ classdef DstarMOO < Navigation
                 % % not using elevation cost this time - (no elevation update needed)                 
                 
                 % base cost-map case:  cost_layer_1 cost + traversal cost 
-                % ds.cost_01(a) = ds.cost_01(b) + ds.traversal_cost(b,a);
+                % ds.cost_01(a) = ds.cost_01(back_pointer) + ds.traversal_cost(back_pointer,a);
                 % (no heuristic update needed)
             end
             if obj > 3                         
                 %display(' updateCosts:  obj > 3')
                 % % w/ cost_02: solar  :  as.plan(goal,4);
-               %   sV = [cos(ds.niter/100);sin(ds.niter/100)]; % rotates 1rad per 100 steps
-               %    sV = [cos(ds.niter/10);sin(ds.niter/10)]; % rotates 1rad per 10 steps
-               %    ds.cost_02(a) = dot(sV,ds.traversal_unit_vector(b,a));
+               %   sV = [cos(ds.num_iterations/100);sin(ds.num_iterations/100)]; % rotates 1rad per 100 steps
+               %    sV = [cos(ds.num_iterations/10);sin(ds.num_iterations/10)]; % rotates 1rad per 10 steps
+               %    ds.cost_02(a) = dot(sV,ds.traversal_unit_vector(back_pointer,a));
                 
                 % base cost-map case:  cost_layer_2 cost + traversal cost 
-                %ds.cost_02(a) = ds.cost_02(b) + ds.traversal_cost(b,a);
+                %ds.cost_02(a) = ds.cost_02(back_pointer) + ds.traversal_cost(back_pointer,a);
                 % (no heuristic update needed)
             end
             if obj > 4                         
@@ -600,25 +604,25 @@ classdef DstarMOO < Navigation
                 % % (no risk update needed)
                 
                 % base cost-map case:  cost_layer_3 cost + traversal cost 
-                ds.cost_03(a) = ds.cost_03(b) + ds.traversal_cost(b,a);
+                ds.cost_03(a) = ds.cost_03(back_pointer) + ds.traversal_cost(back_pointer,a);
                 % (no heuristic update needed)
             end
         end
         
-        function pt = projectCost(ds, a, b)
+        function pt = projectCost(ds, a, back_pointer)
             % Returns the projection of state a into objective space. If
-            % specified, location is moving from b to a.
+            % specified, location is moving from back_pointer to a.
             switch nargin
                 case 2
                     pt = [ds.cost_g(a);
-                          ds.cost_h(a);
+                          ds.cost_heuristic(a);
                           ds.cost_01(a);
                           ds.cost_02(a);
                           ds.cost_03(a);
                           ];
                 case 3
-                    pt = [ds.cost_g(b) + ds.traversal_cost(a,b);
-                          ds.cost_h(a);
+                    pt = [ds.cost_g(back_pointer) + ds.traversal_cost(a,back_pointer);
+                          ds.cost_heuristic(a);
                           ds.cost_01(a);
                           ds.cost_02(a);
                           ds.cost_03(a);
@@ -640,12 +644,12 @@ classdef DstarMOO < Navigation
                 error('D*:INSERT: state in open list %d times', X);
             end
 
-            if ds.t(X) == ds.NEW
+            if ds.tag_new_open_closed(X) == ds.NEW
                 % add a new column to the open list
                 ds.openlist = [ds.openlist [X; pt]];
-            elseif ds.t(X) == ds.OPEN
+            elseif ds.tag_new_open_closed(X) == ds.OPEN
 %                 k_new = min( ds.openlist(2,i), h_new );
-            elseif ds.t(X) == ds.CLOSED
+            elseif ds.tag_new_open_closed(X) == ds.CLOSED
                 if pt(ds.tie) < ds.priority(X) % break tie with the sum of path costs
                     % add a new column to the open list
                     ds.openlist = [ds.openlist [X; pt]];
@@ -657,7 +661,7 @@ classdef DstarMOO < Navigation
                 ds.openlist_maxlen = numcols(ds.openlist);
             end
 
-            ds.t(X) = ds.OPEN;
+            ds.tag_new_open_closed(X) = ds.OPEN;
         end
 
         function DELETE(ds, X)
@@ -667,7 +671,7 @@ classdef DstarMOO < Navigation
                 error('D*:DELETE: state %d doesnt exist', X);
             end
             ds.openlist(:,i) = []; % remove the column
-            ds.t(X) = ds.CLOSED;
+            ds.tag_new_open_closed(X) = ds.CLOSED;
         end
 
         function kmin = GET_KMIN(ds)
