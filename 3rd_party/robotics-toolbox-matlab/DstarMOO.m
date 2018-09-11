@@ -332,9 +332,20 @@ classdef DstarMOO < Navigation
             ds.changed = false;
         end
         
-        function layer = cost_get(ds)
+        function layer__ = cost_get(ds,layer_)
         %DstarMOO.cost_get Get the specified cost layer
-            layer = ds.cost_02;
+            
+            if layer_==1
+                layer__ = ds.cost_01;
+            elseif layer_==2
+                layer__ = ds.cost_02;
+            elseif layer_==3
+                layer__ = ds.cost_03;
+            else
+                display('Layer index out of range')
+            end
+            % If more cost layers needed, add additional elseif statements
+            % as above.
         end
 
         function c = distancemap_get(ds)
@@ -467,6 +478,10 @@ classdef DstarMOO < Navigation
             end
         end
         
+        
+        
+        
+        
         % The main D* function as per the Stentz paper, revised for MOO
         % path planning per the Lavin paper. Comments Ln are the original
         % line numbers.
@@ -535,6 +550,9 @@ classdef DstarMOO < Navigation
             return;
         end % process_state
         
+        
+        
+        
         function k_new = updateCosts(ds, a, b, obj)
             % NOTE: Only for costs that accumulate (i.e. sum) over the
             % path, and for dynamic costs.
@@ -568,9 +586,9 @@ classdef DstarMOO < Navigation
             if obj > 3                         
                 %display(' updateCosts:  obj > 3')
                 % % w/ cost_02: solar  :  as.plan(goal,4);
-                   sV = [cos(ds.niter/100);sin(ds.niter/100)]; % rotates 1rad per 100 steps
-                   sV = [cos(ds.niter/10);sin(ds.niter/10)]; % rotates 1rad per 10 steps
-                   ds.cost_02(a) = dot(sV,ds.traversal_unit_vector(b,a));
+               %   sV = [cos(ds.niter/100);sin(ds.niter/100)]; % rotates 1rad per 100 steps
+               %    sV = [cos(ds.niter/10);sin(ds.niter/10)]; % rotates 1rad per 10 steps
+               %    ds.cost_02(a) = dot(sV,ds.traversal_unit_vector(b,a));
                 
                 % base cost-map case:  cost_layer_2 cost + traversal cost 
                 %ds.cost_02(a) = ds.cost_02(b) + ds.traversal_cost(b,a);
