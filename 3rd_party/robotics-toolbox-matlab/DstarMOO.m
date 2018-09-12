@@ -109,6 +109,7 @@ classdef DstarMOO < Navigation
         % list of open states: 2xN matrix
         %   each open point is a column, row 1 = index of cell, row 2 = k
         openlist
+        %    last_visited_in_openlist
         num_iterations
 
         changed
@@ -121,6 +122,7 @@ classdef DstarMOO < Navigation
         OPEN = 1;
         CLOSED = 2;
     end
+
 
     methods
 
@@ -157,7 +159,7 @@ classdef DstarMOO < Navigation
             ds.quiet = opt.quiet;
 
             ds.occgrid2costmap(ds.occgrid);
-
+            
             % init the D* state variables
             ds.reset();
             if ~isempty(ds.goal)
@@ -495,13 +497,19 @@ classdef DstarMOO < Navigation
             queue = normc(d.openlist(2:size(d.openlist,1),:)');
             [~,ind]=min(sum(queue,2));
             X = d.openlist(1,ind); % L1
+            %             if d.last_visited_in_openlist == X
+            %                 display(sprintf('iteration %i d.last_visited_in_openlist == X == %f', d.num_iterations, X))
+            %                 pause
+            %             end
+            %             d.last_visited_in_openlist = X;
             
             if isempty(X) % L2
                 r = -1;
                 return;
             end
 
-            k_old = d.GET_KMIN(); d.DELETE(X); % L3
+            k_old = d.GET_KMIN();       % L3         
+            d.DELETE(X);                        % L3
             
             d.priority = d.cost_g; % updates priority cost layer
 
@@ -664,6 +672,7 @@ classdef DstarMOO < Navigation
             ds.tag_new_open_closed(X) = ds.OPEN;
         end
 
+        
         function DELETE(ds, X)
             ds.message('delete %d\n', X);
             i = find(ds.openlist(1,:) == X);
@@ -673,19 +682,31 @@ classdef DstarMOO < Navigation
             ds.openlist(:,i) = []; % remove the column
             ds.tag_new_open_closed(X) = ds.CLOSED;
         end
+        
 
         function kmin = GET_KMIN(ds)
             kmin = min(ds.openlist(2,:));
         end
 
+        
         % return the cost of moving from state X to state Y
         function cost = traversal_cost(ds, X, Y)
             [r,c] = ind2sub(size(ds.costmap), [X; Y]);
+            
+            rotational_uncertainty_factor = 0.5 ;
+            rotational_uncertainty = atan2(r(1)-c(1) , r(2)-c(2))  * rotational_uncertainty_factor  ;
+            
             dist = sqrt(sum(diff([r c]).^2));
             dcost = (ds.costmap(X) + ds.costmap(Y))/2;
 
-            cost = dist * dcost;
-        end
+            dist_times_dcost = dist * dcost;
+            cost = dist_times_dcost  ; 
+            
+            %display(  sprintf( 'traversal_cost from  (%f %f) to (%f %f) = %f translation %f dcost %f total : %f rotation',r(1), r(2) , c(1), c(2) , dist , dcost , dist_times_dcost , rotational_uncertainty  ) )            
+            % dist_times_dcost_plus_rotation = dist_times_dcost + rotational_uncertainty  ;            
+            % cost = dist_times_dcost_plus_rotation ;
+        end        
+        
 
         % return the robot unit vector; direction of moving from state X to state Y
         function vector = traversal_unit_vector(ds, X, Y)
@@ -695,7 +716,8 @@ classdef DstarMOO < Navigation
             vector = vector/norm(vector);
 %             slope = vector(2) / vector(1);
 %             theta = dot([0,1],[vector])/(norm([0,1])*norm(vector));            
-        end
+        end        
+        
         
         % return index of neighbour states as a row vector
         function Y = neighbours(ds, X)
