@@ -240,7 +240,9 @@ classdef DstarMOO < Navigation
             if ds.changed
                 error('Cost map has changed, replan');
             end
-            X = sub2ind(size(ds.costmap), current(2), current(1));
+            display( sprintf( 'next( %f  %f ', current(2), current(1) )) ; 
+            X = sub2ind(size(ds.costmap), current(2), current(1) );
+            display( sprintf( 'next( ; X ind = %f',X) );
             X = ds.back_pointer(X);
             if X == 0
                 n = [];
@@ -624,14 +626,14 @@ classdef DstarMOO < Navigation
                 case 2
                     pt = [ds.cost_g(a);
                           ds.cost_heuristic(a);
-                          ds.cost_01(a);
+                          ds.cost_01(a).*50;
                           ds.cost_02(a);
                           ds.cost_03(a);
                           ];
                 case 3
-                    pt = [ds.cost_g(back_pointer) + ds.traversal_cost(a,back_pointer);
+                    pt = [ds.cost_g(back_pointer) + 0.5*ds.traversal_cost(a,back_pointer);
                           ds.cost_heuristic(a);
-                          ds.cost_01(a);
+                          ds.cost_01(a).*50;
                           ds.cost_02(a);
                           ds.cost_03(a);
                           ];
