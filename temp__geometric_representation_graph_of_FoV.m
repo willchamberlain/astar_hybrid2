@@ -73,10 +73,10 @@ cam_3 = [ ...
 %% draw the map
 
 figure_handle = figure; axis equal; grid on; hold on ; axis equal; grid on; 
-patch(corridor(:,1),corridor(:,2),'blue')  ;
-patch(cam3_fov(:,1),cam3_fov(:,2),'green')  ;
-patch(cam1_fov(:,1),cam1_fov(:,2),'green')  ;
-patch(cam2_fov(:,1),cam2_fov(:,2),'green')  ; 
+patch(corridor(:,1),corridor(:,2),[0.6 1 0.4 ])  ;
+patch(cam3_fov(:,1),cam3_fov(:,2),[1 0.4 0.6])  ;
+patch(cam1_fov(:,1),cam1_fov(:,2),[1 0.4 0.6])  ;
+patch(cam2_fov(:,1),cam2_fov(:,2),[1 0.4 0.6])  ; 
 text(cam3_fov(:,1),cam3_fov(:,2),'3')  ;
 text(cam1_fov(:,1),cam1_fov(:,2),'1')  ;
 text(cam2_fov(:,1),cam2_fov(:,2),'2')  ; 
@@ -248,7 +248,7 @@ waypoints = unique(waypoints,'rows')  ;
 
 figure(figure_handle)  ;  hold on  ;
 for ii_ = 1:size(waypoints,1)-1
-    plot2_rows(waypoints(ii_:ii_+1,:)', 'r:', 'Linewidth', 3) 
+    plot2_rows(waypoints(ii_:ii_+1,:)', 'b:', 'Linewidth', 3) 
     pause
     display(sprintf('plotted step %i out of %i.',ii_,size(waypoints,1)-1))  ;
 end

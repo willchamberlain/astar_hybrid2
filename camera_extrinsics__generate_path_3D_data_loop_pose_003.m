@@ -325,10 +325,18 @@ if size(estimated_position_diffs_under_reproj_20,2) > 5
      set(fig_now_, 'Position',  [155   165   655  785] ) ;
      mre_xlim = ceil(max(reprojection_Euclidean_mean) / 100)*100  ;
          if ceil(max(reprojection_Euclidean_mean) / 10) > 10 && mre_xlim>1 ; mre_xlim = ceil(max(reprojection_Euclidean_mean) / 10)*10;  end;
-     subplot(3,3,1:3); histogram(reprojection_Euclidean_mean, 100); title('Mean reprojection error'); xlabel(' pixels '); xlim([0 mre_xlim]);     
+%      subplot(3,3,1:3); histogram(reprojection_Euclidean_mean, 100); title('Mean reprojection error'); xlabel(' pixels '); xlim([0 mre_xlim]);     
+     subplot(3,3,1:3); histogram(reprojection_Euclidean_mean(reprojection_Euclidean_mean<20), 100); 
+     subplot(3,3,1:3); histogram(reprojection_Euclidean_mean, 100, 'BinLimits',[0,20]); 
+        title('Mean reprojection error'); xlabel(' pixels '); xlim([0 mre_xlim]);     
+        xlim([0 20]);     
      ylim_ = [0 350]  ;
      ylim_ = [0 min(p_num_RANSAC_iterations, 100)]  ;
-     subplot(3,3,4:6); histogram(estimated_orientation_diffs_under_reproj_10(:,1) );  xlim([0 0.2]);  title({'','Orientation error for mean reprojection error <= 20px'}); xlabel(' quaternion distance '); % ylim(ylim_);    
+     subplot(3,3,4:6); histogram(estimated_orientation_diffs_under_reproj_10(:,1) );  xlim([0 0.2]);  
+     subplot(3,3,4:6); histogram(estimated_orientation_diffs_under_reproj_10(:,1) );  xlim([0 0.1]);  
+     title({'','Orientation error for mean reprojection error <= 20px'}); 
+     title({'','Orientation error'}); 
+     xlabel(' quaternion distance '); % ylim(ylim_);    
 %      norm_dist_q(ii_ii_) = fitdist(estimated_orientation_diffs_under_reproj_10(1,:)','normal') ;
 %      conf_bound_q(ii_ii_,:) = [ norm_dist_q(ii_ii_).mu - norm_dist_q(ii_ii_).sigma*3 , norm_dist_q(ii_ii_).mu + norm_dist_q(ii_ii_).sigma*3  ]    ;
     
@@ -337,6 +345,7 @@ if size(estimated_position_diffs_under_reproj_20,2) > 5
          subplot(3,3,7); histogram(estimated_position_diffs_under_reproj_20(1,:), 'BinLimits',[-0.2, 0.2]); xlabel(' x(m) '); ylim(ylim_); set(gca,'XTick',[-0.2:0.02:0.2]) ;  set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ;
          subplot(3,3,8); histogram(estimated_position_diffs_under_reproj_20(2,:), 'BinLimits',[-0.2, 0.2]); xlabel(' y(m) '); ylim(ylim_); set(gca,'XTick',[-0.2:0.02:0.2]) ;  set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ; 
          title({'','Position error for mean reprojection error <= 20px'}); 
+         title({'','Position error'}); 
          subplot(3,3,9); histogram(estimated_position_diffs_under_reproj_20(3,:), 'BinLimits',[-0.2, 0.2]); xlabel(' z(m) '); ylim(ylim_); set(gca,'XTick',[-0.2:0.02:0.2]) ;  set(gca,'XTickLabel', str2mat('-0.2', '', '', '', '', '-0.1', '', '', '', '', '0.0', '', '', '', '', '0.1', '', '', '', '', '0.2' )) ;             
     norm_dist_x(ii_ii_) = fitdist(estimated_position_diffs_under_reproj_20(1,:)','normal') ;
     conf_bound_x(ii_ii_,:) = [ norm_dist_x(ii_ii_).mu - norm_dist_x(ii_ii_).sigma*3 , norm_dist_x(ii_ii_).mu + norm_dist_x(ii_ii_).sigma*3  ]    ;
@@ -345,6 +354,10 @@ if size(estimated_position_diffs_under_reproj_20,2) > 5
     norm_dist_z(ii_ii_) = fitdist(estimated_position_diffs_under_reproj_20(3,:)','normal') ;
     conf_bound_z(ii_ii_,:) = [ norm_dist_z(ii_ii_).mu - norm_dist_z(ii_ii_).sigma*3 , norm_dist_z(ii_ii_).mu + norm_dist_z(ii_ii_).sigma*3  ] ;
 end
+
+figure_named('histfit X'); histfit(estimated_position_diffs_under_reproj_20(1,:))  ;  ylabel('') ; xlabel('pose error x m')  ;   %, 'BinLimits',[-0.2, 0.2]);
+figure_named('histfit Y'); histfit(estimated_position_diffs_under_reproj_20(2,:))  ;  ylabel('') ; xlabel('pose error y m')  ;    %, 'BinLimits',[-0.2, 0.2]);
+figure_named('histfit Z'); histfit(estimated_position_diffs_under_reproj_20(3,:))  ;  xlabel('pose error z m')  ;   %, 'BinLimits',[-0.2, 0.2]);
 
     %-- compare the orientations  --  not sure that this is useful  
     camera_pose_rotation_quat = Quaternion(camera.get_pose_rotation)  ;
@@ -754,7 +767,11 @@ end
     robot_last_entry_point = [200,250,0]  ;
     robot_last_exit_point  = [200,225,0]  ;
     robot_last_exit_point  = [250,225,0]  ;
+    robot_last_entry_point = [211,264,0]   ; 
+    robot_last_exit_point  =  [195,228,0];
+    robot_last_entry_point = [200,250,0]  ;
     robot_last_exit_point  = [240,225,0]  ;
+    robot_last_exit_point  = [250,225,0]  ;
     start = robot_last_entry_point(1:2)     % maybe with some variation to generate several paths
     goal = robot_last_exit_point(1:2)        % maybe with some variation to generate several paths
     size(grid_cells_best_payoffs)
@@ -762,6 +779,14 @@ end
         hold on; 
         plot3_rows(robot_last_entry_point','mo') ;
         plot3_rows(robot_last_exit_point','rx') ;
+        plot3_rows( [ total_path_smoothed__ ; -10*ones(size(total_path_start_to_goal__grid_cells_best_payoffs_inverted,1)) ], 'r', 'LineWidth',4)
+        plot3_rows( [ total_path_smoothed__ ; -10*ones(size(total_path_start_to_goal__grid_cells_best_payoffs_inverted,1)) ], 'r:', 'LineWidth',5)
+        plot3_rows( [ robot_last_entry_point(1) robot_last_exit_point(1); robot_last_entry_point(2) robot_last_exit_point(2) ;  -10 -10] , 'w', 'LineWidth',4)
+        plot3_rows( [ robot_last_entry_point(1) robot_last_exit_point(1); robot_last_entry_point(2) robot_last_exit_point(2) ;  -10 -10] , 'w:', 'LineWidth',5)
+
+        direct_path_length = norm(goal - start,2) ;
+        Astar_path_length = sum(norm_2(path_steps,1))  ;
+        
     
     %   flip the payoff to a cost for AStar, so that 
     %       (1) low payoff = high cost 
@@ -822,7 +847,11 @@ total_path_start_to_goal__grid_cells_best_payoffs_inverted = ...
 path_info_gain_for_cam__as_sum_payoff = ...
     sum(total_path_start_to_goal__grid_cells_best_payoffs_inverted)  ;    
     
-    path_planning__draw_path_yx_3d( total_path_smoothed__ ,total_path_start_to_goal__grid_cells_best_payoffs_inverted)    ; 
+    % THIS, BUT FIX THE HEIGHT
+%     path_planning__draw_path_yx_3d( total_path_smoothed__ ,total_path_start_to_goal__grid_cells_best_payoffs_inverted)    ; 
+%     path_planning__draw_path_yx_3d( total_path_smoothed__ ,zeros(size(total_path_start_to_goal__grid_cells_best_payoffs_inverted,1)))    ; 
+%     
+    plot3_rows( [ total_path_smoothed__ ; -10*ones(size(total_path_start_to_goal__grid_cells_best_payoffs_inverted,1)) ], 'r', 'LineWidth',2)
 
     figure_named('total_path_smoothed_grid_cells_best_payoffs_inverted'); hold on; grid on; 
     plot(total_path_start_to_goal__grid_cells_best_payoffs_inverted','bx');  ylim([0 5])
