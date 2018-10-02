@@ -133,6 +133,9 @@ Geometric of the field of view:  built-in Matlab functions
 
 figure ;   surf(cost_layer_geo)
 
+
+%  LEVEL SET
+
 [x,y]=find(cost_layer_geo < 1)
 
 %  --  convhull  --  
@@ -183,13 +186,17 @@ for k = 1:length(lines)
     plot(xy(:,1),xy(:,2),'LineWidth',2,'Color','green');
 end
 
+
 %  --  activecontour  --
+figure;  hold on ;
+BW = edge(  cost_layer_geo < 1  ,  'canny'  )  ; % extract edges
 MASK = zeros( size(BW) )  ;
 MASK(:, 1) = 1  ;
 MASK(:, 50) = 1  ;
 MASK(1, :) = 1  ;
 MASK(200, :) = 1  ;
 segmented_BW = activecontour(BW, MASK)  ;
+figure;  imshow(segmented_BW)
         %   segments the 2-D grayscale image A into
         %   foreground (object) and background regions using active contour based
         %   segmentation. The output image BW is a binary image where the
@@ -203,7 +210,7 @@ houghlines
 %  --  alphaShape  -- 
 
 
-%%
+%%   check whether AStarMoo works  :  only DstarMOO seems to work 
 map = zeros(100,100)  ;
          goal = [50;30];
          goal = [40;90];

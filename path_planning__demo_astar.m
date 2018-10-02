@@ -16,7 +16,7 @@ path_planning__draw_came_from(came_from, strcat(test_name,': ',sprintf(' factor 
 path_planning__draw_path( total_path_goal_to_start__ )    ;
 
 
-%%
+%% Demo AStar
 
 %--------------------------%
 
@@ -54,7 +54,7 @@ surf(map_2);  xlabel('x'); ylabel('y')
 path_planning__draw_came_from(came_from, strcat(test_name,': ',sprintf(' factor %7.f',factor_)))    ;  
 path_planning__draw_path( total_path_goal_to_start__ )    ;
 
-%%
+%%  Path shortening
 %--------------------------%
 
 map_2 = zeros(40,40)    ;
