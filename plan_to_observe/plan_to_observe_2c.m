@@ -2,30 +2,11 @@ addpath '/mnt/nixbig/ownCloud/project_code/plan_to_observe/'
 addpath '/mnt/nixbig/ownCloud/project_code/'
 
 %{
-Suppositions
-    ?? Know (or can build) map. ??
-        -   ?? in that case what about dynamics ??
-
-
-Reactive motion --> investigate how well optimal A* might work with different cost/payoff functions, and how to deal with competing cost functions.    
-
-    Sampling immediate neighbours for lowest cost very vulnerable to interation of cost functions and local maxima and ridge boundaries.
-
-    Sample along arcs further out
-        - takes longer as more points --> sparse --> will be vulnerable to weird cost function manifolds.
-        - kind of thinking like JR's laser scanner at range 
-        - visualise the vector from the robot position to each of cells around it 
-
-    Added : 
-    Take EACH cost map into account and sum unit vectors from each costmap ~~ voting on attributes.    
-        DOES NOT REACH MAIN TASK OBJECTIVE  
-            - once the other robot has gone by, this robot doesn't know how to let go of the attempt to observe it 
-            - does not know 'unreachable'
-                - option: actually do A* , and maybe some limit on cost
-                - option: asymmetric cost function for relative manouvering capabilities
-                - option: extend target in direction of motion --> plan_to_observe_2b.m
-
+Same as plan_to_observe_2.m, but extend the sampling --> AStar but with a longer sampling cone aligned to each objective
+    - what about extended objectives
+    - what about obstacles nearby
 %}
+
 %%
 
 floorplan_x = 11 % 7m forward

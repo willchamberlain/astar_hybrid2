@@ -2,30 +2,9 @@ addpath '/mnt/nixbig/ownCloud/project_code/plan_to_observe/'
 addpath '/mnt/nixbig/ownCloud/project_code/'
 
 %{
-Suppositions
-    ?? Know (or can build) map. ??
-        -   ?? in that case what about dynamics ??
-
-
-Reactive motion --> investigate how well optimal A* might work with different cost/payoff functions, and how to deal with competing cost functions.    
-
-    Sampling immediate neighbours for lowest cost very vulnerable to interation of cost functions and local maxima and ridge boundaries.
-
-    Sample along arcs further out
-        - takes longer as more points --> sparse --> will be vulnerable to weird cost function manifolds.
-        - kind of thinking like JR's laser scanner at range 
-        - visualise the vector from the robot position to each of cells around it 
-
-    Added : 
-    Take EACH cost map into account and sum unit vectors from each costmap ~~ voting on attributes.    
-        DOES NOT REACH MAIN TASK OBJECTIVE  
-            - once the other robot has gone by, this robot doesn't know how to let go of the attempt to observe it 
-            - does not know 'unreachable'
-                - option: actually do A* , and maybe some limit on cost
-                - option: asymmetric cost function for relative manouvering capabilities
-                - option: extend target in direction of motion --> plan_to_observe_2b.m
-
+Same as plan_to_observe_2.m, but extend the target along its trajectory + motion model including uncertainty and correction 
 %}
+
 %%
 
 floorplan_x = 11 % 7m forward
@@ -41,7 +20,73 @@ floorplan_space = zeros(  ceil(floorplan_x*floorplan_scale) , ceil(floorplan_y*f
 cost_to_divert = floorplan_space ;
 cost_to_observe = floorplan_space ;
 
+%%
+%  Mine:
+%  x^2/a^2 + y^2/b^2 == 1  --> x=sqrt(a^2)*(1 - (y^2)/(b^2))  -->  y =   sqrt(( 1  -  x^2/a^2 ) * b^2  )
 
+x=[-1:0.01:1]  ;
+a=1;
+b=0.5;
+y = sqrt(( 1  -  (x.^2)/(a^2) ) * b^2  )
+
+figure; hold on; plot(x,y); plot(x,-y); axis equal
+
+%%
+% https://au.mathworks.com/matlabcentral/answers/86615-how-to-plot-an-ellipse
+a=5; % horizontal radius
+b=10; % vertical radius
+x0=0; % x0,y0 ellipse centre coordinates
+y0=0;
+t=-pi:0.01:pi;
+x=x0+a*cos(t);
+y=y0+b*sin(t);
+plot(x,y)
+
+%%
+% https://au.mathworks.com/matlabcentral/answers/86615-how-to-plot-an-ellipse
+x1 =10 ; y1 = 1 ;
+x2 =  11 ; y2  = 3 ;
+e = 0.99 ;
+
+a = 1/2*sqrt((x2-x1)^2+(y2-y1)^2);
+ b = a*sqrt(1-e^2);
+ t = linspace(0,2*pi);
+ X = a*cos(t);
+ Y = b*sin(t);
+ w = atan2(y2-y1,x2-x1);
+ x = (x1+x2)/2 + X*cos(w) - Y*sin(w);
+ y = (y1+y2)/2 + X*sin(w) + Y*cos(w);
+ plot(x,y,'r-'); hold on
+ axis equal
+ min_idx = find(y==min(y))
+ max_idx = find(y==max(y))
+ min_x = x(min_idx)
+ max_x = x(max_idx)
+ 
+         rot=rotz(deg2rad(45));
+         rot=rot(1:2,1:2)
+        x_y = rot* ([x;y] - repmat(   [ x1+(x2-x1)/2 ;  y1+(y2-y1)/2 ] , 1 , size(x,2) ) )  + repmat(   [ x1+(x2-x1)/2 ;  y1+(y2-y1)/2 ] , 1 , size(x,2) );
+     min_y = min(x_y(2,:))
+     min_idx = find(x_y(2,:)==min_y)
+     max_y = max(x_y(2,:))  
+     max_idx = find(x_y(2,:)==max_y)
+     min_x = x_y(1,min_idx)
+     max_x = x_y(1,max_idx)
+
+        plot(x_y(1,:),x_y(2,:),'b')
+        plot(0 , 0 , 'bs')
+        
+ potential_zone = [ min_x  max_x  0;
+   min_y  max_y  0] ;
+potential_zone_closed = [ potential_zone potential_zone(:,1) ]
+patch(potential_zone_closed(1,:),potential_zone_closed(2,:),'r')
+
+%  NOTE:  gets me a cone/trapezoid and ellipses at each end:  would like a set of ellipses along a trajectory, and/or an envelope around a trajectory that's an
+%  integration of the ellipses of probability --> 3D as is over time = configuration space 
+
+%  How to check whether a point is inside an ellipse
+%  How to check whether a line intersects an ellipse and where
+ 
 %%  1)  cost_to_observe as measurement model 
 %{
     Put the Robot_Target somewhere in the world
