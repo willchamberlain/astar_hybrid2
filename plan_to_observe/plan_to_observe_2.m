@@ -39,6 +39,7 @@ for yy_ = 1.0 : 1 : floorplan_extent_cells(2)
         dist_cell_to_target = norm_2(dist_cell_to_target,1)  ;
                             % dist_cell_to_target = sqrt(   [ - robot_target_posn(1) ]^2  +   [ xx_- robot_target_posn(2) ]^2   )  ;        
         costmap_obs_dist(xx_ , yy_) =  (0.00275*exp((dist_cell_to_target)*0.215*(3/4) ))   ;  % parameterisation : exp(d*x) : x spreads the function
+        costmap_obs_dist(xx_ , yy_) =  (0.00275*exp((dist_cell_to_target)*0.1215*(3/4) ))   ;  % parameterisation : exp(d*x) : x spreads the function
         if costmap_obs_dist(xx_ , yy_) > 1 
             costmap_obs_dist(xx_ , yy_) = 1  ;
         elseif costmap_obs_dist(xx_ , yy_) < 0  
@@ -68,8 +69,14 @@ size(costmap_dist_to_path_follower)
 num_iterations = 60 ;
 robot_posn = [5;5] ;
 f1h=figure_named('costmap_dist_to_path_follower'); hold on; grid on; xlabel('x'); ylabel('y');
+    daspect(  [  1 1 0.1  ]  );
+    view(3) ;
 f2h=figure_named('costmap_obs_dist '); hold on; grid on; xlabel('x'); ylabel('y');
+    daspect(  [  1 1 0.1  ]  );
+    view(3) ;
 f3h=figure_named('costmap_obs_dist + costmap_dist_to_path_follower '); hold on; grid on; xlabel('x'); ylabel('y');
+    daspect(  [  1 1 0.1  ]  );
+    view(3) ;
 
 main_task_start_point=[10;30]  ;
 main_task_end_point=[60;30]  ;
@@ -80,16 +87,12 @@ plot(main_task_end_point(1),main_task_end_point(2),'bo')
 robot_start_posn = [ 60; 10 ]  ;
 robot_end_posn = [ 10; 20 ]  ;
 robot_step = ( robot_end_posn - robot_start_posn ) / num_iterations  ;
-robot_target_posn = robot_start_posn  ;
+robot_target_posn = [100;90]  ;  %robot_start_posn  ;
 
 max_dist = sqrt( ((1/floorplan_scale)*floorplan_y)^2 + ((1/floorplan_scale)*floorplan_x)^2 ) ;
 max_cost = max_dist;
 
 for t = 1:num_iterations
-    figure(f1h)
-    axes = gca;
-    clf;
-    grid on; hold on; 
     path_follower_posn = path_follower_posn + path_follower_step  ;
     costmap_dist_to_path_follower = zeros((1/floorplan_scale)*floorplan_x,(1/floorplan_scale)*floorplan_y)  ;
     
@@ -99,7 +102,7 @@ for t = 1:num_iterations
         for xx_ = 1.0 : 1 : (1/floorplan_scale)*floorplan_x
             cell_to_target =   - robot_target_posn  ;
             dist_cell_to_target = sqrt(   [ xx_- robot_target_posn(1) ]^2  +   [ yy_- robot_target_posn(2) ]^2   )  ;        
-            costmap_obs_dist(xx_ , yy_) =  (0.00275*exp(dist_cell_to_target*0.185*(3/4) ))   ;  % parameterisation : exp(d*x) : x spreads the function
+            costmap_obs_dist(xx_ , yy_) =  (0.00275*exp(dist_cell_to_target*0.1015*(3/4) ))   ;  % parameterisation : exp(d*x) : x spreads the function
             if costmap_obs_dist(xx_ , yy_) > 1 
                 costmap_obs_dist(xx_ , yy_) = 1  ;
             elseif costmap_obs_dist(xx_ , yy_) < 0  
@@ -114,20 +117,31 @@ for t = 1:num_iterations
                 = sqrt(  (xx_ - path_follower_posn(1))^2  + (yy_ - path_follower_posn(2))^2)    /  max_dist;            
         end
     end
+    
+    figure(f1h)
+    clf;
+    grid on; hold on; 
     colormap hot  ;
     surf( costmap_dist_to_path_follower )  ;
-    plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  max(max(costmap_dist_to_path_follower)) ] , 'cx'  , 'LineWidth',5)
-    plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [max(max(costmap_dist_to_path_follower)),0] , 'c', 'LineWidth',1)   
-    view(3);
+    data_indicator_height = max(max(costmap_dist_to_path_follower)) ;
+        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1)   
+    plot3(robot_target_posn(2),robot_target_posn(1),  data_indicator_height , 'mx', 'LineWidth',5)   
+    plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [ data_indicator_height ,0] , 'm', 'LineWidth',1) 
+        view(3)
     
     figure(f2h)  ;
     clf;
     grid on; hold on; 
     colormap hot  ;
-    costmap_total = costmap_obs_dist ;
-    plot3(robot_target_posn(2),robot_target_posn(1),  max(max(costmap_total)) , 'mx', 'LineWidth',5)   
-    plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [max(max(costmap_total)),0] , 'm', 'LineWidth',1)   
-    surf( costmap_total )  ;
+    surf( costmap_obs_dist )  ;  
+    surf( costmap_dist_to_path_follower )  ;   
+    data_indicator_height = max(max(costmap_obs_dist))  ;
+        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ; data_indicator_height  ] , 'cx'  , 'LineWidth',5)
+        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height,0] , 'c', 'LineWidth',1)   
+    plot3(robot_target_posn(2),robot_target_posn(1),  data_indicator_height, 'mx', 'LineWidth',5)   
+    plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
+        view(3)
     
     figure(f3h)  ;
     clf;
@@ -137,21 +151,18 @@ for t = 1:num_iterations
     size(costmap_dist_to_path_follower)
     costmap_total = costmap_obs_dist + costmap_dist_to_path_follower ;
     surf( costmap_total )  ;
+    data_indicator_height = max(max(costmap_total))  ;
+    indicator_x = round(path_follower_posn(2));
+    indicator_y = round(path_follower_posn(1));
+    cost_at_indicator = costmap_total(  indicator_y , indicator_x )  ;
+        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height,0] , 'c', 'LineWidth',1)   
+    plot3(robot_target_posn(2),robot_target_posn(1),  data_indicator_height , 'mx', 'LineWidth',5)   
+    plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
+        obj_handle_ = patch([0 0 floorplan_extent_cells(1) floorplan_extent_cells(1) ],[floorplan_extent_cells(2)  0 0  floorplan_extent_cells(2)], [ cost_at_indicator cost_at_indicator cost_at_indicator cost_at_indicator ] , 'p');
+        obj_handle_.FaceAlpha=0.2;
+    view(3)
     
-%       figure
-%     plot3(robot_target_posn(1),robot_target_posn(2),  max(max(costmap_total)) , 'cx', 'LineWidth',5)   
-    plot3(robot_target_posn(2),robot_target_posn(1),  max(max(costmap_total)) , 'mx', 'LineWidth',5)   
-    plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [max(max(costmap_total)),0] , 'm', 'LineWidth',1)   
-    
-    %     axis equal  ;
-    daspect(  [  1 1 0.1  ]  );
-    xlim( [0 70] )
-    ylim( [0 40] )
-    zlim( [-0.1 1.7] )
-    axes = gca;
-        %     axes.View( [-15.600000000000046 , 29.200000000000024]')    
-        %     view  ( 37, 30 )
-    view(3) ;
     pause  ;
 end
 
