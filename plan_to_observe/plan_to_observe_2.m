@@ -84,6 +84,9 @@ path_follower_step=(main_task_end_point-main_task_start_point) / num_iterations 
 path_follower_posn = main_task_start_point  ;
 plot(main_task_end_point(1),main_task_end_point(2),'bo')
 
+path_follower_posn_lagged = repmat(path_follower_posn,[1 5]);
+robot_posn = path_follower_posn_lagged;
+
 robot_start_posn = [ 60; 10 ]  ;
 robot_end_posn = [ 10; 20 ]  ;
 robot_step = ( robot_end_posn - robot_start_posn ) / num_iterations  ;
@@ -125,7 +128,11 @@ for t = 1:num_iterations
     surf( costmap_dist_to_path_follower )  ;
     data_indicator_height = max(max(costmap_dist_to_path_follower)) ;
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
-        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1)   
+        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
+        text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
+            plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+            plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
+            text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')        
     plot3(robot_target_posn(2),robot_target_posn(1),  data_indicator_height , 'mx', 'LineWidth',5)   
     plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [ data_indicator_height ,0] , 'm', 'LineWidth',1) 
         view(3)
@@ -137,8 +144,12 @@ for t = 1:num_iterations
     surf( costmap_obs_dist )  ;  
     surf( costmap_dist_to_path_follower )  ;   
     data_indicator_height = max(max(costmap_obs_dist))  ;
-        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ; data_indicator_height  ] , 'cx'  , 'LineWidth',5)
-        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height,0] , 'c', 'LineWidth',1)   
+        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
+        text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
+            plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+            plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
+            text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')  
     plot3(robot_target_posn(2),robot_target_posn(1),  data_indicator_height, 'mx', 'LineWidth',5)   
     plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
         view(3)
@@ -155,15 +166,29 @@ for t = 1:num_iterations
     indicator_x = round(path_follower_posn(2));
     indicator_y = round(path_follower_posn(1));
     cost_at_indicator = costmap_total(  indicator_y , indicator_x )  ;
+    robot_indicator_x = round(robot_posn(2));
+    robot_indicator_y = round(robot_posn(1));
+    robot_cost_at_indicator = costmap_total(  robot_indicator_y , robot_indicator_x )  ;
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
-        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height,0] , 'c', 'LineWidth',1)   
+        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
+        text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
+            plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+            plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
+            text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g') 
     plot3(robot_target_posn(2),robot_target_posn(1),  data_indicator_height , 'mx', 'LineWidth',5)   
     plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
-        obj_handle_ = patch([0 0 floorplan_extent_cells(1) floorplan_extent_cells(1) ],[floorplan_extent_cells(2)  0 0  floorplan_extent_cells(2)], [ cost_at_indicator cost_at_indicator cost_at_indicator cost_at_indicator ] , 'p');
-        obj_handle_.FaceAlpha=0.2;
+        obj_handle_ = patch([0 0 floorplan_extent_cells(2) floorplan_extent_cells(2) ],[floorplan_extent_cells(1)  0 0  floorplan_extent_cells(1)], [ cost_at_indicator cost_at_indicator cost_at_indicator cost_at_indicator ] , 'c');
+        obj_handle_.FaceAlpha=0.1;
+        obj_handle_ = patch([0 0 floorplan_extent_cells(2) floorplan_extent_cells(2) ],[floorplan_extent_cells(1)  0 0  floorplan_extent_cells(1)], [ robot_cost_at_indicator robot_cost_at_indicator robot_cost_at_indicator robot_cost_at_indicator ] , 'g');
+        obj_handle_.FaceAlpha=0.1;
     view(3)
     
     pause  ;
+    
+    
+    path_follower_posn_lagged(:,1) = path_follower_posn;
+    path_follower_posn_lagged(:,2:5) = path_follower_posn_lagged(:,1:4);
+    robot_posn = path_follower_posn_lagged(:,5);  % 2 step behind 
 end
 
 %%
