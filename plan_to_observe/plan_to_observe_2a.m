@@ -291,12 +291,21 @@ for t = 1:num_iterations*5
                      p2_pt_to = [min_SAMPLE_dir_yx_per_costmap(:,cc_)   ; data_indicator_height+0.0001]  ;
                      plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',2)  ;
                 end
+                 p1_pt_from =  [robot_posn(2);robot_posn(1);data_indicator_height+0.0001]  ;
+                 p2_pt_to = [dir_vec_end_yx+robot_posn   ; data_indicator_height+0.0001]  ;
+                 plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',2)  ;
                 priority_costmap = 2;
                 norm_2(dir_vec_end_yx,1)
                 if norm_2(dir_vec_end_yx,1) <= 3
+                     p1_pt_from =  [robot_posn(2);robot_posn(1);data_indicator_height+0.0001]  ;
+                     p2_pt_to = [dir_vec_end_yx+robot_posn   ; data_indicator_height+0.0001]  ;
+                     plot3_rows([p1_pt_from p2_pt_to], 'r', 'LineWidth',2)  ;
                     dir_vec_end_yx
                     dir_vec_end_yx = dir_vec_end_yx + flip(min_SAMPLE_dir_yx_per_costmap(:,priority_costmap)) -  robot_posn ;  
                     dir_vec_end_yx
+                     p1_pt_from =  [robot_posn(2);robot_posn(1);data_indicator_height+0.0001]  ;
+                     p2_pt_to = [min_SAMPLE_dir_yx_per_costmap(:,cc_)   ; data_indicator_height+0.0001]  ;
+                     plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',3)  ;
                 end
                 dir_vec_end_yx = dir_vec_end_yx./norm_2(dir_vec_end_yx,1)   ;                
                 
