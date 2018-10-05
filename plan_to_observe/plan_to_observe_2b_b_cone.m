@@ -6,7 +6,8 @@ addpath(  '/mnt/nixbig/downloads/matlab_DistBetween2Segment/DistBetween2Segment/
 Same as plan_to_observe_2.m, but extend the target along its trajectory + motion model - including uncertainty and correction 
 %}
 
-%%
+%% 
+% Set up variables
 
 floorplan_x = 11 % 7m forward
 floorplan_y = 9 % 5m left
@@ -22,7 +23,7 @@ cost_to_divert = floorplan_space ;
 cost_to_observe = floorplan_space ;
 
 %%
-%  Mine:
+% Ellipse: Mine:
 %  x^2/a^2 + y^2/b^2 == 1  --> x=sqrt(a^2)*(1 - (y^2)/(b^2))  -->  y =   sqrt(( 1  -  x^2/a^2 ) * b^2  )
 
 x=[-1:0.01:1]  ;
@@ -33,7 +34,7 @@ y = sqrt(( 1  -  (x.^2)/(a^2) ) * b^2  )
 figure; hold on; plot(x,y); plot(x,-y); axis equal
 
 %%
-% https://au.mathworks.com/matlabcentral/answers/86615-how-to-plot-an-ellipse
+% Ellipse: https://au.mathworks.com/matlabcentral/answers/86615-how-to-plot-an-ellipse
 a=5; % horizontal radius
 b=10; % vertical radius
 x0=0; % x0,y0 ellipse centre coordinates
@@ -44,7 +45,7 @@ y=y0+b*sin(t);
 plot(x,y)
 
 %%
-% https://au.mathworks.com/matlabcentral/answers/86615-how-to-plot-an-ellipse
+% Ellipse: https://au.mathworks.com/matlabcentral/answers/86615-how-to-plot-an-ellipse
 x1 =10 ; y1 = 1 ;
 x2 =  11 ; y2  = 3 ;
 e = 0.99 ;
@@ -88,49 +89,6 @@ patch(potential_zone_closed(1,:),potential_zone_closed(2,:),'r')
 %  How to check whether a point is inside an ellipse
 %  How to check whether a line intersects an ellipse and where
  
-%%  1)  cost_to_observe as measurement model 
-%{
-    Put the Robot_Target somewhere in the world
-    Work out the field/cost to each cell
-    Heatmap 
-%}
-figure; hold on; grid on; xlabel('distance (0.1m)'); ylabel('observability');
-draw_axes_direct(eye(3),[floorplan_extent_cells(1)/2;floorplan_extent_cells(2)/2;0],'',1)
-%    Put the Robot_Target somewhere in the world
-robot_target_posn = [ ...
-    round( randi( (1/floorplan_scale)*floorplan_x) ); ...
-    round( randi( (1/floorplan_scale)*floorplan_y ) )  ];
-robot_target_posn = round(floorplan_extent_cells/2)   ;
-costmap_obs_dist = ones(floorplan_extent_cells(1),floorplan_extent_cells(2))  ;
-max_dist = sqrt( ((1/floorplan_scale)*floorplan_x)^2 + ((1/floorplan_scale)*floorplan_y)^2 ) ;
-% CALCULATE COST
-for yy_ = 1.0 : 1 : floorplan_extent_cells(2)
-    for xx_ = 1.0 : 1 : floorplan_extent_cells(1)
-        dist_cell_to_target = [ xx_ ; yy_ ] - robot_target_posn  ;
-        dist_cell_to_target = norm_2(dist_cell_to_target,1)  ;
-                            % dist_cell_to_target = sqrt(   [ - robot_target_posn(1) ]^2  +   [ xx_- robot_target_posn(2) ]^2   )  ;        
-        costmap_obs_dist(xx_ , yy_) =  (0.00275*exp((dist_cell_to_target)*0.215*(3/4) ))   ;  % parameterisation : exp(d*x) : x spreads the function
-        costmap_obs_dist(xx_ , yy_) =  (0.00275*exp((dist_cell_to_target)*0.1215*(3/4) ))   ;  % parameterisation : exp(d*x) : x spreads the function
-        if costmap_obs_dist(xx_ , yy_) > 1 
-            costmap_obs_dist(xx_ , yy_) = 1  ;
-        elseif costmap_obs_dist(xx_ , yy_) < 0  
-            costmap_obs_dist(xx_ , yy_) = 0  ;
-        end
-    end
-end
-
-% VISUALISE COST
-figure_named('Observation benefit/gain/measurement model vs distance'); 
-axes=subplot(1,2 , 1);  colormap hot; title('Observation "cost"/measurement model') ;   hold on; grid on; xlabel('x (0.1m)'); ylabel('y (0.1m)'); zlabel('cost')
-surf( costmap_obs_dist )  ;  %  view(3)  ;  
-draw_axes_direct(eye(3),[floorplan_extent_cells(1)/2;floorplan_extent_cells(2)/2;0],'',1)
-axes.DataAspectRatio=[1 1 0.02]
-
-
-axes=subplot(1,2 , 2);  colormap hot; title('Observation benefit/gain/measurement model falls with distance') ;  hold on; grid on; xlabel('x (0.1m)'); ylabel('y (0.1m)'); zlabel('cost')
-surf( 1-costmap_obs_dist )  ;  %  view(3)  ;
-draw_axes_direct(eye(3),[floorplan_extent_cells(1)/2;floorplan_extent_cells(2)/2;0],'',1)
-axes.DataAspectRatio=[1 1 0.02]
 
 
 %%
@@ -162,13 +120,42 @@ draw_figs = true  ;
 %         %  view(3) ;
 % end
 f3h=figure_named('costmap_obs_dist + costmap_dist_to_path_follower '); 
-subplot(2,2,1);    hold on; grid on; xlabel('x'); ylabel('y');
-subplot(2,2,2);    hold on; grid on; xlabel('x'); ylabel('y');
+sub_axis_h(1) = subplot(2,2,1);    
+sub_axis_h(2) = subplot(2,2,2);   
+sub_axis_h(3) = subplot(2,2,3);     
+axes(sub_axis_h(1));   hold on; grid on; xlabel('x'); ylabel('y');
+        daspect(  [  1 1 0.1  ]  );
+%     pos = get( sub_axis_h(1), 'Position' )     ;   
+        % the first two coordinates are the horizontal and vertical relative (in [0,1]) coordinates 
+        %           of the origin of the axis 
+        %           with respect to the lower left corner of the figure, 
+        %  and the second two are the relative width and height.
+                %     size=[pos(3) pos(4)];
+                %     aspect=
+                %     height=0.4; width=height
+    sub_axis_h_Position{1} =  [  -0.05 0.05 0.5 0.9  ]  ;
+    sub_axis_h(1).Position =  sub_axis_h_Position{1}  ;
+    xlim([0,90]); ylim([0,110]);
+    drawnow
+        %     sub1_axis_h.Position =  [  0 0.6  pos(3) pos(4)  ]  ;    %        [pos(1) pos(2) pos(3) pos(4)]
+
+
+axes(sub_axis_h(2));  hold on; grid on; xlabel('x'); ylabel('y');
         daspect(  [  1 1 0.1  ]  );
         view(3) ;
-subplot(2,2,3);     hold on; grid on; xlabel('x'); ylabel('y');
+        sub_axis_h_Position{2} =  [  0.55 0.5  0.5 0.55  ]  ;
+        sub_axis_h(2).Position =  sub_axis_h_Position{2}  ;
+    xlim([0,90]); ylim([0,110]);
+    drawnow
+    
+axes(sub_axis_h(3));  
+        hold on; grid on; xlabel('x'); ylabel('y');
         daspect(  [  1 1 0.1  ]  );
         view(3) ;
+        sub_axis_h_Position{3} =  [  0.35 0.05  0.55 0.55  ]  ;
+        sub_axis_h(3).Position =  sub_axis_h_Position{3}  ;
+    xlim([0,90]); ylim([0,110]);
+    drawnow
     
 
 costmap_obs_dist = ones(floorplan_extent_cells(1),floorplan_extent_cells(2))  ;
@@ -240,7 +227,7 @@ for t = 1: loops
             dist_cell_to_target = dist__ ;
              %  [line1_exit__, line2_exit__, line2_exit_to_line1_exit_vec__, dist__] = shortestLineBetweenLineSegments( line1_pt1_, line1_pt2_, line2_pt1_, line2_pt2_)
             
-            costmap_obs_dist(xx_ , yy_) =  0.75*(0.00275*exp(dist_cell_to_target*0.07015*(3/4) ))   ;  % parameterisation : exp(d*x) : x spreads the function
+            costmap_obs_dist(xx_ , yy_) =  0.75*(0.005275*exp(dist_cell_to_target*0.07015*(3/4) ))   ;  % parameterisation : exp(d*x) : x spreads the function
             costmap_obs_dist(xx_ , yy_) =  costmap_obs_dist(xx_ , yy_) * 1.1  ;
             if costmap_obs_dist(xx_ , yy_) > 1 
                 costmap_obs_dist(xx_ , yy_) = 1  ;
@@ -297,11 +284,13 @@ for t = 1: loops
             +   max(max(costmap_dist_to_path_follower(costmap_dist_to_path_follower==tolerance_cost_level))) -   max(max(costmap_dist_to_path_follower(costmap_dist_to_path_follower==tolerance_cost_level)))^exponent_here     ; 
 
     if draw_figs
-    subplot(2,2,2);    
+    subplot(sub_axis_h(2));    
     cla();
     grid on; hold on; 
     colormap hot  ;
+        sub_axis_h(2).Position =  sub_axis_h_Position{2}  ;
     surf( costmap_dist_to_path_follower )  ;
+    surf( costmap_total )  ;
     data_indicator_height = 1.1; %  max(max(costmap_dist_to_path_follower)) ;
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
         plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
@@ -317,12 +306,14 @@ for t = 1: loops
     daspect(  [  1 1 0.025   ]  );
     zlim([0 1.1])  ;
     view(3)
+    xlim([0,90]); ylim([0,110]);
     
     
-    subplot(2,2,3);    
+    subplot(sub_axis_h(3));    
     cla();
     grid on; hold on; 
     colormap hot  ;
+        sub_axis_h(3).Position =  sub_axis_h_Position{3}  ;
     surf( costmap_obs_dist )  ;  
     surf( costmap_dist_to_path_follower )  ;   
     data_indicator_height = 1.1; %    max(max(costmap_obs_dist))  ;
@@ -339,6 +330,7 @@ for t = 1: loops
     daspect(  [  1 1 0.025   ]  )  ;
     zlim([0 1.1])  ;
     view(3)
+    xlim([0,90]); ylim([0,110]);
     end
     
     costmaps{1} = costmap_obs_dist;
@@ -349,10 +341,11 @@ for t = 1: loops
     min_SAMPLE_dir_yx_per_costmap = zeros(2,num_costmaps,'double');
     
     %  figure(f3h)  ;
-    subplot(2,2,1);    
+    subplot(sub_axis_h(1));    
     cla();
     grid on; hold on; 
     colormap hot  ;
+        sub_axis_h(1).Position =  sub_axis_h_Position{1}  ;
     size(costmap_obs_dist)
     size(costmap_dist_to_path_follower)
     costmap_total = costmap_obs_dist + costmap_dist_to_path_follower ;
@@ -413,14 +406,34 @@ for t = 1: loops
                 end
                 
                 % kind of vote:  sum across the x and y 
+                priority_costmap_num = 2 ;
                 dir_vec_end_yx = [0;0];
-                for cc_ = 1:size(costmaps,2)     
+                display('pre-loop')
+                for cc_ = 1:size(costmaps,2)  
+                    if cc_ ~= priority_costmap_num
+                    display(sprintf('in-loop cc_=%i',cc_))
                     dir_vec_end_yx = dir_vec_end_yx + flip(min_SAMPLE_dir_yx_per_costmap(:,cc_)) -  robot_posn ;        
+                    if cc_ ~= priority_costmap_num
+                        dir_vec_end_yx = 2*dir_vec_end_yx ;
+                    end
                     min_SAMPLE_dir_yx_per_costmap(:,cc_)  
                      p1_pt_from =  [robot_posn(2);robot_posn(1);data_indicator_height+0.0001]  ;
                      p2_pt_to = [min_SAMPLE_dir_yx_per_costmap(:,cc_)   ; data_indicator_height+0.0001]  ;
                      plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',2)  ;
+                    end
                 end
+%{                
+                cc_ = priority_costmap_num  ;   %  same-ish vector, opposite direction   -  x=1; y_lim=20;y=[-20*pi:0.1:20*pi]; figure; hold on, grid on;; plot(rem(atan2(y,x),pi/2)), plot(atan2(y,x)); xlabel(strcat('y: -',int2str(y_lim),'pi to ',int2str(y_lim),'pi')); ylabel(strcat('atan2(y,x=',int2str(x),')'))
+                    dir_vec_end_yx__priority = dir_vec_end_yx + flip(min_SAMPLE_dir_yx_per_costmap(:,cc_)) -  robot_posn ;       
+                    dir_vec_end_yx
+                    dir_vec_end_yx__priority
+                    atan2(dir_vec_end_yx__priority(2),dir_vec_end_yx__priority(1))
+                    min_SAMPLE_dir_yx_per_costmap(:,cc_)  
+                     p1_pt_from =  [robot_posn(2);robot_posn(1);data_indicator_height+0.0001]  ;
+                     p2_pt_to = [min_SAMPLE_dir_yx_per_costmap(:,cc_)   ; data_indicator_height+0.0001]  ;
+                     plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',2)  ;
+%}                     
+                
                  p1_pt_from =  [robot_posn(2);robot_posn(1);data_indicator_height+0.0001]  ;
                  p2_pt_to = [dir_vec_end_yx+robot_posn   ; data_indicator_height+0.0001]  ;
                  plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',2)  ;
@@ -445,8 +458,8 @@ for t = 1: loops
     plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
     plot3([robot_posn_prediction_vec(2,1),robot_posn_prediction_vec(2,2)],[robot_posn_prediction_vec(1,1),robot_posn_prediction_vec(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
         
-    plot3(robot_target_posn__hist(2,:) , robot_target_posn__hist(1,:),  path_altitude, 'mx' ) ;
     path_altitude = repmat(data_indicator_height, 1, size(robot_posn__hist,2))  ;
+    plot3(robot_target_posn__hist(2,:) , robot_target_posn__hist(1,:),  path_altitude, 'mx' ) ;
     plot3(path_follower_posn__hist(2,:) , path_follower_posn__hist(1,:), path_altitude  , 'co') ;
     plot3(path_follower_posn__hist(2,:) , path_follower_posn__hist(1,:), path_altitude  , 'co') ;
     plot3(robot_posn__hist(2,:) , robot_posn__hist(1,:),  path_altitude, 'bs' ) ;
@@ -457,6 +470,7 @@ for t = 1: loops
         % daspect(  [  1 1 0.05  ]  );
         daspect(  [  1 1 0.025  ]  );
     %  view(3) ;
+    xlim([0,90]); ylim([0,110]);
     
     
     path_follower_posn_lagged(:,1) = path_follower_posn;
