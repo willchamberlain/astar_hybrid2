@@ -1,4 +1,12 @@
 addpath('/mnt/nixbig/ownCloud/project_code/')
+
+%%
+%{
+        Get the lowest-cost over time from the target's trajectory  -->  forward-projection / envelope  of the instantaneous costs
+%}
+costmap_obs_dist__hist_min = min(costmap_obs_dist__hist(:,:,1:50),[],3)  ;
+figure;  surf(costmap_obs_dist__hist_min)
+
 %%
 
 map_1 = zeros(100,100)  ;  start_1 = [2,2]  ;   goal_1 = [90,90]  ;

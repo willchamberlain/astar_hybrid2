@@ -42,7 +42,9 @@ function [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_
 %                         end
 %                     end
                 end
-                current_node = [ open_set(open_set_index,1), open_set(open_set_index,2) ]    ;
+%                current_node = [ open_set(open_set_index,1), open_set(open_set_index,2) ]    ;
+                current_node = [ open_set(open_set_index,1); open_set(open_set_index,2) ]    ;
+   
                 current_row_ = open_set(open_set_index,1)    ;    current_col_ = open_set(open_set_index,2)    ; 
                 if current_node == goal 
                     disp( 'current_node == goal' )
@@ -87,7 +89,7 @@ function [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_
                         
                         came_from( : , ii_row_ , jj_col_ ) =   current_node   ;
                         g_score( ii_row_ , jj_col_ ) = tentative_gScore    ;
-                        f_score( ii_row_ , jj_col_ ) = g_score( ii_row_ , jj_col_ ) + path_planning__manhattan_distance( [ ii_row_, jj_col_] , goal )    ;
+                        f_score( ii_row_ , jj_col_ ) = g_score( ii_row_ , jj_col_ ) + path_planning__manhattan_distance( [ ii_row_, jj_col_] , goal' )    ;
                     end
                 end                
                 
