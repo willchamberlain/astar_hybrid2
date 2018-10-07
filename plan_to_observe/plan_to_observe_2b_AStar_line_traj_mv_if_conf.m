@@ -187,6 +187,7 @@ main_task_end_point=[55;30]  ;
 main_task_waypoints = [ main_task_start_point main_task_end_point ]  ;
 main_task_current_waypoint_num = 1 + 1;
 path_follower_step=(main_task_end_point-main_task_start_point) / num_iterations  ;
+path_follower_step=path_follower_step*1.4;
 path_follower_posn = main_task_start_point  ;
 plot(main_task_end_point(1),main_task_end_point(2),'bo')
 
@@ -229,6 +230,12 @@ dist_cell_to_target_radius_type = 'flat';
 t = 0 ;
 while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     t = t + 1 ;
+    
+    if norm_2(path_follower_posn-main_task_waypoints(:,main_task_current_waypoint_num),1)<0.5
+        display('Waiting for robot to catch up')  
+        path_follower_step=[0;0]  
+    end
+    
     if norm_2(main_task_waypoints(:,main_task_current_waypoint_num)-robot_posn,1) < 0.5  % change goals 
         if 0 == mod(main_task_current_waypoint_num,2) 
             main_task_waypoints(:,end+1) = main_task_start_point 
@@ -238,8 +245,10 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
             main_task_current_waypoint_num = main_task_current_waypoint_num + 1
         end
         path_follower_step=(main_task_waypoints(:,main_task_current_waypoint_num)-main_task_waypoints(:,main_task_current_waypoint_num-1)) / num_iterations  
+        path_follower_step=path_follower_step.*1.4;
         path_follower_posn = robot_posn 
     end
+    
     
     path_follower_posn_old = path_follower_posn;
     path_follower_posn = path_follower_posn + path_follower_step  ;
