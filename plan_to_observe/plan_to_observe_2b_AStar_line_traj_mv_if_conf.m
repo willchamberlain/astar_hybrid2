@@ -229,16 +229,16 @@ dist_cell_to_target_radius_type = 'flat';
 t = 0 ;
 while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     t = t + 1 ;
-    if norm_2(main_task_end_point-robot_posn,1) < 0.5  % change goals 
-        if 0 == mod(main_task_current_waypoint_num,1) 
-            main_task_waypoints(:,end+1) = main_task_start_point ;
-            main_task_current_waypoint_num = main_task_current_waypoint_num + 1;
+    if norm_2(main_task_waypoints(:,main_task_current_waypoint_num)-robot_posn,1) < 0.5  % change goals 
+        if 0 == mod(main_task_current_waypoint_num,2) 
+            main_task_waypoints(:,end+1) = main_task_start_point 
+            main_task_current_waypoint_num = main_task_current_waypoint_num + 1
         else
-            main_task_waypoints(:,end+1) = main_task_end_point ;
-            main_task_current_waypoint_num = main_task_current_waypoint_num + 1;
+            main_task_waypoints(:,end+1) = main_task_end_point 
+            main_task_current_waypoint_num = main_task_current_waypoint_num + 1
         end
-        path_follower_step=(main_task_waypoints(:,main_task_current_waypoint_num)-main_task_waypoints(:,main_task_current_waypoint_num-1)) / num_iterations  ;
-        path_follower_posn = robot_posn ;
+        path_follower_step=(main_task_waypoints(:,main_task_current_waypoint_num)-main_task_waypoints(:,main_task_current_waypoint_num-1)) / num_iterations  
+        path_follower_posn = robot_posn 
     end
     
     path_follower_posn_old = path_follower_posn;
