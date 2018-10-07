@@ -182,7 +182,8 @@ costmap_obs_dist_narrow = ones(floorplan_extent_cells(1),floorplan_extent_cells(
     num_costmaps = size(costmaps,2)   ;
 
 main_task_start_point=[10;30]  ;
-main_task_end_point=[90;30]  ;
+%   main_task_end_point=[90;30]  ;
+main_task_end_point=[55;30]  ;
 main_task_waypoints = [ main_task_start_point main_task_end_point ]  ;
 main_task_current_waypoint_num = 1 + 1;
 path_follower_step=(main_task_end_point-main_task_start_point) / num_iterations  ;
@@ -226,8 +227,20 @@ dist_cell_to_target_radius_type = 'repel';
 dist_cell_to_target_radius_type = 'flat';
     
 t = 0 ;
-while norm_2(main_task_end_point-robot_posn,1) > 0.01
+while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     t = t + 1 ;
+    if norm_2(main_task_end_point-robot_posn,1) < 0.5  % change goals 
+        if 0 == mod(main_task_current_waypoint_num,1) 
+            main_task_waypoints(:,end+1) = main_task_start_point ;
+            main_task_current_waypoint_num = main_task_current_waypoint_num + 1;
+        else
+            main_task_waypoints(:,end+1) = main_task_end_point ;
+            main_task_current_waypoint_num = main_task_current_waypoint_num + 1;
+        end
+        path_follower_step=(main_task_waypoints(:,main_task_current_waypoint_num)-main_task_waypoints(:,main_task_current_waypoint_num-1)) / num_iterations  ;
+        path_follower_posn = robot_posn ;
+    end
+    
     path_follower_posn_old = path_follower_posn;
     path_follower_posn = path_follower_posn + path_follower_step  ;
     if sum(path_follower_posn> min(floorplan_extent_cells)) || sum(path_follower_posn<[1; 1])
@@ -398,7 +411,7 @@ while norm_2(main_task_end_point-robot_posn,1) > 0.01
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
         plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
         text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
-                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), [data_indicator_height data_indicator_height], 'c:', 'LineWidth',2)   ;
+                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'c:', 'LineWidth',2)   ;
             plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
             plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
             text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')        
@@ -424,7 +437,7 @@ while norm_2(main_task_end_point-robot_posn,1) > 0.01
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
         plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
         text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
-                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), [data_indicator_height data_indicator_height], 'c:', 'LineWidth',2)   ;
+                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'c:', 'LineWidth',2)   ;
             plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
             plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
             text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')  
@@ -488,7 +501,7 @@ while norm_2(main_task_end_point-robot_posn,1) > 0.01
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
         plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
         text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
-                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), [data_indicator_height data_indicator_height], 'c:', 'LineWidth',2)   ;
+                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'c:', 'LineWidth',2)   ;
             plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
             plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
             
