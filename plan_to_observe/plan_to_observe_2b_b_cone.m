@@ -161,8 +161,13 @@ axes(sub_axis_h(3));
 costmap_obs_dist = ones(floorplan_extent_cells(1),floorplan_extent_cells(2))  ;
 costmap_obs_dist_narrow = ones(floorplan_extent_cells(1),floorplan_extent_cells(2))  ;
 
+    costmaps{1} = costmap_obs_dist;
+    costmaps{2} = costmap_dist_to_path_follower;
+    num_costmaps = size(costmaps,2)   ;
+
 main_task_start_point=[10;30]  ;
 main_task_end_point=[90;30]  ;
+main_task_waypoints = [ main_task_start_point main_task_end_point ]  ;
 path_follower_step=(main_task_end_point-main_task_start_point) / num_iterations  ;
 path_follower_posn = main_task_start_point  ;
 plot(main_task_end_point(1),main_task_end_point(2),'bo')
@@ -171,7 +176,7 @@ path_follower_posn_lagged = repmat(path_follower_posn,[1 5]);
 
 robot_posn = main_task_start_point ;
 
-robot_target_posn = [100;90]  ;  %robot_start_posn  ;
+robot_target_posn = [100;60]  ;  %robot_start_posn  ;
 robot_planned_path_start_posn = robot_target_posn  ;
 robot_planned_path_end_posn = [ 10; 90 ]  ;
 robot_planned_path_step_base = ( robot_planned_path_end_posn - robot_planned_path_start_posn ) / num_iterations  ;
@@ -190,7 +195,21 @@ F(loops) = struct('cdata',[],'colormap',[]);
     robot_target_posn__hist = zeros(2,loops)  ;
     robot_posn__hist = zeros(2,loops)  ;
     path_follower_posn__hist = zeros(2,loops)  ;
-
+    cost_at_robot_posn__hist = zeros(num_costmaps,loops);
+    dist_from_main_task_goal__hist = zeros(1,loops)  ;    %  current_goal_posn__hist = repmat(main_task_end_point,1,loops);  dist_from_main_task_goal__hist = norm_2(robot_posn__hist - current_goal_posn__hist , 1)
+    dist_from_target__hist = zeros(1,loops)  ;   %  dist_from_target__hist =  norm_2(robot_posn__hist - robot_target_posn__hist,1)
+    
+    %  Metrics for information gain vs inefficiency on main task        
+        %  figure;  hold on; grid on; plot(dist_from_target__hist);  plot(dist_from_main_task_goal__hist) ;  plot(dist_from_target__hist./dist_from_main_task_goal__hist) ;    
+        %  ratio of distances to each
+        %  figure; plot(dist_from_target__hist./dist_from_main_task_goal__hist) ;  ylim([0 2])
+        %  time in good observation range of target
+        %  time to complete main task 
+        %  Note:  Doug had an _objective_, industry-based measure : items picked per minute
+        %   Objective measure:  how far the target robot progresses 
+        %   Objective measure:  estimation error for the target robot  <--  legitimate use e.g. RoboCar has ddgy IMU and no GPS
+    
+    
 % input('any key to start')    
 pause(2)
     
@@ -202,6 +221,7 @@ for t = 1: loops
     end
     path_follower_posn__hist(:,t) = path_follower_posn;
     costmap_dist_to_path_follower = zeros((1/floorplan_scale)*floorplan_x,(1/floorplan_scale)*floorplan_y)  ;
+    costmap_total = zeros((1/floorplan_scale)*floorplan_x,(1/floorplan_scale)*floorplan_y)  ;
     
     robot_target_posn_old = robot_target_posn;
     robot_planned_path_step = robot_planned_path_step_base + [randn(1) ; randn(1)].* (norm_2(robot_planned_path_step_base,1)/10) ;
@@ -224,7 +244,21 @@ for t = 1: loops
                 shortestLineBetweenLineSegments(  ...
                 robot_posn_prediction_vec(:,1) , robot_posn_prediction_vec(:,2)  ,  ...
                 [xx_,yy_] , [xx_,yy_]  )  ;
-            dist_cell_to_target = dist__ ;
+            dist_cell_to_target = dist__ ;     
+            [line1_exit__, line2_exit__, line2_exit_to_line1_exit_vec__, dist__] = ...
+                shortestLineBetweenLineSegments(  ...
+                robot_posn_prediction_vec_1(:,1) , robot_posn_prediction_vec_1(:,2)  ,  ...
+                [xx_,yy_] , [xx_,yy_]  )  ;
+            if dist__ < dist_cell_to_target
+                dist_cell_to_target = dist__ ;     
+            end;
+            [line1_exit__, line2_exit__, line2_exit_to_line1_exit_vec__, dist__] = ...
+                shortestLineBetweenLineSegments(  ...
+                robot_posn_prediction_vec_2(:,1) , robot_posn_prediction_vec_2(:,2)  ,  ...
+                [xx_,yy_] , [xx_,yy_]  )  ;
+            if dist__ < dist_cell_to_target
+                dist_cell_to_target = dist__ ;     
+            end;
              %  [line1_exit__, line2_exit__, line2_exit_to_line1_exit_vec__, dist__] = shortestLineBetweenLineSegments( line1_pt1_, line1_pt2_, line2_pt1_, line2_pt2_)
             
             costmap_obs_dist(xx_ , yy_) =  0.75*(0.005275*exp(dist_cell_to_target*0.07015*(3/4) ))   ;  % parameterisation : exp(d*x) : x spreads the function
@@ -295,6 +329,7 @@ for t = 1: loops
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
         plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
         text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
+                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), [data_indicator_height data_indicator_height], 'c:', 'LineWidth',2)   ;
             plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
             plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
             text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')        
@@ -320,12 +355,15 @@ for t = 1: loops
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
         plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
         text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
+                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), [data_indicator_height data_indicator_height], 'c:', 'LineWidth',2)   ;
             plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
             plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
             text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')  
     plot3(robot_target_posn(2),robot_target_posn(1),  data_indicator_height, 'mx', 'LineWidth',5)   
     plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
     plot3([robot_posn_prediction_vec(2,1),robot_posn_prediction_vec(2,2)],[robot_posn_prediction_vec(1,1),robot_posn_prediction_vec(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
+    plot3([robot_posn_prediction_vec_1(2,1),robot_posn_prediction_vec_1(2,2)],[robot_posn_prediction_vec_1(1,1),robot_posn_prediction_vec_1(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
+    plot3([robot_posn_prediction_vec_2(2,1),robot_posn_prediction_vec_2(2,2)],[robot_posn_prediction_vec_2(1,1),robot_posn_prediction_vec_2(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
     
     daspect(  [  1 1 0.025   ]  )  ;
     zlim([0 1.1])  ;
@@ -335,7 +373,6 @@ for t = 1: loops
     
     costmaps{1} = costmap_obs_dist;
     costmaps{2} = costmap_dist_to_path_follower;
-    num_costmaps = size(costmaps,2)   ;
     SAMPLE_VALUE_per_costmap = zeros(num_costmaps,1,'double');
     min_SAMPLE_VALUE_per_costmap = ones(1,num_costmaps,'double').*10000;
     min_SAMPLE_dir_yx_per_costmap = zeros(2,num_costmaps,'double');
@@ -350,16 +387,18 @@ for t = 1: loops
     size(costmap_dist_to_path_follower)
     costmap_total = costmap_obs_dist + costmap_dist_to_path_follower ;
     surf( costmap_total )  ;
-    data_indicator_height = 1.1; %1.5;  %max(max(costmap_total))  ;
+    data_indicator_height = 1.45; %1.5;  %max(max(costmap_total))  ;
     indicator_x = round(path_follower_posn(2));
     indicator_y = round(path_follower_posn(1));
     cost_at_indicator = costmap_total(  indicator_y , indicator_x )  ;
     robot_indicator_x = round(robot_posn(2));
     robot_indicator_y = round(robot_posn(1));
     robot_cost_at_indicator = costmap_total(  robot_indicator_y , robot_indicator_x )  ;
+    display('362')
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
         plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
         text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
+                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), [data_indicator_height data_indicator_height], 'c:', 'LineWidth',2)   ;
             plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
             plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
             % text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g') 
@@ -368,9 +407,10 @@ for t = 1: loops
                 min_sample_SAMPLE_X=0;
                 for xii_ = [ -1 -0.5 0 0.5 1 ].*5
                     for yii_ = [ 1 0.5 0  -0.5 -1].*5
+                        display(sprintf('xii_=%i, yii_=%i',xii_,yii_))
                         if xii_ == yii_ ;   continue;     end;                            
-                        SAMPLE_Y = robot_indicator_x+round(yii_)  ;
-                        SAMPLE_X = robot_indicator_y+round(xii_)  ;
+                        SAMPLE_Y = robot_indicator_x+round(yii_)  ; if SAMPLE_Y<1; SAMPLE_Y=1; end;
+                        SAMPLE_X = robot_indicator_y+round(xii_)  ; if SAMPLE_X<1; SAMPLE_X=1; end;
                         SAMPLE_VALUE = costmap_total(SAMPLE_X,SAMPLE_Y)  ;
                         if SAMPLE_VALUE< min_sample
                             min_sample = SAMPLE_VALUE  ;
@@ -404,12 +444,21 @@ for t = 1: loops
 %                          end
                     end
                 end
-                
+display('410')                
                 % kind of vote:  sum across the x and y 
                 priority_costmap_num = 2 ;
                 dir_vec_end_yx = [0;0];
+                for cc_ = 1:size(costmaps,2)     
+                    dir_vec_end_yx = dir_vec_end_yx + flip(min_SAMPLE_dir_yx_per_costmap(:,cc_)) -  robot_posn ;        
+                    min_SAMPLE_dir_yx_per_costmap(:,cc_)  
+                     p1_pt_from =  [robot_posn(2);robot_posn(1);data_indicator_height+0.0001]  ;
+                     p2_pt_to = [min_SAMPLE_dir_yx_per_costmap(:,cc_)   ; data_indicator_height+0.0001]  ;
+                     plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',1)  ;
+                end
+                %{
                 display('pre-loop')
                 for cc_ = 1:size(costmaps,2)  
+                    display(sprintf('cc_=%i',cc_));
                     if cc_ ~= priority_costmap_num
                     display(sprintf('in-loop cc_=%i',cc_))
                     dir_vec_end_yx = dir_vec_end_yx + flip(min_SAMPLE_dir_yx_per_costmap(:,cc_)) -  robot_posn ;        
@@ -422,21 +471,20 @@ for t = 1: loops
                      plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',2)  ;
                     end
                 end
-%{                
+                
                 cc_ = priority_costmap_num  ;   %  same-ish vector, opposite direction   -  x=1; y_lim=20;y=[-20*pi:0.1:20*pi]; figure; hold on, grid on;; plot(rem(atan2(y,x),pi/2)), plot(atan2(y,x)); xlabel(strcat('y: -',int2str(y_lim),'pi to ',int2str(y_lim),'pi')); ylabel(strcat('atan2(y,x=',int2str(x),')'))
                     dir_vec_end_yx__priority = dir_vec_end_yx + flip(min_SAMPLE_dir_yx_per_costmap(:,cc_)) -  robot_posn ;       
-                    dir_vec_end_yx
-                    dir_vec_end_yx__priority
-                    atan2(dir_vec_end_yx__priority(2),dir_vec_end_yx__priority(1))
+                    angle_diff = tan(dir_vec_end_yx(1)/dir_vec_end_yx(2))  -  tan(dir_vec_end_yx__priority(1)/dir_vec_end_yx__priority(2))  ;
+                    if angle_diff > degtorad(135) | angle_diff < degtorad(-135)
                     min_SAMPLE_dir_yx_per_costmap(:,cc_)  
                      p1_pt_from =  [robot_posn(2);robot_posn(1);data_indicator_height+0.0001]  ;
                      p2_pt_to = [min_SAMPLE_dir_yx_per_costmap(:,cc_)   ; data_indicator_height+0.0001]  ;
                      plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',2)  ;
-%}                     
+                 %}
                 
                  p1_pt_from =  [robot_posn(2);robot_posn(1);data_indicator_height+0.0001]  ;
                  p2_pt_to = [dir_vec_end_yx+robot_posn   ; data_indicator_height+0.0001]  ;
-                 plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',2)  ;
+                 plot3_rows([p1_pt_from p2_pt_to], 'm', 'LineWidth',1)  ;
                 priority_costmap = 2;
                 norm_2(dir_vec_end_yx,1)
                 if norm_2(dir_vec_end_yx,1) <= 3
@@ -457,6 +505,8 @@ for t = 1: loops
     plot3(robot_target_posn(2),robot_target_posn(1),  data_indicator_height , 'mx', 'LineWidth',5)   
     plot3([robot_target_posn(2),robot_target_posn(2)],[robot_target_posn(1),robot_target_posn(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
     plot3([robot_posn_prediction_vec(2,1),robot_posn_prediction_vec(2,2)],[robot_posn_prediction_vec(1,1),robot_posn_prediction_vec(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
+    plot3([robot_posn_prediction_vec_1(2,1),robot_posn_prediction_vec_1(2,2)],[robot_posn_prediction_vec_1(1,1),robot_posn_prediction_vec_1(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
+    plot3([robot_posn_prediction_vec_2(2,1),robot_posn_prediction_vec_2(2,2)],[robot_posn_prediction_vec_2(1,1),robot_posn_prediction_vec_2(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
         
     path_altitude = repmat(data_indicator_height, 1, size(robot_posn__hist,2))  ;
     plot3(robot_target_posn__hist(2,:) , robot_target_posn__hist(1,:),  path_altitude, 'mx' ) ;
@@ -490,6 +540,15 @@ for t = 1: loops
          end
     end
     robot_posn__hist(:,t) = robot_posn  ;
+	
+    robot_indicator_x = round(robot_posn(2));
+    robot_indicator_y = round(robot_posn(1));
+    
+    for ii_ = 1:size(costmaps,2)
+        cost_at_robot_posn = costmaps{ii_}(robot_indicator_y,robot_indicator_x)  ;
+        cost_at_robot_posn__hist(ii_,t) = cost_at_robot_posn  ;
+    end
+	
     
     % SAVE VARIABLES AND IMAGES   
 
@@ -502,13 +561,38 @@ for t = 1: loops
     
     pause(0.1)
 end
-display('At end!')
+display('At end of simulation!')
 % v = VideoWriter(strcat(exp_run_output_dir,'/','f3h.mp4'))  ;
 % open(v)  ;
 % writeVideo(v,A)  ;
 % close(v)  ;
 exp_run_start_time.Format
 save(  strcat(exp_run_output_dir,'/',exp_name_script_name,datetostr(exp_run_start_time),'.m')  )
+
+display('Displaying summaries')
+
+figure_named('Timestep'); grid on; xlabel('time'); hold on; 
+benefit_ = 1-cost_at_robot_posn__hist(1,:)  ;
+plot(benefit_)  ;
+plot(cost_at_robot_posn__hist(2,:))  ;
+net_gain = (1-cost_at_robot_posn__hist(2,:))-cost_at_robot_posn__hist(1,:)  ;
+plot( net_gain )  ;
+legend('benefit of observation','main mission cost = cost of distance from path','net gain (unscaled)')  ;
+
+figure_named('Cummulative'); grid on; xlabel('time'); hold on; 
+plot(cumsum(benefit_))  ;
+plot(cumsum(cost_at_robot_posn__hist(2,:)))  ;
+plot( cumsum( net_gain ))  ;
+legend('benefit of observation','main mission cost = cost of distance from path','net gain (unscaled)')  ;
+
+norm_2(robot_posn__hist - robot_target_posn__hist,2)  ;
+norm_2(robot_posn__hist - robot_target_posn__hist,1)  ;
+figure; plot(norm_2(robot_posn__hist - robot_target_posn__hist,1))  ;
+current_goal_posn__hist = repmat(main_task_end_point,1,loops)  ;
+dist_from_main_task_goal__hist = norm_2(robot_posn__hist - current_goal_posn__hist , 1)  ;
+dist_from_target__hist =  norm_2(robot_posn__hist - robot_target_posn__hist,1)  ;
+figure; hold on; grid on; xlabel('time'); plot(dist_from_target__hist);  plot(dist_from_main_task_goal__hist) ;  plot(dist_from_target__hist./dist_from_main_task_goal__hist) ;
+figure; hold on; grid on; xlabel('time'); plot(dist_from_target__hist./dist_from_main_task_goal__hist) ;  ylim([0 2])  ;
 
 display('Ended!')
 
