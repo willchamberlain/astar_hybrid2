@@ -229,9 +229,9 @@ dist_cell_to_target_radius_type = 'flat';
     
 t = 0 ;
 target_frustration_factor = 0;
+was_observed = false;
 while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     t = t + 1 ;
-    target_frustration_factor = target_frustration_factor +1 ;
     
     if norm_2(path_follower_posn-main_task_waypoints(:,main_task_current_waypoint_num),1)<0.5
         display('Waiting for robot to catch up')  
@@ -239,6 +239,12 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     end
     
     if norm_2(main_task_waypoints(:,main_task_current_waypoint_num)-robot_posn,1) < 0.5  % change goals 
+        if was_observed
+            target_frustration_factor = target_frustration_factor - 1  ; 
+        else
+            target_frustration_factor = target_frustration_factor+ 1  ;
+        end
+        was_observed = false;
         if 0 == mod(main_task_current_waypoint_num,2) 
             main_task_waypoints(:,end+1) = main_task_start_point 
             main_task_current_waypoint_num = main_task_current_waypoint_num + 1
@@ -297,7 +303,8 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
          if dist_cell_to_target < dist_cell_to_target_detect_radius_factor   %  close enough TO BE ACCURATE ENOUGH and PROBABILITY OF GOOD DETECTION IS HIGH ENOUGH
             target_posn_start = target_posn_start + robot_planned_path_step  ;    
             target_posn_prediction_vec =  [ target_posn_start   target_posn_start+robot_planned_path_step*20]  ;
-            target_frustration_factor = target_frustration_factor - 2 ;
+            %target_frustration_factor = target_frustration_factor - 2 ;            
+            was_observed = true;
         else
             target_posn_start = target_posn_start ;
             target_posn_prediction_vec =  [ target_posn_start   target_posn_start+robot_planned_path_step*1]  ;  % maintain a vector just to keep the calculation changes minimal below
@@ -492,7 +499,8 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     
     cost_ratio =     (max(max(costmap_dist_to_path_follower)) - min(min(costmap_dist_to_path_follower))) / ((max(max(costmap_obs_dist)) - min(min(costmap_obs_dist))))  ;
     costmap_obs_dist_scaled =     costmap_obs_dist.* cost_ratio  ;    
-    costmap_obs_dist_scaled = costmap_obs_dist_scaled * (1 + target_frustration_factor/num_iterations )  ;  % if no detection for # iterations equal to one main task execution it will double 
+    % costmap_obs_dist_scaled = costmap_obs_dist_scaled * (1 + target_frustration_factor/num_iterations )  ;  % if no detection for # iterations equal to one main task execution it will double 
+    costmap_obs_dist_scaled = costmap_obs_dist_scaled * (1 + target_frustration_factor)  ;  % if no detection for # iterations equal to one main task execution it will double     
     costmap_total = costmap_obs_dist_scaled + costmap_dist_to_path_follower  ;
     costmap_total =  costmap_total + 1.0;  % do NOT know why I need this : need to add at least 1.0 to get A* to plan 
     
