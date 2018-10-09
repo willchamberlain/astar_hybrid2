@@ -199,6 +199,7 @@ target_posn_start = [100;60]  ;  %robot_start_posn  ;
 target_posn_start = [45;35]  ;  %robot_start_posn  ;
 target_planned_path_start_posn = target_posn_start  ;
 target_planned_path_end_posn = [ 10; 60 ]  ;
+target_planned_path_end_posn = [ 10; 35 ]  ;
 target_planned_path_step_base = ( target_planned_path_end_posn - target_planned_path_start_posn ) / num_iterations  ;
 target_posn_prediction_vec = target_posn_start + target_planned_path_step_base  ;
 
@@ -228,6 +229,7 @@ dist_cell_to_target_radius_type = 'repel';
 dist_cell_to_target_radius_type = 'flat';
     
 t = 0 ;
+target_frustration__on = false  ;
 target_frustration_factor = 0;
 was_observed = false;
 while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
@@ -239,14 +241,20 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     end
     
     if norm_2(main_task_waypoints(:,main_task_current_waypoint_num)-robot_posn,1) < 0.5  % change goals 
-        if was_observed
-            target_frustration_factor = target_frustration_factor / 2  ; 
-            target_frustration_factor = max(target_frustration_factor,1);
+        
+        if target_frustration__on
+            if was_observed
+                target_frustration_factor = target_frustration_factor / 2  ; 
+                target_frustration_factor = max(target_frustration_factor,1);
+            else
+                target_frustration_factor = max(target_frustration_factor,1);
+                target_frustration_factor = target_frustration_factor*2  ;
+            end    
         else
-            target_frustration_factor = max(target_frustration_factor,1);
-            target_frustration_factor = target_frustration_factor*2  ;
+            target_frustration_factor = 0 ;
         end
-        target_frustration_factor
+        
+        
         was_observed = false;
         if 0 == mod(main_task_current_waypoint_num,2) 
             main_task_waypoints(:,end+1) = main_task_start_point ;
@@ -633,7 +641,9 @@ display('At end of simulation!')
 % writeVideo(v,A)  ;
 % close(v)  ;
 exp_run_start_time.Format
-save(  strcat(exp_run_output_dir,'/',exp_name_script_name,datetostr(exp_run_start_time),'.m')  )
+savefile_name = strcat(exp_run_output_dir,'/',exp_name_script_name,datetostr(exp_run_start_time)) ;
+display(sprintf('Saving as   \n%s',savefile_name));
+save( savefile_name ,'.m')  
 
 display('Displaying summaries')
 
