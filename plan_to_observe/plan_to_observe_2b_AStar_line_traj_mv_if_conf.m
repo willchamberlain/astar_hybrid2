@@ -240,21 +240,24 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     
     if norm_2(main_task_waypoints(:,main_task_current_waypoint_num)-robot_posn,1) < 0.5  % change goals 
         if was_observed
-            target_frustration_factor = target_frustration_factor - 1  ; 
+            target_frustration_factor = target_frustration_factor / 2  ; 
+            target_frustration_factor = max(target_frustration_factor,1);
         else
-            target_frustration_factor = target_frustration_factor+ 1  ;
+            target_frustration_factor = max(target_frustration_factor,1);
+            target_frustration_factor = target_frustration_factor*2  ;
         end
+        target_frustration_factor
         was_observed = false;
         if 0 == mod(main_task_current_waypoint_num,2) 
-            main_task_waypoints(:,end+1) = main_task_start_point 
-            main_task_current_waypoint_num = main_task_current_waypoint_num + 1
+            main_task_waypoints(:,end+1) = main_task_start_point ;
+            main_task_current_waypoint_num = main_task_current_waypoint_num + 1 ;
         else
-            main_task_waypoints(:,end+1) = main_task_end_point 
-            main_task_current_waypoint_num = main_task_current_waypoint_num + 1
+            main_task_waypoints(:,end+1) = main_task_end_point ;
+            main_task_current_waypoint_num = main_task_current_waypoint_num + 1;
         end
-        path_follower_step=(main_task_waypoints(:,main_task_current_waypoint_num)-main_task_waypoints(:,main_task_current_waypoint_num-1)) / num_iterations  
+        path_follower_step=(main_task_waypoints(:,main_task_current_waypoint_num)-main_task_waypoints(:,main_task_current_waypoint_num-1)) / num_iterations  ;
         path_follower_step=path_follower_step.*1.4;
-        path_follower_posn = robot_posn 
+        path_follower_posn = robot_posn ;
     end
     
     
@@ -305,6 +308,7 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
             target_posn_prediction_vec =  [ target_posn_start   target_posn_start+robot_planned_path_step*20]  ;
             %target_frustration_factor = target_frustration_factor - 2 ;            
             was_observed = true;
+            display(' ----- was_observed  -----')
         else
             target_posn_start = target_posn_start ;
             target_posn_prediction_vec =  [ target_posn_start   target_posn_start+robot_planned_path_step*1]  ;  % maintain a vector just to keep the calculation changes minimal below
@@ -418,60 +422,6 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     %         = costmap_dist_to_path_follower(costmap_dist_to_path_follower<tolerance_cost_level).^exponent_here  ...
     %             +   max(max(costmap_dist_to_path_follower(costmap_dist_to_path_follower==tolerance_cost_level))) -   max(max(costmap_dist_to_path_follower(costmap_dist_to_path_follower==tolerance_cost_level)))^exponent_here     ; 
 
-    if draw_figs
-    subplot(sub_axis_h(2));    
-    cla();
-    grid on; hold on; 
-    colormap hot  ;
-        sub_axis_h(2).Position =  sub_axis_h_Position{2}  ;
-    surf( costmap_dist_to_path_follower )  ;
-    surf( costmap_total )  ;
-    data_indicator_height = 1.1; %  max(max(costmap_dist_to_path_follower)) ;
-        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
-        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
-        text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
-                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'c:', 'LineWidth',2)   ;
-            plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
-            plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
-            text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')        
-    plot3(target_posn_start(2),target_posn_start(1),  data_indicator_height , 'mx', 'LineWidth',5)   
-    plot3([target_posn_start(2),target_posn_start(2)],[target_posn_start(1),target_posn_start(1)],  [ data_indicator_height ,0] , 'm', 'LineWidth',1) 
-    plot3([target_posn_prediction_vec(2,1),target_posn_prediction_vec(2,2)],[target_posn_prediction_vec(1,1),target_posn_prediction_vec(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
-    %plot3([robot_posn_prediction_vec_1(2,1),robot_posn_prediction_vec_1(2,2)],[robot_posn_prediction_vec_1(1,1),robot_posn_prediction_vec_1(1,2)],  [data_indicator_height,data_indicator_height] , 'm:', 'LineWidth',1)   
-    %plot3([robot_posn_prediction_vec_2(2,1),robot_posn_prediction_vec_2(2,2)],[robot_posn_prediction_vec_2(1,1),robot_posn_prediction_vec_2(1,2)],  [data_indicator_height,data_indicator_height] , 'm:', 'LineWidth',1)   
-    daspect(  [  1 1 0.025   ]  );
-    zlim([0 1.1])  ;
-    view(3)
-    xlim([0,90]); ylim([0,110]);
-    
-    
-    subplot(sub_axis_h(3));    
-    cla();
-    grid on; hold on; 
-    colormap hot  ;
-        sub_axis_h(3).Position =  sub_axis_h_Position{3}  ;
-    surf( costmap_obs_dist )  ;  
-    surf( costmap_dist_to_path_follower )  ;   
-    data_indicator_height = 1.1; %    max(max(costmap_obs_dist))  ;
-        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
-        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
-        text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
-                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'c:', 'LineWidth',2)   ;
-            plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
-            plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
-            text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')  
-    plot3(target_posn_start(2),target_posn_start(1),  data_indicator_height, 'mx', 'LineWidth',5)   
-    plot3([target_posn_start(2),target_posn_start(2)],[target_posn_start(1),target_posn_start(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
-    plot3([target_posn_prediction_vec(2,1),target_posn_prediction_vec(2,2)],[target_posn_prediction_vec(1,1),target_posn_prediction_vec(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
-    %plot3([robot_posn_prediction_vec_1(2,1),robot_posn_prediction_vec_1(2,2)],[robot_posn_prediction_vec_1(1,1),robot_posn_prediction_vec_1(1,2)],  [data_indicator_height,data_indicator_height] , 'm:', 'LineWidth',1)   
-    %plot3([robot_posn_prediction_vec_2(2,1),robot_posn_prediction_vec_2(2,2)],[robot_posn_prediction_vec_2(1,1),robot_posn_prediction_vec_2(1,2)],  [data_indicator_height,data_indicator_height] , 'm:', 'LineWidth',1)   
-    
-    daspect(  [  1 1 0.025   ]  )  ;
-    zlim([0 1.1])  ;
-    view(3)
-    xlim([0,90]); ylim([0,110]);
-    end
-    
     costmaps{1} = costmap_obs_dist;
     costmaps{2} = costmap_dist_to_path_follower;
     SAMPLE_VALUE_per_costmap = zeros(num_costmaps,1,'double');
@@ -502,7 +452,7 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     % costmap_obs_dist_scaled = costmap_obs_dist_scaled * (1 + target_frustration_factor/num_iterations )  ;  % if no detection for # iterations equal to one main task execution it will double 
     costmap_obs_dist_scaled = costmap_obs_dist_scaled * (1 + target_frustration_factor)  ;  % if no detection for # iterations equal to one main task execution it will double     
     costmap_total = costmap_obs_dist_scaled + costmap_dist_to_path_follower  ;
-    costmap_total =  costmap_total + 1.0;  % do NOT know why I need this : need to add at least 1.0 to get A* to plan 
+    costmap_total =  costmap_total + 1.0;  % do NOT know why I need this yet : need to add at least 1.0 to get A* to plan 
     
                             %     figure; 
                             %     hold on;  surf(costmap_obs_dist)  ;
@@ -521,12 +471,12 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     display('362')
         plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
         plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
-        text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
+        %text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
                 plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'c:', 'LineWidth',2)   ;
-            plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'cd', 'LineWidth',4)   ;
+            plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'ys'  , 'LineWidth',7)
             plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
             
-              
                 
 
     %  start next step calculation                
@@ -543,12 +493,15 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
             
             %             hold on; plot3(start_1(1),goal_1(2), 3,'rs','LineWidth',5)
             %             hold on; plot3(start_1(1),start_1(2), 3,'md','LineWidth',5)
-            plot3(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:),map_1(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:)),'ro')
+            plot3(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:), 1.1*map_1(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:)),'rd','LineWidth',1.5)
             
             display('end next step calculation');
     %  end next step calculation
             
-    plot3(target_posn_start(2),target_posn_start(1),  data_indicator_height , 'mx', 'LineWidth',5)   
+    %plot3(target_posn_start(2),target_posn_start(1),  data_indicator_height , 'mx', 'LineWidth',5)
+    plot3(target_planned_path_start_posn(2),target_planned_path_start_posn(1),  0.1+costmap_total(target_planned_path_start_posn(2),target_planned_path_start_posn(1)) , 'md', 'LineWidth',5)   
+    plot3(target_posn_start(2),target_posn_start(1),  0.1+costmap_total(round(target_posn_start(2)),round(target_posn_start(1))) , 'mx', 'LineWidth',5)   
+    plot3(target_planned_path_end_posn(2),target_planned_path_end_posn(1),  0.1+costmap_total(target_planned_path_end_posn(2),target_planned_path_end_posn(1)) , 'md', 'LineWidth',5)   
     plot3([target_posn_start(2),target_posn_start(2)],[target_posn_start(1),target_posn_start(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
     plot3([target_posn_prediction_vec(2,1),target_posn_prediction_vec(2,2)],[target_posn_prediction_vec(1,1),target_posn_prediction_vec(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
     %plot3([robot_posn_prediction_vec_1(2,1),robot_posn_prediction_vec_1(2,2)],[robot_posn_prediction_vec_1(1,1),robot_posn_prediction_vec_1(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
@@ -577,7 +530,7 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     plot3(robot_target_posn__hist(2,:) , robot_target_posn__hist(1,:),  path_altitude, 'mx' ) ;
     plot3(path_follower_posn__hist(2,:) , path_follower_posn__hist(1,:), path_altitude  , 'co') ;
     plot3(path_follower_posn__hist(2,:) , path_follower_posn__hist(1,:), path_altitude  , 'co') ;
-    plot3(robot_posn__hist(2,:) , robot_posn__hist(1,:),  path_altitude, 'bs' ) ;
+    plot3(robot_posn__hist(2,:) , robot_posn__hist(1,:),  path_altitude, 'ys' ) ;
     %         obj_handle_ = patch([0 0 floorplan_extent_cells(2) floorplan_extent_cells(2) ],[floorplan_extent_cells(1)  0 0  floorplan_extent_cells(1)], [ cost_at_indicator cost_at_indicator cost_at_indicator cost_at_indicator ] , 'c');
     %         obj_handle_.FaceAlpha=0.1;
     %         obj_handle_ = patch([0 0 floorplan_extent_cells(2) floorplan_extent_cells(2) ],[floorplan_extent_cells(1)  0 0  floorplan_extent_cells(1)], [ robot_cost_at_indicator robot_cost_at_indicator robot_cost_at_indicator robot_cost_at_indicator ] , 'g');
@@ -586,6 +539,82 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
         daspect(  [  1 1 0.025  ]  );
     %  view(3) ;
     xlim([0,90]); ylim([0,110]);
+    
+    %----------------------  finish drawing main plot
+    
+    
+%-------------
+
+
+
+    if draw_figs
+    subplot(sub_axis_h(2));    
+    cla();
+    grid on; hold on; 
+    % colormap hot  ;
+        sub_axis_h(2).Position =  sub_axis_h_Position{2}  ;
+    surf( costmap_dist_to_path_follower )  ;
+    surf( costmap_total -1 )  ;
+    data_indicator_height = 1.1; %  max(max(costmap_dist_to_path_follower)) ;
+    data_indicator_height =    max( max(max(costmap_dist_to_path_follower)) , max(max(costmap_total)) ) *1.1  ;
+        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
+        text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
+                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'c:', 'LineWidth',2)   ;
+            plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+            plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
+            text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')        
+    plot3(target_posn_start(2),target_posn_start(1),  data_indicator_height , 'mx', 'LineWidth',5)   
+    plot3([target_posn_start(2),target_posn_start(2)],[target_posn_start(1),target_posn_start(1)],  [ data_indicator_height ,0] , 'm', 'LineWidth',1) 
+    plot3([target_posn_prediction_vec(2,1),target_posn_prediction_vec(2,2)],[target_posn_prediction_vec(1,1),target_posn_prediction_vec(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
+    %plot3([robot_posn_prediction_vec_1(2,1),robot_posn_prediction_vec_1(2,2)],[robot_posn_prediction_vec_1(1,1),robot_posn_prediction_vec_1(1,2)],  [data_indicator_height,data_indicator_height] , 'm:', 'LineWidth',1)   
+    %plot3([robot_posn_prediction_vec_2(2,1),robot_posn_prediction_vec_2(2,2)],[robot_posn_prediction_vec_2(1,1),robot_posn_prediction_vec_2(1,2)],  [data_indicator_height,data_indicator_height] , 'm:', 'LineWidth',1)       
+    plot3(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:),map_1(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:))  -1 ,'rd')
+    daspect(  [  1 1 0.025   ]  );
+    zlim([0 data_indicator_height*1.1])  ;
+    view(3)
+    xlim([0,90]); ylim([0,110]);
+    
+
+    subplot(sub_axis_h(3));   % title('dist to obstacle');
+    cla();
+    grid on; hold on; 
+    % colormap hot  ;
+        sub_axis_h(3).Position =  sub_axis_h_Position{3}  ;
+    surf( costmap_obs_dist_scaled )  ;  
+    surf( costmap_total -1)  ;
+    data_indicator_height =    max( max(max(costmap_obs_dist)) , max(max(costmap_total)) ) *1.1   ;
+        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+        plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
+        text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
+                plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'c:', 'LineWidth',2)   ;
+            plot3_rows(  [   robot_posn(2) ; robot_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+            plot3([robot_posn(2),robot_posn(2)],[robot_posn(1),robot_posn(1)],  [data_indicator_height , 0] , 'g', 'LineWidth',1)   
+            text(  robot_posn(2) , robot_posn(1) , data_indicator_height  , 'robot', 'Color'  , 'g')  
+    plot3(target_posn_start(2),target_posn_start(1),  data_indicator_height, 'mx', 'LineWidth',5)   
+    plot3([target_posn_start(2),target_posn_start(2)],[target_posn_start(1),target_posn_start(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
+    plot3([target_posn_prediction_vec(2,1),target_posn_prediction_vec(2,2)],[target_posn_prediction_vec(1,1),target_posn_prediction_vec(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
+    %plot3([robot_posn_prediction_vec_1(2,1),robot_posn_prediction_vec_1(2,2)],[robot_posn_prediction_vec_1(1,1),robot_posn_prediction_vec_1(1,2)],  [data_indicator_height,data_indicator_height] , 'm:', 'LineWidth',1)   
+    %plot3([robot_posn_prediction_vec_2(2,1),robot_posn_prediction_vec_2(2,2)],[robot_posn_prediction_vec_2(1,1),robot_posn_prediction_vec_2(1,2)],  [data_indicator_height,data_indicator_height] , 'm:', 'LineWidth',1)       
+    plot3(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:),map_1(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:)) -1 ,'rd')
+    daspect(  [  1 1 0.025   ]  )  ;
+    zlim([0 data_indicator_height*1.1])  ;
+    view(3)
+    xlim([0,90]); ylim([0,110]);
+    end
+    
+            
+            
+            
+            
+%-------------            
+    
+    
+    
+    
+    
+    
+    
     
     % SAVE VARIABLES AND IMAGES   
 
