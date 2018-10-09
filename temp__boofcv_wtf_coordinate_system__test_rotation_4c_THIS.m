@@ -75,15 +75,16 @@ BoofCV_inv = tr_invert(BoofCV)
             % draw_axes_direct(  VOS_orientation_2  ,  VOS_posn_2  ,'',0.2)
             % draw_axes_direct_c(  VOS_orientation_2  ,  VOS_posn_2  ,'',0.15,'r')
             % draw_axes_direct_c(  VOS_orientation_2  ,  VOS_posn_2  ,'',0.15,'m:')
-BoofCV_inv_orientation = BoofCV_inv(1:3,1:3)  ;
-BoofCV_inv_posn = BoofCV_inv(1:3,4)  ;
+            
+BoofCV_inv_orientation = BoofCV_inv(1:3,1:3)  ;     % 1) see if we can get rot, trans of inverted transform straight from BoofCV
+BoofCV_inv_posn = BoofCV_inv(1:3,4)  ;                  % 1) see if we can get rot, trans of inverted transform straight from BoofCV
 VOS_posn_2 = BoofCV_inv_to_VOS *  BoofCV_inv_posn
 
 VOS_orientation_2  =  BoofCV_inv_to_VOS * BoofCV_inv_orientation
 
 figure(f1)
-draw_axes_direct(  VOS_orientation_2  ,  VOS_posn_2  ,'',0.1)
-draw_axes_direct_c(  VOS_orientation_2  ,  VOS_posn_2  ,'',0.07,'c')
+%   draw_axes_direct_c(  VOS_orientation_2  ,  VOS_posn_2  ,'',0.2,'c')                %   correct vectors as basis vectors, but swapped x->z etc.
+%   draw_axes_direct(  VOS_orientation_2  ,  VOS_posn_2  ,'',0.15)                          %   correct vectors as basis vectors, but swapped x->z etc.
 
 VOS_orientation_2_2  =  [ VOS_orientation_2(1:3,3) , VOS_orientation_2(1:3,1) , VOS_orientation_2(1:3,2)  ]
 draw_axes_direct(  VOS_orientation_2_2  ,  VOS_posn_2  ,'',0.2)
