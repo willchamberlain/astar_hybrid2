@@ -110,12 +110,6 @@ end
 %
     
     
-    exp_name_script_name = 'plan_to_observe_2b_'  ;
-    exp_run_start_time = datetime('now')  ;    
-    exp_run_output_dir = strcat('/mnt/nixbig/ownCloud/project_code/plan_to_observe/',exp_name_script_name)  ;
-    mkdir(exp_run_output_dir)  ;
-    exp_run_output_dir = strcat('/mnt/nixbig/ownCloud/project_code/plan_to_observe/',exp_name_script_name,'/',datetostr(exp_run_start_time,'s'))  ;
-    mkdir(exp_run_output_dir)  ;
     
     % RUN the thing
 costmap_dist_to_path_follower = zeros(floorplan_extent_cells')  ;
@@ -200,6 +194,7 @@ target_posn_start = [45;35]  ;  %robot_start_posn  ;
 target_planned_path_start_posn = target_posn_start  ;
 target_planned_path_end_posn = [ 10; 60 ]  ;
 target_planned_path_end_posn = [ 10; 35 ]  ;
+target_planned_path_end_posn = [ 10; 60 ]  ;
 target_planned_path_step_base = ( target_planned_path_end_posn - target_planned_path_start_posn ) / num_iterations  ;
 target_posn_prediction_vec = target_posn_start + target_planned_path_step_base  ;
 
@@ -223,8 +218,8 @@ F(loops) = struct('cdata',[],'colormap',[]);
 pause(2)
 
 
-dist_cell_to_target_detect_radius_factor = 10 ;             
-dist_cell_to_target_avoid_radius_factor = 6 ;             
+dist_cell_to_target_detect_radius_factor = 15 ;             
+dist_cell_to_target_avoid_radius_factor = 4 ;             
 dist_cell_to_target_radius_type = 'repel';
 dist_cell_to_target_radius_type = 'flat';
     
@@ -329,8 +324,8 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
                 % fov_lim_left = radtodeg(atan2(robot_FoV_left_vec(2),robot_FoV_left_vec(1)))  ;
                 % fov_lim_right = radtodeg(atan2(robot_FoV_right_vec(2),robot_FoV_right_vec(1)))  ;                
                     
-                angle_ = radtodeg( atan2(vec_robot_heading(2),vec_robot_heading(1)) + atan2(vec_to_target(2),vec_to_target(1)))  
-                if abs(angle_) < 30  ||  360-abs(angle_) < 30  
+                angle_ = radtodeg( atan2(vec_robot_heading(2),vec_robot_heading(1)) + atan2(vec_to_target(2),vec_to_target(1)))  ;
+                if abs(angle_) <= 50    ||  360-abs(angle_) <= 50  
                     was_observed = true;                    
                     display(' ----- was_observed  -----')                        
                     % if ( fov_lim_left <= to_target &&  to_target <= fov_lim_right ) || ( to_target <= fov_lim_left  &&  fov_lim_right <= to_target  )              
@@ -339,6 +334,7 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
                      %    %target_frustration_factor = target_frustration_factor - 2 ;            
                 else
                     display(' ----- was NOT observed  : close enough , but out of FoV  -----')
+                    target_posn_prediction_vec =  [ target_posn_start   target_posn_start+robot_planned_path_step*1]  ;
                 end
              end
              % end check whether the robot can see the target
@@ -526,7 +522,7 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
             
             %  if the path takes the target through the robot's FoV, pursue it, otherwise replan just on the path follower --> move toward behavoural.
             is_target_in_Fov = false  ;
-            robot_FoV = degtorad(60) ;
+            robot_FoV = degtorad(90) ;
             robot_FoV_left = rot2(robot_FoV/2) ;
             robot_FoV_right = rot2(-robot_FoV/2) ;
             
@@ -723,6 +719,13 @@ display('At end of simulation!')
 % open(v)  ;
 % writeVideo(v,A)  ;
 % close(v)  ;
+
+exp_name_script_name = 'plan_to_observe_2b_'  ;
+exp_run_start_time = datetime('now')  ;    
+exp_run_output_dir = strcat('/mnt/nixbig/ownCloud/project_code/plan_to_observe/',exp_name_script_name)  ;
+mkdir(exp_run_output_dir)  ;
+exp_run_output_dir = strcat('/mnt/nixbig/ownCloud/project_code/plan_to_observe/',exp_name_script_name,'/',datetostr(exp_run_start_time,'s'))  ;
+mkdir(exp_run_output_dir)  ;
 exp_run_start_time.Format
 savefile_name = strcat(exp_run_output_dir,'/',exp_name_script_name,datetostr(exp_run_start_time) ,'.mat') ;
 display(sprintf('Saving as   \n%s',savefile_name));
