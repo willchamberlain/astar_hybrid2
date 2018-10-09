@@ -312,11 +312,36 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
             cost__ =  cost__   + 1.0 ;  % costmap_total =  costmap_total + 1.0;  % do NOT know why I need this : need to add at least 1.0 to get A* to plan             
         
          if dist_cell_to_target < dist_cell_to_target_detect_radius_factor   %  close enough TO BE ACCURATE ENOUGH and PROBABILITY OF GOOD DETECTION IS HIGH ENOUGH
-            target_posn_start = target_posn_start + robot_planned_path_step  ;    
-            target_posn_prediction_vec =  [ target_posn_start   target_posn_start+robot_planned_path_step*20]  ;
-            %target_frustration_factor = target_frustration_factor - 2 ;            
-            was_observed = true;
-            display(' ----- was_observed  -----')
+             
+             % check whether the robot can see the target
+             if t > 2
+                last_pos = robot_posn__hist(:,t-2) ;    % robot_posn updates after this
+                this_pos = robot_posn__hist(:,t-1) ;    % robot_posn updates after this
+                vec_robot_heading = this_pos - last_pos  ;
+                robot_FoV_left_vec = robot_FoV_left * vec_robot_heading ;  robot_FoV_left_vec  = robot_FoV_left_vec ./ norm_2(robot_FoV_left_vec ,1)  ;
+                robot_FoV_right_vec = robot_FoV_right * vec_robot_heading ;  robot_FoV_right_vec  = robot_FoV_right_vec ./ norm_2(robot_FoV_right_vec ,1)  ;
+                vec_to_target = (target_posn_start - this_pos )  ; vec_to_target = vec_to_target./norm_2(vec_to_target,1)  ;
+                
+                % %radtodeg(atan2(vec_robot_heading(1),vec_robot_heading(2)))
+                % radtodeg(atan2(vec_robot_heading(2),vec_robot_heading(1)))  ;
+                % %radtodeg(atan2(vec_to_target(1),vec_to_target(2)))
+                % to_target = radtodeg(atan2(vec_to_target(2),vec_to_target(1)))  ;
+                % fov_lim_left = radtodeg(atan2(robot_FoV_left_vec(2),robot_FoV_left_vec(1)))  ;
+                % fov_lim_right = radtodeg(atan2(robot_FoV_right_vec(2),robot_FoV_right_vec(1)))  ;                
+                    
+                angle_ = radtodeg( atan2(vec_robot_heading(2),vec_robot_heading(1)) + atan2(vec_to_target(2),vec_to_target(1)))  
+                if abs(angle_) < 30  ||  360-abs(angle_) < 30  
+                    was_observed = true;                    
+                    display(' ----- was_observed  -----')                        
+                    % if ( fov_lim_left <= to_target &&  to_target <= fov_lim_right ) || ( to_target <= fov_lim_left  &&  fov_lim_right <= to_target  )              
+                    target_posn_start = target_posn_start + robot_planned_path_step  ;    
+                    target_posn_prediction_vec =  [ target_posn_start   target_posn_start+robot_planned_path_step*20]  ;
+                     %    %target_frustration_factor = target_frustration_factor - 2 ;            
+                else
+                    display(' ----- was NOT observed  : close enough , but out of FoV  -----')
+                end
+             end
+             % end check whether the robot can see the target
         else
             target_posn_start = target_posn_start ;
             target_posn_prediction_vec =  [ target_posn_start   target_posn_start+robot_planned_path_step*1]  ;  % maintain a vector just to keep the calculation changes minimal below
