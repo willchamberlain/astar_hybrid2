@@ -477,7 +477,7 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     robot_indicator_y = round(robot_posn(1));
     robot_cost_at_indicator = costmap_total(  robot_indicator_y , robot_indicator_x )  ;
     display('362')
-        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',5)
+        plot3_rows(  [   path_follower_posn(2) ; path_follower_posn(1)  ;  data_indicator_height ] , 'cx'  , 'LineWidth',7)
         plot3([path_follower_posn(2),path_follower_posn(2)],[path_follower_posn(1),path_follower_posn(1)],  [data_indicator_height , 0] , 'c', 'LineWidth',1) 
         %text(  path_follower_posn(2) , path_follower_posn(1) , data_indicator_height   , 'aim', 'Color' , 'c')
                 plot3( main_task_waypoints(2,:)  , main_task_waypoints(1,:), ones(size(main_task_waypoints))*data_indicator_height , 'c:', 'LineWidth',2)   ;
@@ -499,17 +499,75 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
             [ total_path_goal_to_start__  , total_path_start_to_goal__ ] = path_planning__reconstruct_path(came_from, goal_1)    ;
             dir_vec_end_yx = total_path_start_to_goal__(:,2)   ;
             
-            %             hold on; plot3(start_1(1),goal_1(2), 3,'rs','LineWidth',5)
-            %             hold on; plot3(start_1(1),start_1(2), 3,'md','LineWidth',5)
-            plot3(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:), 1.1*map_1(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:)),'rd','LineWidth',1.5)
+            %  if the path takes the target through the robot's FoV, pursue it, otherwise replan just on the path follower --> move toward behavoural.
+            is_target_in_Fov = false  ;
+            robot_FoV = degtorad(60) ;
+            robot_FoV_left = rot2(robot_FoV/2) ;
+            robot_FoV_right = rot2(-robot_FoV/2) ;
+            
+            total_path_start_to_goal__FoV_and_range = [];
+            total_path_start_to_goal__FoV_dir_not_range = [];
+            total_path_start_to_goal__neither_FoV_nor_range = [];
+            for astar_plan_step_ = 2 : size(total_path_start_to_goal__,2)                  
+                last_pos = total_path_start_to_goal__(:,astar_plan_step_-1)  ;
+                this_pos = total_path_start_to_goal__(:,astar_plan_step_)  ;
+                vec_robot_heading = this_pos - last_pos  ;
+                robot_FoV_left_vec = robot_FoV_left * vec_robot_heading ;  robot_FoV_left_vec  = robot_FoV_left_vec ./ norm_2(robot_FoV_left_vec ,1)  ;
+                robot_FoV_right_vec = robot_FoV_right * vec_robot_heading ;  robot_FoV_right_vec  = robot_FoV_right_vec ./ norm_2(robot_FoV_right_vec ,1)  ;
+                vec_to_target = (target_posn_start - this_pos )  ; vec_to_target = vec_to_target./norm_2(vec_to_target,1)  ;
+                
+                %radtodeg(atan2(vec_robot_heading(1),vec_robot_heading(2)))
+                radtodeg(atan2(vec_robot_heading(2),vec_robot_heading(1)))  ;
+                %radtodeg(atan2(vec_to_target(1),vec_to_target(2)))
+                to_target = radtodeg(atan2(vec_to_target(2),vec_to_target(1)))  ;
+                fov_lim_left = radtodeg(atan2(robot_FoV_left_vec(2),robot_FoV_left_vec(1)))  ;
+                fov_lim_right = radtodeg(atan2(robot_FoV_right_vec(2),robot_FoV_right_vec(1)))  ;
+                
+                if ( fov_lim_left <= to_target &&  to_target <= fov_lim_right ) || ( to_target <= fov_lim_left  &&  fov_lim_right <= to_target  ) 
+                    dist__ = norm_2(target_posn_start - this_pos,1)  ;
+                    if dist__ <= dist_cell_to_target_detect_radius_factor
+                        total_path_start_to_goal__FoV_and_range(:,end+1) = this_pos ;
+                    else
+                        total_path_start_to_goal__FoV_dir_not_range(:,end+1) = this_pos ;
+                    end
+                else
+                        total_path_start_to_goal__neither_FoV_nor_range(:,end+1) = this_pos ;
+                end
+            end           
+            if size(total_path_start_to_goal__FoV_and_range,2)<=0
+                display('Not reaching target: replanning to follow the main task')
+                goal_1 = round(path_follower_posn) ; %[  main_task_waypoints(1,main_task_current_waypoint_num) ;  main_task_waypoints(2,main_task_current_waypoint_num) ] ;
+                if norm_2(round(goal_1)-start_1,1) > 1
+                    [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_planning__astar(map_1, start_1, goal_1)    ;
+                    [ total_path_goal_to_start__  , total_path_start_to_goal__ ] = path_planning__reconstruct_path(came_from, goal_1)    ;
+                    dir_vec_end_yx = total_path_start_to_goal__(:,2)   ;
+                else
+                    dir_vec_end_yx = goal_1  ;
+                end
+            end
+            
+            
+            path_altitude = repmat(data_indicator_height, 1, size(robot_posn__hist,2))  ;
+            plot3(robot_posn__hist(2,:) , robot_posn__hist(1,:),  path_altitude, 'ys' ) ;
+            
+            if size(total_path_start_to_goal__FoV_and_range,2) > 0
+                plot3(total_path_start_to_goal__FoV_and_range(2,:),total_path_start_to_goal__FoV_and_range(1,:), 1.1*map_1(total_path_start_to_goal__FoV_and_range(2,:),total_path_start_to_goal__FoV_and_range(1,:)),'rd','LineWidth',3) ;
+                plot3(total_path_start_to_goal__FoV_and_range(2,:),total_path_start_to_goal__FoV_and_range(1,:), 1.1*map_1(total_path_start_to_goal__FoV_and_range(2,:),total_path_start_to_goal__FoV_and_range(1,:)),'y.','LineWidth',3) ;
+            end
+            if size(total_path_start_to_goal__FoV_dir_not_range,2) > 0
+                plot3(total_path_start_to_goal__FoV_dir_not_range(2,:),total_path_start_to_goal__FoV_dir_not_range(1,:), 1.1*map_1(total_path_start_to_goal__FoV_dir_not_range(2,:),total_path_start_to_goal__FoV_dir_not_range(1,:)),'rd','LineWidth',2)  ;
+            end
+                %total_path_start_to_goal__neither_FoV_nor_range = [];
+            plot3(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:), 1.1*map_1(total_path_start_to_goal__(2,:),total_path_start_to_goal__(1,:)),'rd','LineWidth',1)
+            
             
             display('end next step calculation');
     %  end next step calculation
             
     %plot3(target_posn_start(2),target_posn_start(1),  data_indicator_height , 'mx', 'LineWidth',5)
-    plot3(target_planned_path_start_posn(2),target_planned_path_start_posn(1),  0.1+costmap_total(target_planned_path_start_posn(2),target_planned_path_start_posn(1)) , 'md', 'LineWidth',5)   
-    plot3(target_posn_start(2),target_posn_start(1),  0.1+costmap_total(round(target_posn_start(2)),round(target_posn_start(1))) , 'mx', 'LineWidth',5)   
-    plot3(target_planned_path_end_posn(2),target_planned_path_end_posn(1),  0.1+costmap_total(target_planned_path_end_posn(2),target_planned_path_end_posn(1)) , 'md', 'LineWidth',5)   
+    plot3(target_planned_path_start_posn(2),target_planned_path_start_posn(1),  0.1+costmap_total(target_planned_path_start_posn(2),target_planned_path_start_posn(1)) , 'md', 'LineWidth',3)   
+    plot3(target_posn_start(2),target_posn_start(1),  0.1+costmap_total(round(target_posn_start(2)),round(target_posn_start(1))) , 'mx', 'LineWidth',6)   
+    plot3(target_planned_path_end_posn(2),target_planned_path_end_posn(1),  0.1+costmap_total(target_planned_path_end_posn(2),target_planned_path_end_posn(1)) , 'md', 'LineWidth',3)   
     plot3([target_posn_start(2),target_posn_start(2)],[target_posn_start(1),target_posn_start(1)],  [data_indicator_height,0] , 'm', 'LineWidth',1)   
     plot3([target_posn_prediction_vec(2,1),target_posn_prediction_vec(2,2)],[target_posn_prediction_vec(1,1),target_posn_prediction_vec(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
     %plot3([robot_posn_prediction_vec_1(2,1),robot_posn_prediction_vec_1(2,2)],[robot_posn_prediction_vec_1(1,1),robot_posn_prediction_vec_1(1,2)],  [data_indicator_height,data_indicator_height] , 'm', 'LineWidth',1)   
@@ -538,7 +596,7 @@ while norm_2(target_planned_path_end_posn-target_posn_start,1) > 0.0001
     plot3(robot_target_posn__hist(2,:) , robot_target_posn__hist(1,:),  path_altitude, 'mx' ) ;
     plot3(path_follower_posn__hist(2,:) , path_follower_posn__hist(1,:), path_altitude  , 'co') ;
     plot3(path_follower_posn__hist(2,:) , path_follower_posn__hist(1,:), path_altitude  , 'co') ;
-    plot3(robot_posn__hist(2,:) , robot_posn__hist(1,:),  path_altitude, 'ys' ) ;
+    %      plot3(robot_posn__hist(2,:) , robot_posn__hist(1,:),  path_altitude, 'ys' ) ;
     %         obj_handle_ = patch([0 0 floorplan_extent_cells(2) floorplan_extent_cells(2) ],[floorplan_extent_cells(1)  0 0  floorplan_extent_cells(1)], [ cost_at_indicator cost_at_indicator cost_at_indicator cost_at_indicator ] , 'c');
     %         obj_handle_.FaceAlpha=0.1;
     %         obj_handle_ = patch([0 0 floorplan_extent_cells(2) floorplan_extent_cells(2) ],[floorplan_extent_cells(1)  0 0  floorplan_extent_cells(1)], [ robot_cost_at_indicator robot_cost_at_indicator robot_cost_at_indicator robot_cost_at_indicator ] , 'g');
@@ -641,9 +699,9 @@ display('At end of simulation!')
 % writeVideo(v,A)  ;
 % close(v)  ;
 exp_run_start_time.Format
-savefile_name = strcat(exp_run_output_dir,'/',exp_name_script_name,datetostr(exp_run_start_time)) ;
+savefile_name = strcat(exp_run_output_dir,'/',exp_name_script_name,datetostr(exp_run_start_time) ,'.mat') ;
 display(sprintf('Saving as   \n%s',savefile_name));
-save( savefile_name ,'.m')  
+save( savefile_name)  
 
 display('Displaying summaries')
 
