@@ -1,0 +1,15 @@
+#  Connect to RASLAB
+
+# Set up the Pioneer1 as the master
+#  source ~/Desktop/ROS_NETWORKING_PIONEER1_RASLAB
+source ~/Desktop/ROS_NETWORKING_QUT
+# check
+export | grep ROS
+
+# Run the driver to use the Pioneer base by sending /Pioneer2/cmd_vel
+roslaunch /home/pioneer2/pioneer2/src/pioneer_launch/launch/pioneer_nav_p2os_only.launch
+
+
+
+#  this would be useful in a script for ROS_IP and ROS_HOSTNAME, and also for ROS_MASTER_URI and then override that if an extra parameter is passed   ifconfig wlan4 | grep -Po 't addr:\K[\d.]+'
+#  note that wlan0|1|2|3|4|...
