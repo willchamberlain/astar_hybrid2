@@ -39,6 +39,8 @@ rosnode list
 rostopic list
 rosservice list
 
+tf_tree = rostf
+
 mumblemumble_pub = rospublisher('/mumblemumble', 'std_msgs/String')
 mumblemumble_msg = rosmessage(mumblemumble_pub)
 mumblemumble_msg.Data='mumblemumble'
