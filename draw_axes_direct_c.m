@@ -1,4 +1,4 @@
-function draw_axes_direct_c(R, T, text_string, axis_arrow_scale, colour)
+function draw_axes_direct_c(R, T, text_string, axis_arrow_scale, colour, varargin)
 
 
 camera_position = T;
@@ -9,13 +9,13 @@ check_se3(camera_to_world);
     hold on;
     
     camera_axis_u = camera_to_world*[1.0*axis_arrow_scale 0 0 1]';
-    plot3( [camera_position(1,1),camera_axis_u(1)] , [camera_position(2,1),camera_axis_u(2)] , [camera_position(3,1),camera_axis_u(3)] , colour)
+    plot3( [camera_position(1,1),camera_axis_u(1)] , [camera_position(2,1),camera_axis_u(2)] , [camera_position(3,1),camera_axis_u(3)] , colour , varargin{:} )
     
     camera_axis_v = camera_to_world*[0 1.0*axis_arrow_scale 0 1]';
-    plot3( [camera_position(1,1),camera_axis_v(1)] , [camera_position(2,1),camera_axis_v(2)] , [camera_position(3,1),camera_axis_v(3)] , colour)
+    plot3( [camera_position(1,1),camera_axis_v(1)] , [camera_position(2,1),camera_axis_v(2)] , [camera_position(3,1),camera_axis_v(3)] , colour , varargin{:} )
     
     camera_axis_z = camera_to_world*[0 0 1.0*axis_arrow_scale 1]';
-    plot3( [camera_position(1,1),camera_axis_z(1)] , [camera_position(2,1),camera_axis_z(2)] , [camera_position(3,1),camera_axis_z(3)] , colour )
+    plot3( [camera_position(1,1),camera_axis_z(1)] , [camera_position(2,1),camera_axis_z(2)] , [camera_position(3,1),camera_axis_z(3)] , colour , varargin{:} )
     
     
     if ~isempty(text_string) 
