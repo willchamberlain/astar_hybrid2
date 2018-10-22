@@ -132,7 +132,9 @@ f3h=figure_named('costmap_obs_dist + costmap_dist_to_path_follower ');
 sub_axis_h(1) = subplot(2,2,1);    
 sub_axis_h(2) = subplot(2,2,2);   
 sub_axis_h(3) = subplot(2,2,3);     
+
 axes(sub_axis_h(1));   hold on; grid on; xlabel('x'); ylabel('y');
+
         daspect(  [  1 1 0.1  ]  );
 %     pos = get( sub_axis_h(1), 'Position' )     ;   
         % the first two coordinates are the horizontal and vertical relative (in [0,1]) coordinates 

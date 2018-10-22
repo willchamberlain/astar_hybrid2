@@ -2,7 +2,7 @@ addpath '/mnt/nixbig/ownCloud/project_code/plan_to_observe/'
 addpath '/mnt/nixbig/ownCloud/project_code/'
 
 %{
-Same as plan_to_observe_2.m, but 
+Simulation - AStar planning  of robot to observe a mobile target - as discussed with Juxi.
 %}
 
 %%

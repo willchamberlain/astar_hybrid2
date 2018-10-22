@@ -1,0 +1,54 @@
+-- single:  --
+
+    -- maps --
+    floorplan_extent_cells
+
+main_task_start_point
+main_task_end_point
+
+
+-- timeseries --
+
+    -- states --
+    t
+    robot_target_posn
+    path_follower_step
+    robot_posn
+    robot_planned_path_end_posn
+    robot_planned_path_step
+    path_follower_posn
+    robot_next_step
+    
+    min_SAMPLE_VALUE_per_costmap(cc_)
+    min_SAMPLE_dir_yx_per_costmap(:,cc_)
+    
+    -- maps --
+    costmap_obs_dist
+    costmap_dist_to_path_follower
+    costmap_obs_dist_narrow
+
+date
+
+
+--------------------------------------
+
+figure
+
+x=zeros(1);
+y=zeros(1);
+lin_ = linspace(0 , 2*pi , 16)
+for ii_ = 1:size(lin_,2)
+    x(ii_) = sin(ii_)  ;
+    y(ii_) = cos(ii_)  ;    
+end
+
+
+plot(x,y,'rx')
+axis equal
+x
+
+
+for xii_ = 1:sampling__x
+
+max(cc_)
+

@@ -231,7 +231,7 @@ while norm_2(main_task_end_point-robot_posn,1) > 0.01
     costmap_total = zeros((1/floorplan_scale)*floorplan_x,(1/floorplan_scale)*floorplan_y)  ;
     
     robot_planned_path_step_noise_scale_factor = 0 ;
-    target_posn_old = target_posn_start;    
+    target_posn_old = target_posn_start;        
     robot_planned_path_step_noise =  [randn(1) ; randn(1)].* (norm_2(target_planned_path_step_base,1)/10) ;
     robot_planned_path_step = target_planned_path_step_base + robot_planned_path_step_noise* robot_planned_path_step_noise_scale_factor;
     
