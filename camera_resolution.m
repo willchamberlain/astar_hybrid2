@@ -1,5 +1,11 @@
 
 function m = camera_resolution(radius)
+%{
+    2D camera resolution values.
+Example:
+cam_res_ = camera_resolution(50);
+surf(cam_res_) 
+%}
     w = radius ;
     [x,y] = meshgrid(-w:w, -w:w) ;
     size(-(x.^2 + y.^2))    
