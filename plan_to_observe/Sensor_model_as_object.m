@@ -22,6 +22,7 @@ classdef Sensor_model_as_object  <  handle
         need_to_calc_costmap = true  ;
         
         as;
+        current_path;
     end
     methods
         function obj = Sensor_model_as_object(robot_id_, floorplan_, payoffs_map_, start_, goal_, robot_size_)
@@ -36,10 +37,29 @@ classdef Sensor_model_as_object  <  handle
         
         function path__ = planningStep(obj, new_start_location_)
             if nargin > 1
-                display('New start for planning:')  ;
+                display(sprintf('%s : _old_ start for planning:',obj.robot_id))  ;
+                display(obj.start)  ;
+                display(sprintf('%s : new start for planning:',obj.robot_id))  ;
                 display(new_start_location_)  ;
-                obj.start = new_start_location_  ;
-            end            
+                obj.start = new_start_location_  ;                
+                display(sprintf('%s : current goal for planning:',obj.robot_id))  ;
+                display(obj.goal)  ;
+            end
+            if isequal(size(obj.start),size(obj.goal))
+                if obj.start == obj.goal
+                    display(sprintf('At goal at %i,%i : should have no planning to do',obj.goal(1),obj.goal(2)));
+                    obj.current_path = []  ;    % plan solution path star-goal, return path             
+                    path__ = obj.current_path;
+                    return
+                end
+            else
+                if obj.start == obj.goal'
+                    display(sprintf('At goal at %i,%i : should have no planning to do',obj.goal(1),obj.goal(2)));
+                    obj.current_path = []  ;    % plan solution path star-goal, return path             
+                    path__ = obj.current_path;
+                    return
+                end
+            end
             if obj.need_to_calc_costmap
                 obj.need_to_calc_costmap = false  ;                
                 % map_1 is the base map passed to Navigation; remains zeros to avoid problems between Navigation and DStarMoo:  belongs to DStarMoo
@@ -57,10 +77,12 @@ classdef Sensor_model_as_object  <  handle
                 display(sprintf('planningStep: num_layers=%i',num_layers))  ;
                 obj.as.plan(obj.goal, 2+size(obj.payoffs_map,3) , obj.start )  ;
             end
-            path__ = obj.as.path(obj.start)  ;    % plan solution path star-goal, return path             
+            
+            obj.current_path = obj.as.path(obj.start)  ;    % plan solution path star-goal, return path             
+            path__ = obj.current_path;
         end
         
-        function goal_moved(obj, new_goal_)
+        function changeGoal(obj, new_goal_)
             if ~isequal(obj.goal, new_goal_)
                 obj.need_to_calc_costmap = true;
                 obj.goal=new_goal_;
@@ -77,7 +99,11 @@ classdef Sensor_model_as_object  <  handle
                 obj.robot_location
                 display('obj.goal')
                 obj.goal
-                if obj.robot_location == obj.goal'
+                temp_goal_to_compare = obj.goal;
+                if ~isequal( size(obj.robot_location) , size(obj.goal) )
+                    temp_goal_to_compare = obj.goal';
+                end
+                if obj.robot_location == temp_goal_to_compare
                     display(sprintf('Robot %s at goal', obj.robot_id)) ;
                     status__ = Sensor_model_as_object.AT_GOAL;                
                 else

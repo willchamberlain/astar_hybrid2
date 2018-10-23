@@ -606,6 +606,11 @@ figure_named('plan and move')
         %         F = [1 2 3 4];
         %         p___ = patch('Faces',F,'Vertices',V)
         
+        f_rendezvous_map = figure_named('Rendezvous','default');
+        hold on
+%         s_f_rendezvous_map=surf(zeros(size(payoffs_map(1:scaledown:end,1:scaledown:end,4))));
+%         s_f_rendezvous_map.EdgeColor='none';
+        
         size(payoffs_map_reduced)
         payoffs_map_costmap_layers = payoffs_map_reduced(:,:,1:3)  ;
         
@@ -614,28 +619,42 @@ figure_named('plan and move')
         size(path)
         path(1,:)
         path(end,:)
-        robots{1}.status = s1111.moveAStep
-        robots{1}.location = s1111.robot_location        
+        robots{1}.robot_sim = s1111  ;
+        robots{1}.status = s1111.moveAStep  ;
+        robots{1}.location = s1111.robot_location  ;
+        robots{1}.location_hist = s1111.robot_location  ;
         
         s2222 = Sensor_model_as_object('s2222',floorplan_,payoffs_map_costmap_layers, start_1-[10;10],goal_1+[10;10],  1  ) ;        
         path = s2222.planningStep()  ;
         size(path)
         path(1,:)
         path(end,:)
-        robots{2}.status = s2222.moveAStep
-        robots{2}.location = s2222.robot_location
+        robots{2}.robot_sim = s2222  ;
+        robots{2}.status = s2222.moveAStep  ;
+        robots{2}.location = s2222.robot_location  ;
+        robots{2}.location_hist = s2222.robot_location  ;
         
-        robot_in_play = true
+        robot_in_play = true  ;
         while robot_in_play
             
             if  ~isequal( robots{1}.status , Sensor_model_as_object.AT_GOAL )
-                robots{1}.status = s1111.moveAStep                
-                robots{1}.location = s1111.robot_location
+                robots{1}.status = s1111.moveAStep  ;
+                robots{1}.location = s1111.robot_location  ;
+                robots{1}.location_hist(end+1,:) = s1111.robot_location  ;
             end
             if  ~isequal( robots{2}.status , Sensor_model_as_object.AT_GOAL )
-                robots{2}.status = s2222.moveAStep
-                robots{2}.location = s2222.robot_location            
+                robots{2}.status = s2222.moveAStep  ;
+                robots{2}.location = s2222.robot_location  ;
+                robots{1}.location_hist(end+1,:) = s2222.robot_location  ;
             end
+            
+            robots{1}.robot_sim.changeGoal(robots{2}.location)  ;            
+            robots{2}.robot_sim.changeGoal(robots{1}.location)  ;
+            
+%             path_plots{1}.last_plot = [];
+%             path_plots{1}.hist = [];
+%             path_plots{2}.last_plot = [];
+%             path_plots{2}.hist = [];
             
             robot_in_play_now = false;
             for ii_ = 1:size(robots,2)
@@ -646,13 +665,39 @@ figure_named('plan and move')
             end
             robot_in_play = robot_in_play_now;            
             
+            figure(f_rendezvous_map);  
+            cla
+            hold on; grid on; axis equal;
+            xlabel('x'); ylabel('y'); zlabel('z');
+            xlim([0 size(payoffs_map_reduced,1)]) ; ylim([0 size(payoffs_map_reduced,2)]) ;
             for ii_ = 1:size(robots,2)
                 if ~isequal( robots{ii_}.status , Sensor_model_as_object.AT_GOAL )                    
-                    figure(f_payoffs_map);  hold on;                %plot3_rows( [ P 1.1*ones(size(P,1),1)]' , 'rx', 'LineWidth',2)  % plot flat 
-                    plot3( robots{ii_}.location(1),robots{ii_}.location(2),  payoffs_map_reduced(robots{ii_}.location(2),robots{ii_}.location(1),4)+0.01, 'kd', 'LineWidth',1)  % plot across the surface
-                    drawnow;  pause(0.1) ;
+                    figure(f_rendezvous_map);  hold on;                %plot3_rows( [ P 1.1*ones(size(P,1),1)]' , 'rx', 'LineWidth',2)  % plot flat 
+%                     if ~isempty(path_plots{ii_}.last_plot) ; display('delete(path_plots{ii_})'); delete(path_plots{ii_}.last_plot)  ; end;
+                    if 1==ii_
+                        %plot3( robots{ii_}.location(1),robots{ii_}.location(2),  payoffs_map_reduced(robots{ii_}.location(2),robots{ii_}.location(1),4)+0.01, 'k', 'LineWidth',1)  % plot across the surface
+                        plot( robots{ii_}.location(1),robots{ii_}.location(2), 'ks', 'LineWidth',1)  % plot across the surface
+                        plot( robots{ii_}.robot_sim.current_path(:,1)',robots{ii_}.robot_sim.current_path(:,2)', 'k:', 'LineWidth',1) ;  % plot across the surface
+%                         
+%                         path_plots{ii_}.last_plot=plot( robots{ii_}.robot_sim.current_path(:,1)',robots{ii_}.robot_sim.current_path(:,2)', 'k:', 'LineWidth',1) ;  % plot across the surface
+%                         path_plots{ii_}.current = path_plots{ii_}.last_plot  ;
+                    else
+                        %plot3( robots{ii_}.location(1),robots{ii_}.location(2),  payoffs_map_reduced(robots{ii_}.location(2),robots{ii_}.location(1),4)+0.01, 'b', 'LineWidth',1)  % plot across the surface
+                        plot( robots{ii_}.location(1),robots{ii_}.location(2), 'bd', 'LineWidth',1)  % plot across the surface
+                        plot( robots{ii_}.robot_sim.current_path(:,1)',robots{ii_}.robot_sim.current_path(:,2)', 'b:', 'LineWidth',1) ;  % plot across the surface
+%                         
+%                         path_plots{ii_}.last_plot=plot( robots{ii_}.robot_sim.current_path(:,1)',robots{ii_}.robot_sim.current_path(:,2)', 'b:', 'LineWidth',1) ;  % plot across the surface
+%                         path_plots{ii_}.current = path_plots{ii_}.last_plot  ;
+                    end
+                else
+                    figure(f_rendezvous_map);  hold on;                %plot3_rows( [ P 1.1*ones(size(P,1),1)]' , 'rx', 'LineWidth',2)  % plot flat 
+                    %plot3( robots{ii_}.location(1),robots{ii_}.location(2),  payoffs_map_reduced(robots{ii_}.location(2),robots{ii_}.location(1),4)+0.01, 'g', 'LineWidth',1)  % plot across the surface
+                    plot( robots{ii_}.location(1),robots{ii_}.location(2), 'gx', 'LineWidth',3)  % plot across the surface
                 end
+                    drawnow;  pause(0.1) ;                     
             end            
+            
+            drawnow;
         end
        
          
