@@ -471,6 +471,53 @@ f_payoffs_map.Name='payoffs_map';
                  V = [ y1  x1  2; y2  x1  2; y2 x2  2; y1 x2  2];
                  F = [1 2 3 4];
                  p___ = patch('Faces',F,'Vertices',V)
+                 
+                 
+                 
+
+        %{ 
+        Sensor_model_as_object(              floorplan_,             
+                    payoffs_map_,             start_, goal_,             robot_size_)           
+        %}
+        size(payoffs_map)
+        payoffs_map_costmap_layers = payoffs_map(:,:,1:3)  ;
+        s1111 = Sensor_model_as_object('s1111',floorplan_,payoffs_map_costmap_layers, start_1,goal_1,  1  ) ;        
+        path = s1111.planningStep()  ;
+        size(path)
+        path(1,:)
+        path(end,:)
+        robots{1}.status = s1111.moveAStep
+        robots{1}.location = s1111.robot_location        
+        
+        s2222 = Sensor_model_as_object('s2222',floorplan_,payoffs_map_costmap_layers, start_1-[10;10],goal_1+[10;10],  1  ) ;        
+        path = s2222.planningStep()  ;
+        size(path)
+        path(1,:)
+        path(end,:)
+        robots{2}.status = s2222.moveAStep
+        robots{2}.location = s2222.robot_location
+        
+        robot_in_play = true
+        while robot_in_play
+            
+            if  ~isequal( robots{1}.status , Sensor_model_as_object.AT_GOAL )
+                robots{1}.status = s1111.moveAStep                
+                robots{1}.location = s1111.robot_location
+            end
+            if  ~isequal( robots{2}.status , Sensor_model_as_object.AT_GOAL )
+                robots{2}.status = s2222.moveAStep
+                robots{2}.location = s2222.robot_location            
+            end
+            
+            robot_in_play_now = false;
+            for ii_ = 1:size(robots,2)
+                if ~isequal( robots{ii_}.status , Sensor_model_as_object.AT_GOAL )
+                    robot_in_play_now = true ;
+                    break  ;
+                end
+            end
+            robot_in_play = robot_in_play_now;            
+        end
         
          %%  reduced map size
 
@@ -502,6 +549,7 @@ map_1=map_1(1:scaledown:end,1:scaledown:end) ;
         costs_map = max(max(payoffs_map(:,:,1))) - payoffs_map(:,:,1) ;
         costs_map = squeeze(costs_map ) ;
         costs_map = costs_map(1:scaledown:end,1:scaledown:end) ;
+        % payoffs_map_reduced(:,:,1) = costs_map  ;
         normA = costs_map - min(min((costs_map)));
         normA = normA ./ max(max(normA))  ;
         as.addCost(1,normA);        % add 1st add'l cost layer L
@@ -509,6 +557,7 @@ map_1=map_1(1:scaledown:end,1:scaledown:end) ;
         costs_map = max(max(payoffs_map(:,:,2))) - payoffs_map(:,:,2) ;
         costs_map = squeeze(costs_map ) ;
         costs_map = costs_map(1:scaledown:end,1:scaledown:end) ;
+        % payoffs_map_reduced(:,:,2) = costs_map  ;
         normA = costs_map - min(min((costs_map)));
         normA = normA ./ max(max(normA))  ;
         as.addCost(2,normA);        % add 1st add'l cost layer L
@@ -516,6 +565,7 @@ map_1=map_1(1:scaledown:end,1:scaledown:end) ;
         costs_map = max(max(payoffs_map(:,:,3))) - payoffs_map(:,:,3) ;
         costs_map = squeeze(costs_map ) ;
         costs_map = costs_map(1:scaledown:end,1:scaledown:end) ;
+        % payoffs_map_reduced(:,:,3) = costs_map  ;
         normA = costs_map - min(min((costs_map)));
         normA = normA ./ max(max(normA))  ;
 %         normA = zeros(size(normA )) ;
@@ -556,7 +606,54 @@ figure_named('plan and move')
         %         F = [1 2 3 4];
         %         p___ = patch('Faces',F,'Vertices',V)
         
-         
+        size(payoffs_map_reduced)
+        payoffs_map_costmap_layers = payoffs_map_reduced(:,:,1:3)  ;
+        
+        s1111 = Sensor_model_as_object('s1111',floorplan_,payoffs_map_costmap_layers, start_1,goal_1,  1  ) ;        
+        path = s1111.planningStep()  ;
+        size(path)
+        path(1,:)
+        path(end,:)
+        robots{1}.status = s1111.moveAStep
+        robots{1}.location = s1111.robot_location        
+        
+        s2222 = Sensor_model_as_object('s2222',floorplan_,payoffs_map_costmap_layers, start_1-[10;10],goal_1+[10;10],  1  ) ;        
+        path = s2222.planningStep()  ;
+        size(path)
+        path(1,:)
+        path(end,:)
+        robots{2}.status = s2222.moveAStep
+        robots{2}.location = s2222.robot_location
+        
+        robot_in_play = true
+        while robot_in_play
+            
+            if  ~isequal( robots{1}.status , Sensor_model_as_object.AT_GOAL )
+                robots{1}.status = s1111.moveAStep                
+                robots{1}.location = s1111.robot_location
+            end
+            if  ~isequal( robots{2}.status , Sensor_model_as_object.AT_GOAL )
+                robots{2}.status = s2222.moveAStep
+                robots{2}.location = s2222.robot_location            
+            end
+            
+            robot_in_play_now = false;
+            for ii_ = 1:size(robots,2)
+                if ~isequal( robots{ii_}.status , Sensor_model_as_object.AT_GOAL )
+                    robot_in_play_now = true ;
+                    break  ;
+                end
+            end
+            robot_in_play = robot_in_play_now;            
+            
+            for ii_ = 1:size(robots,2)
+                if ~isequal( robots{ii_}.status , Sensor_model_as_object.AT_GOAL )                    
+                    figure(f_payoffs_map);  hold on;                %plot3_rows( [ P 1.1*ones(size(P,1),1)]' , 'rx', 'LineWidth',2)  % plot flat 
+                    plot3( robots{ii_}.location(1),robots{ii_}.location(2),  payoffs_map_reduced(robots{ii_}.location(2),robots{ii_}.location(1),4)+0.01, 'kd', 'LineWidth',1)  % plot across the surface
+                    drawnow;  pause(0.1) ;
+                end
+            end            
+        end
        
          
 %%  To combine two+ fields of view, handle this 'cost' as uncertainty at each point:

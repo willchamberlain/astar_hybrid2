@@ -17,13 +17,15 @@ classdef Sensor_model_as_object  <  handle
         goal
         robot_size
         robot_location
+        robot_id
         
         need_to_calc_costmap = true  ;
         
         as;
     end
     methods
-        function obj = Sensor_model_as_object(floorplan_, payoffs_map_, start_, goal_, robot_size_)
+        function obj = Sensor_model_as_object(robot_id_, floorplan_, payoffs_map_, start_, goal_, robot_size_)
+            obj.robot_id = robot_id_ ;
             obj.floorplan=floorplan_ ;
             obj.payoffs_map = payoffs_map_ ;
             obj.start = start_ ;
@@ -51,6 +53,8 @@ classdef Sensor_model_as_object  <  handle
                     normA = normA ./ max(max(normA))  ;
                     obj.as.addCost(ii_,normA)  ;        % add additional cost layer
                 end                
+                num_layers = 2+size(obj.payoffs_map,3) ;
+                display(sprintf('planningStep: num_layers=%i',num_layers))  ;
                 obj.as.plan(obj.goal, 2+size(obj.payoffs_map,3) , obj.start )  ;
             end
             path__ = obj.as.path(obj.start)  ;    % plan solution path star-goal, return path             
@@ -69,7 +73,12 @@ classdef Sensor_model_as_object  <  handle
                 obj.robot_location = path_(1,:)  ;
                 status__ = Sensor_model_as_object.NOT_AT_GOAL;
             else
-                if obj.robot_location == obj.goal
+                display('obj.robot_location')
+                obj.robot_location
+                display('obj.goal')
+                obj.goal
+                if obj.robot_location == obj.goal'
+                    display(sprintf('Robot %s at goal', obj.robot_id)) ;
                     status__ = Sensor_model_as_object.AT_GOAL;                
                 else
                     display('Problem: path is zero length but robot is not located at the goal.')
