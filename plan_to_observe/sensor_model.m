@@ -30,7 +30,7 @@ camera_angle = 345  ;
 camera_pose = [world_x_extent(2)/2;world_y_extent(2)/2;degtorad(camera_angle)]
 camera_angle_rot2 = rotz(degtorad(camera_angle))
 
-FoV_angle = 60 ;
+FoV_angle = 62 ;
 
 x_unit = [1;0]  ;
 y_unit = [0;1]  ;
@@ -55,7 +55,7 @@ plot2_rows_rotate_robot_to_diagram( y_unit_rotated , 'g')
 plot2_rows_rotate_robot_to_diagram( camera_optical_axis_2units , 'k')
 
 %%  FoV: angle of view is 90 degrees (or 60 degrees, or whatever)
-FoV_angle = 60 ;
+FoV_angle = 62 ;
 FoV_left_rot = rotz(degtorad(FoV_angle/2))  ;  FoV_left_rot = FoV_left_rot(1:2,1:2)  ;
 FoV_right_rot = rotz(degtorad(-FoV_angle/2))  ;  FoV_right_rot = FoV_right_rot(1:2,1:2)  ;  
 FoV_left_dir = FoV_left_rot*camera_optical_axis_direction_unit  ;
@@ -79,7 +79,7 @@ camera_position_h = e2h(camera_pose(1:2))  ;
 FoV_left_lim = [ camera_position_h   FoV_left_dir+camera_position_h ]  ;
 plot2_rows_rotate_robot_to_diagram( FoV_left_lim , 'c')  ;
 
-%%
+%% Main section - add two more cameras, calculate information gain/uncertainty reduction 
 
 %  uncertainty_vs_distance = (0.714285714285714*0.0005*exp(dist))                                                   
 scale_up = 10  ;  scale_down = 1/scale_up  ;
@@ -270,6 +270,7 @@ bits_with_1_as_first =  index_order_of_sort(1,:,:)  ==1 ; size(bits_with_1_as_fi
 f_bits_with_1_as_first=figure; idisp(squeeze(bits_with_1_as_first))  ;  f_bits_with_1_as_first.Name='cells outside a field of view, by assignment to the default uncertainty/cost';
 
 %%  To combine two+ fields of view, handle this 'cost' as uncertainty at each point, as information gain at each point
+%  Results:  need to show the difference between the two cost fields as a surf,  and the effecs on planned paths and allocations.
 %{
     Here treat information gain as observation from divergent angles to reduce the entropy of 
     the individual observations that is due to the error in the sensor model:  the errors correlate 
@@ -332,7 +333,7 @@ end
 f_payoffs_map = figure; surf(payoffs_map(:,:,4)); f_payoffs_map.Name='payoffs_map';
 f_payoffs_map_is_layer_1 = figure; surf(payoffs_map_is_layer_1); f_payoffs_map_is_layer_1.Name='payoffs_map_is_layer_1';
     
-%% AStar
+%% AStar planning on the composite cost field
 % Pick two points, do A* planning, make sure that it shows the effects of the shape of the information gain.
 % See e.g. /mnt/nixbig/ownCloud/project_code/plan_to_observe/plan_to_observe_2b_AStar_line_traj_mv_if_conf.m
 size(payoffs_map(:,:,4))
@@ -364,6 +365,145 @@ axes_current_cam_target = axes_current.CameraTarget
 axes_current.CameraUpVector
 axes_current.CameraViewAngle
 
+
+%% for DStarMoo 
+addpath('/mnt/nixbig/ownCloud/project_code/3rd_party/robotics-toolbox-matlab/')
+addpath('/mnt/nixbig/ownCloud/project_code/')
+%% DStarMoo planning on separate cost fields with multi-objective (not Pareto) 
+%{
+See   /mnt/nixbig/ownCloud/project_code/temp__AStar_DStar__Moo_PO__corridor.m   -  section "multi-objective and dynamic objective DStar"
+%}
+
+f_payoffs_map = figure; 
+s=surf(payoffs_map(:,:,1)); zlim([ 0 max(max(payoffs_map(:,:,4)))] ) % payoffs 1-3 are per-camera, #4 is the composite, not to be used here
+s.EdgeColor='none'
+hold on
+s=surf(payoffs_map(:,:,4));
+s.EdgeColor='none'
+f_payoffs_map.Name='payoffs_map';     
+
+map_1 = zeros(size(payoffs_map,1),size(payoffs_map,2)) ;  % no walls
+%  !! problem with wall in base map
+%      map_1(209:211,215:260) = 1 ;  % wall to mostly bisect the middle FoV
+     map_1(209:211,230:260) = 1 ;  % wall to mostly bisect the middle FoV
+
+        figure_named('plan and move')
+        start_1  = [265 ; 262]  ;
+        goal_1 = [144 ; 218]  ;
+        
+        as = DstarMOO(map_1);    % create Navigation object
+        
+        costs_map = max(max(payoffs_map(:,:,1))) - payoffs_map(:,:,1) ;
+        costs_map = squeeze(costs_map ) ;
+        normA = costs_map - min(min((costs_map)));
+        normA = normA ./ max(max(normA))  ;
+        as.addCost(1,normA);        % add 1st add'l cost layer L
+        
+        costs_map = max(max(payoffs_map(:,:,2))) - payoffs_map(:,:,2) ;
+        costs_map = squeeze(costs_map ) ;
+        normA = costs_map - min(min((costs_map)));
+        normA = normA ./ max(max(normA))  ;
+        as.addCost(2,normA);        % add 1st add'l cost layer L
+        
+        costs_map = max(max(payoffs_map(:,:,3))) - payoffs_map(:,:,3) ;
+        costs_map = squeeze(costs_map ) ;
+        normA = costs_map - min(min((costs_map)));
+        normA = normA ./ max(max(normA))  ;
+%         normA = zeros(size(normA )) ;
+        as.addCost(3,normA);        % add 1st add'l cost layer L
+        
+         tic
+         as.plan(goal_1,5);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic
+         toc
+         %figure; pause(1); as.path(start_1);        % plan solution path star-goal, animate
+         P = as.path(start_1);    % plan solution path star-goal, return path 
+         size(P)
+         path_plotpoints = [ P 1.1*ones(size(P,1),1)]  ;
+         
+        figure(f_payoffs_map);  pause(1); hold on;                %plot3_rows( [ P 1.1*ones(size(P,1),1)]' , 'rx', 'LineWidth',2)  % plot flat 
+        for ii_ = 1:size(P,1)
+            plot3( P(ii_,1),P(ii_,2),  payoffs_map(P(ii_,2),P(ii_,1),4)+0.01, 'rs', 'LineWidth',2)  % plot across the surface
+        end
+
+        
+        %  !! problem with wall in base map
+        %{
+                 V = [209 230 2; 211 230 2; 211 260 2; 209 260 2];
+                 %  V = [230 209 2; 230 211 2; 260 211 2; 260 209 2];
+                 F = [1 2 3 4];
+                 p___ = patch('Faces',F,'Vertices',V)
+                 %}
+        
+         %%
+         
+f_payoffs_map = figure; 
+s=surf(payoffs_map(1:5:end,1:5:end,1)); zlim([ 0 max(max(payoffs_map(:,:,4)))] ) % payoffs 1-3 are per-camera, #4 is the composite, not to be used here
+s.EdgeColor='none'
+hold on
+s=surf(payoffs_map(1:5:end,1:5:end,4));
+s.EdgeColor='none'
+f_payoffs_map.Name='payoffs_map';     
+map_1 = zeros(size(payoffs_map,1),size(payoffs_map,2)) ;  % no walls
+%  !! problem with wall in base map
+%      map_1(209:211,215:260) = 1 ;  % wall to mostly bisect the middle FoV
+     map_1(209:211,230:260) = 1 ;  % wall to mostly bisect the middle FoV
+
+        figure_named('plan and move')
+        start_1  = [265 ; 262]  ;
+        start_1  = round(start_1 ./ 5) ;
+        goal_1 = [144 ; 218]  ;
+        goal_1 = round(goal_1 ./ 5) ;
+        
+        
+        map_1=map_1(1:5:end,1:5:end) ;
+        as = DstarMOO(map_1);    % create Navigation object
+        
+        costs_map = max(max(payoffs_map(:,:,1))) - payoffs_map(:,:,1) ;
+        costs_map = squeeze(costs_map ) ;
+        costs_map = costs_map(1:5:end,1:5:end) ;
+        normA = costs_map - min(min((costs_map)));
+        normA = normA ./ max(max(normA))  ;
+        as.addCost(1,normA);        % add 1st add'l cost layer L
+        
+        costs_map = max(max(payoffs_map(:,:,2))) - payoffs_map(:,:,2) ;
+        costs_map = squeeze(costs_map ) ;
+        costs_map = costs_map(1:5:end,1:5:end) ;
+        normA = costs_map - min(min((costs_map)));
+        normA = normA ./ max(max(normA))  ;
+        as.addCost(2,normA);        % add 1st add'l cost layer L
+        
+        costs_map = max(max(payoffs_map(:,:,3))) - payoffs_map(:,:,3) ;
+        costs_map = squeeze(costs_map ) ;
+        costs_map = costs_map(1:5:end,1:5:end) ;
+        normA = costs_map - min(min((costs_map)));
+        normA = normA ./ max(max(normA))  ;
+%         normA = zeros(size(normA )) ;
+        as.addCost(3,normA);        % add 1st add'l cost layer L
+        
+         tic
+         as.plan(goal_1,5);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic
+         toc
+         %figure; pause(1); as.path(start_1);        % plan solution path star-goal, animate
+         P = as.path(start_1);    % plan solution path star-goal, return path 
+         size(P)
+         path_plotpoints = [ P 1.1*ones(size(P,1),1)]  ;
+         
+         payoffs_map_reduced=payoffs_map(1:5:end,1:5:end,:)  ;
+        figure(f_payoffs_map);  pause(1); hold on;                %plot3_rows( [ P 1.1*ones(size(P,1),1)]' , 'rx', 'LineWidth',2)  % plot flat 
+        for ii_ = 1:size(P,1)
+            plot3( P(ii_,1),P(ii_,2),  payoffs_map_reduced(P(ii_,2),P(ii_,1),4)+0.01, 'rs', 'LineWidth',1)  % plot across the surface
+        end
+
+        
+        %  !! problem with wall in base map
+        %         V = [209 215 2; 211 215 2; 211 260 2; 209 260 2];
+        %         %  V = [215 209 2; 215 211 2; 260 211 2; 260 209 2];
+        %         F = [1 2 3 4];
+        %         p___ = patch('Faces',F,'Vertices',V)
+        
+         
+       
+         
 %%  To combine two+ fields of view, handle this 'cost' as uncertainty at each point:
 %{
 variance_ = ( g1_variance * g2_variance ) / (g1_variance + g2_variance) ; 
