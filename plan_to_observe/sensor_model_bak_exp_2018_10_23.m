@@ -18,7 +18,7 @@ uncertainty_vs_angle(uncertainty_vs_angle > 1)=1
 subplot(1,2,2); hold on; grid on; xlabel('distance (0.1m)'); ylabel('uncertainty vs angle');
 plot(uncertainty_vs_angle);  
 
-cla 
+cla
 
 %%  Camera position in the world
 
@@ -142,7 +142,7 @@ f_check_dist_map.Name='check_dist_map'  ;
 
 %-----  Second camera : same world parameters, camera-specific parameters
 
-FoV_angle_2 =62;
+FoV_angle_2 =80;
 camera_pose_2 = camera_pose+[0 ; -5 ; degtorad(30)]  ;
 rot_z = rotz(degtorad(30));  rot_z = rot_z(1:2,1:2)  ;
 camera_optical_axis_direction_unit_2 = rot_z*camera_optical_axis_direction_unit  ;
@@ -167,7 +167,7 @@ f_camera_per_cell = figure; surf(squeeze(camera_per_cell) ); f_camera_per_cell.N
 
 %-----  Third camera : same world parameters, camera-specific intrinsic and extrinsic parameters
 
-FoV_angle_3 =62;
+FoV_angle_3 =80;
 camera_pose_3 = camera_pose+[0 ; -10 ; degtorad(45)]  ;
 rot_z = rotz(degtorad(30));  rot_z = rot_z(1:2,1:2)  ;
 camera_optical_axis_direction_unit_3 = rot_z*camera_optical_axis_direction_unit  ;
@@ -339,49 +339,31 @@ f_payoffs_map_is_layer_1 = figure; surf(payoffs_map_is_layer_1); f_payoffs_map_i
 size(payoffs_map(:,:,4))
 max(max(payoffs_map(:,:,4)))
 costs_map = max(max(payoffs_map(:,:,4))) - payoffs_map(:,:,4) ;
-
-costs_map(costs_map == max(max(payoffs_map(:,:,4)))) = max(max(payoffs_map(:,:,4)))*1000000;
 costs_map = squeeze(costs_map ) ;
-
-start_1  = [265 ; 262]  ;
-goal_1 = [144 ; 218]  ;
-%goal_1 = [144 ; 262]  ;
-map_1 = costs_map ;
-
-tic
-            [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_planning__astar(map_1, start_1, goal_1)    ;
-            [ total_path_goal_to_start__  , total_path_start_to_goal__ ] = path_planning__reconstruct_path(came_from, goal_1)    ;
-toc            
-            
 f_costs_map = figure; 
-s_costs_map = surf(map_1); 
+s_costs_map = surf(costs_map); 
 s_costs_map.EdgeColor = 'none';
 %  s_costs_map.EdgeColor = [0 0 0];
 f_costs_map.Name='costs_map';
+
+start_1  = [265 ; 262]  ;
+goal_1 = [144 ; 218]  ;
+map_1 = costs_map ;
+
 hold on; plot3_rows([start_1 ; 2.1], 'rx', 'LineWidth',2) 
 hold on; plot3_rows([goal_1 ; 2.1], 'bd', 'LineWidth',2) 
-size(total_path_start_to_goal__)
-plot3_rows( [ total_path_start_to_goal__ ; (max(max(map_1))*1.01)*ones(1,size(total_path_start_to_goal__,2))] , 'm:', 'LineWidth',2)
 
+            [ path__ , f_score, g_score , came_from, open_set, closed_set ] = path_planning__astar(map_1, start_1, goal_1)    ;
+            [ total_path_goal_to_start__  , total_path_start_to_goal__ ] = path_planning__reconstruct_path(came_from, goal_1)    ;
+            
+size(total_path_start_to_goal__)
+plot3_rows( [ total_path_start_to_goal__ ; 2.1*ones(1,size(total_path_start_to_goal__,2))] , 'm:', 'LineWidth',2)
 
 axes_current = f_costs_map.CurrentAxes()
 axes_current_cam_posn = axes_current.CameraPosition
 axes_current_cam_target = axes_current.CameraTarget
 axes_current.CameraUpVector
 axes_current.CameraViewAngle
-
-%  plot the cost of traversal 
-figure;   hold on; grid on;
-points_ = zeros(1,size(total_path_goal_to_start__,2));
-for ii_ = 1:size(total_path_goal_to_start__,2)
-    points_(ii_) =  map_1(total_path_goal_to_start__(2,ii_),total_path_goal_to_start__(1,ii_))  ;
-end
-plot( points_ , 'r' )
-plot( [1,size(total_path_goal_to_start__,2)] , [ max(max(map_1)) , max(max(map_1)) ] )
-xlim( [ 1 size(total_path_goal_to_start__,2) ] )
-ylim( [ 0 max(max(map_1))*1.1] )
-
-%%
 
 
 %% for DStarMoo 
@@ -400,29 +382,16 @@ s=surf(payoffs_map(:,:,4));
 s.EdgeColor='none'
 f_payoffs_map.Name='payoffs_map';     
 
+map_1 = zeros(size(payoffs_map,1),size(payoffs_map,2)) ;  % no walls
+%  !! problem with wall in base map
+%      map_1(209:211,215:260) = 1 ;  % wall to mostly bisect the middle FoV
+     map_1(209:211,230:260) = 1 ;  % wall to mostly bisect the middle FoV
+
         figure_named('plan and move')
-
-        % payoffs_map is the map of projected information gain from VOS smart cameras: it belongs to VOS
-        payoffs_map;
-
-        % map_1 is the base map passed to Navigation; remains zeros to avoid problems between Navigation and DStarMoo:  belongs to DStarMoo
-        map_1 = zeros(size(payoffs_map,1),size(payoffs_map,2)) ;  % no walls
-
-        % belong to the robot
         start_1  = [265 ; 262]  ;
         goal_1 = [144 ; 218]  ;
         
-        
-        % flooplan_ is the flooplan: it is the world model of static obstacles:  it belongs to the map owner
-        flooplan_ = zeros(size(map_1));
-        flooplan_(215:260,209:211) = 1000000 ;  % wall to mostly bisect the middle FoV
-        flooplan_(215:260,249:251) = 1000000 ;  % wall 
-        flooplan_(260:260,209:251) = 1000000 ;  % wall  
-        
-        % inflated_flooplan is the flooplan inflated for safe robot navigation: it belongs to the robot: 
-        inflated_flooplan = ismooth(flooplan_,2) ;
-        
-        as = DstarMOO(map_1,inflated_flooplan);    % INFLATION  create Navigation object
+        as = DstarMOO(map_1);    % create Navigation object
         
         costs_map = max(max(payoffs_map(:,:,1))) - payoffs_map(:,:,1) ;
         costs_map = squeeze(costs_map ) ;
@@ -444,7 +413,7 @@ f_payoffs_map.Name='payoffs_map';
         as.addCost(3,normA);        % add 1st add'l cost layer L
         
          tic
-         as.plan(goal_1,5,start_1);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic
+         as.plan(goal_1,5);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic
          toc
          %figure; pause(1); as.path(start_1);        % plan solution path star-goal, animate
          P = as.path(start_1);    % plan solution path star-goal, return path 
@@ -457,20 +426,13 @@ f_payoffs_map.Name='payoffs_map';
         end
 
         
-                 V = [209 215 2; 211 215 2; 211 260 2; 209 260 2];
+        %  !! problem with wall in base map
+        %{
+                 V = [209 230 2; 211 230 2; 211 260 2; 209 260 2];
+                 %  V = [230 209 2; 230 211 2; 260 211 2; 260 209 2];
                  F = [1 2 3 4];
                  p___ = patch('Faces',F,'Vertices',V)
-        
-                 V = [249 215 2; 251 215 2; 251 260 2; 249 260 2];
-                 F = [1 2 3 4];
-                 p___ = patch('Faces',F,'Vertices',V)
-        
-        
-                x1=260;x2=260;
-                y1=209;y2=251;
-                 V = [ y1  x1  2; y2  x1  2; y2 x2  2; y1 x2  2];
-                 F = [1 2 3 4];
-                 p___ = patch('Faces',F,'Vertices',V)
+                 %}
         
          %%
          
@@ -483,8 +445,8 @@ s.EdgeColor='none'
 f_payoffs_map.Name='payoffs_map';     
 map_1 = zeros(size(payoffs_map,1),size(payoffs_map,2)) ;  % no walls
 %  !! problem with wall in base map
-      map_1(209:211,215:260) = 1 ;  % wall to mostly bisect the middle FoV
-%     map_1(209:211,230:260) = 1 ;  % wall to partially bisect the middle FoV
+%      map_1(209:211,215:260) = 1 ;  % wall to mostly bisect the middle FoV
+     map_1(209:211,230:260) = 1 ;  % wall to mostly bisect the middle FoV
 
         figure_named('plan and move')
         start_1  = [265 ; 262]  ;
@@ -519,7 +481,7 @@ map_1 = zeros(size(payoffs_map,1),size(payoffs_map,2)) ;  % no walls
         as.addCost(3,normA);        % add 1st add'l cost layer L
         
          tic
-         as.plan(goal_1,5,start_1);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic
+         as.plan(goal_1,5);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic
          toc
          %figure; pause(1); as.path(start_1);        % plan solution path star-goal, animate
          P = as.path(start_1);    % plan solution path star-goal, return path 
@@ -580,7 +542,7 @@ See https://ccrma.stanford.edu/~jos/sasp/Product_Two_Gaussian_PDFs.html
 
 See /mnt/nixbig/ownCloud/project_code/20181008/gaussian_mult_example.m
 %}
-
+ 
 
 %%  From the above, for cameras 1 to i, take uncertainty_cost as min(uncertainty_i)
 % Start with 2 cameras
