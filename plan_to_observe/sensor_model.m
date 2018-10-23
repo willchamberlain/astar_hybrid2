@@ -414,13 +414,13 @@ f_payoffs_map.Name='payoffs_map';
         
         
         % flooplan_ is the flooplan: it is the world model of static obstacles:  it belongs to the map owner
-        flooplan_ = zeros(size(map_1));
-        flooplan_(215:260,209:211) = 1000000 ;  % wall to mostly bisect the middle FoV
-        flooplan_(215:260,249:251) = 1000000 ;  % wall 
-        flooplan_(260:260,209:251) = 1000000 ;  % wall  
+        floorplan_ = zeros(size(map_1));
+        floorplan_(215:260,209:211) = 1000000 ;  % wall to mostly bisect the middle FoV
+        floorplan_(215:260,249:251) = 1000000 ;  % wall 
+        floorplan_(260:260,209:251) = 1000000 ;  % wall  
         
         % inflated_flooplan is the flooplan inflated for safe robot navigation: it belongs to the robot: 
-        inflated_flooplan = ismooth(flooplan_,2) ;
+        inflated_flooplan = ismooth(floorplan_,2) ;
         
         as = DstarMOO(map_1,inflated_flooplan);    % INFLATION  create Navigation object
         
@@ -472,61 +472,78 @@ f_payoffs_map.Name='payoffs_map';
                  F = [1 2 3 4];
                  p___ = patch('Faces',F,'Vertices',V)
         
-         %%
-         
-f_payoffs_map = figure; 
-s=surf(payoffs_map(1:5:end,1:5:end,1)); zlim([ 0 max(max(payoffs_map(:,:,4)))] ) % payoffs 1-3 are per-camera, #4 is the composite, not to be used here
-s.EdgeColor='none'
-hold on
-s=surf(payoffs_map(1:5:end,1:5:end,4));
-s.EdgeColor='none'
-f_payoffs_map.Name='payoffs_map';     
-map_1 = zeros(size(payoffs_map,1),size(payoffs_map,2)) ;  % no walls
-%  !! problem with wall in base map
-      map_1(209:211,215:260) = 1 ;  % wall to mostly bisect the middle FoV
-%     map_1(209:211,230:260) = 1 ;  % wall to partially bisect the middle FoV
+         %%  reduced map size
 
-        figure_named('plan and move')
+         scaledown = 2;
+
+
+base_size = [size(payoffs_map,1),size(payoffs_map,2)]  ;
+
+map_1 = zeros(base_size) ;  % no walls
+map_1=map_1(1:scaledown:end,1:scaledown:end) ;
+        
         start_1  = [265 ; 262]  ;
-        start_1  = round(start_1 ./ 5) ;
+        start_1  = round(start_1 ./ scaledown) ;
         goal_1 = [144 ; 218]  ;
-        goal_1 = round(goal_1 ./ 5) ;
+        goal_1 = round(goal_1 ./ scaledown) ;
         
         
-        map_1=map_1(1:5:end,1:5:end) ;
-        as = DstarMOO(map_1);    % create Navigation object
+        % flooplan_ is the flooplan: it is the world model of static obstacles:  it belongs to the map owner
+        floorplan_ = zeros(base_size);        
+        floorplan_=floorplan_(1:scaledown:end,1:scaledown:end) ;  
+        floorplan_(round([215:260]./ scaledown),round([209:211]./ scaledown)) = 1000000 ;  % wall to mostly bisect the middle FoV
+        floorplan_(round([215:260]./ scaledown),round([249:251]./ scaledown)) = 1000000 ;  % wall 
+        floorplan_( round([260:260]./ scaledown),round([209:251]./ scaledown)) = 1000000 ;  % wall
+        
+        
+        
+        as = DstarMOO(map_1,floorplan_);    % create Navigation object
         
         costs_map = max(max(payoffs_map(:,:,1))) - payoffs_map(:,:,1) ;
         costs_map = squeeze(costs_map ) ;
-        costs_map = costs_map(1:5:end,1:5:end) ;
+        costs_map = costs_map(1:scaledown:end,1:scaledown:end) ;
         normA = costs_map - min(min((costs_map)));
         normA = normA ./ max(max(normA))  ;
         as.addCost(1,normA);        % add 1st add'l cost layer L
         
         costs_map = max(max(payoffs_map(:,:,2))) - payoffs_map(:,:,2) ;
         costs_map = squeeze(costs_map ) ;
-        costs_map = costs_map(1:5:end,1:5:end) ;
+        costs_map = costs_map(1:scaledown:end,1:scaledown:end) ;
         normA = costs_map - min(min((costs_map)));
         normA = normA ./ max(max(normA))  ;
         as.addCost(2,normA);        % add 1st add'l cost layer L
         
         costs_map = max(max(payoffs_map(:,:,3))) - payoffs_map(:,:,3) ;
         costs_map = squeeze(costs_map ) ;
-        costs_map = costs_map(1:5:end,1:5:end) ;
+        costs_map = costs_map(1:scaledown:end,1:scaledown:end) ;
         normA = costs_map - min(min((costs_map)));
         normA = normA ./ max(max(normA))  ;
 %         normA = zeros(size(normA )) ;
         as.addCost(3,normA);        % add 1st add'l cost layer L
         
          tic
-         as.plan(goal_1,5,start_1);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic
+         as.plan(goal_1,scaledown,start_1);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic
          toc
          %figure; pause(1); as.path(start_1);        % plan solution path star-goal, animate
          P = as.path(start_1);    % plan solution path star-goal, return path 
          size(P)
          path_plotpoints = [ P 1.1*ones(size(P,1),1)]  ;
          
-         payoffs_map_reduced=payoffs_map(1:5:end,1:5:end,:)  ;
+         
+         
+         
+f_payoffs_map = figure; 
+s=surf(payoffs_map(1:scaledown:end,1:scaledown:end,1)); zlim([ 0 max(max(payoffs_map(:,:,4)))] ) % payoffs 1-3 are per-camera, #4 is the composite, not to be used here
+s.EdgeColor='none'
+hold on
+s=surf(payoffs_map(1:scaledown:end,1:scaledown:end,4));
+s.EdgeColor='none'
+f_payoffs_map.Name='payoffs_map';     
+figure_named('plan and move')
+
+         
+         payoffs_map_reduced=payoffs_map(1:scaledown:end,1:scaledown:end,:)  ;
+                  
         figure(f_payoffs_map);  pause(1); hold on;                %plot3_rows( [ P 1.1*ones(size(P,1),1)]' , 'rx', 'LineWidth',2)  % plot flat 
         for ii_ = 1:size(P,1)
             plot3( P(ii_,1),P(ii_,2),  payoffs_map_reduced(P(ii_,2),P(ii_,1),4)+0.01, 'rs', 'LineWidth',1)  % plot across the surface
