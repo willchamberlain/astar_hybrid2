@@ -96,6 +96,8 @@ classdef DstarMOO < Navigation
         back_pointer       % backpointer (0 means not set)
         tag_new_open_closed       % tag: NEW OPEN CLOSED
         
+        world 
+        
         cost_g       % path distance summation
         cost_heuristic       % path heuristic (state to goal) cost
         cost_01      % add'l cost layer 01 (unused)
@@ -127,7 +129,7 @@ classdef DstarMOO < Navigation
     methods
 
         % constructor
-        function ds = DstarMOO(world, varargin)
+        function ds = DstarMOO(world, world_2, varargin)
             %DstarMOO.DstarMOO D*MOO constructor
             %
             % DS = DstarMOO(MAP, OPTIONS) is a D* navigation object, and MAP is an
@@ -152,6 +154,7 @@ classdef DstarMOO < Navigation
 
             % invoke the superclass constructor
             ds = ds@Navigation(world, varargin{:});
+            ds.world = world_2  ;
 
             % options
             opt.quiet = false;
@@ -240,9 +243,9 @@ classdef DstarMOO < Navigation
             if ds.changed
                 error('Cost map has changed, replan');
             end
-            display( sprintf( 'next( %f  %f ', current(2), current(1) )) ; 
+            % display( sprintf( 'next( %f  %f ', current(2), current(1) )) ; 
             X = sub2ind(size(ds.costmap), current(2), current(1) );
-            display( sprintf( 'next( ; X ind = %f',X) );
+            % display( sprintf( 'next( ; X ind = %f',X) );
             X = ds.back_pointer(X);
             if X == 0
                 n = [];
@@ -252,7 +255,7 @@ classdef DstarMOO < Navigation
             end
         end
 
-        function plan(ds, goal, N)
+        function plan(ds, goal, N, start_)
             %DstarMOO.plan Plan path to goal
             %
             % DS.plan() updates DS with a costmap of distance to the
@@ -269,6 +272,7 @@ classdef DstarMOO < Navigation
             %   goal: goal state coordinates
             %   N: number of optimization objectives; standard D* is 2
             %   (i.e. distance and heuristic)
+            
             
             ds.N = N; % number of optimization objectives
             ds.openlist = zeros(ds.N+1,0);
@@ -307,6 +311,7 @@ classdef DstarMOO < Navigation
             % Setup cost layers DS.cost_g and DS.cost_heuristic.
             % assign values to the distance cost layer, set as DS.costmap
             ds.occgrid2costmap(ds.occgrid);
+            figure; idisp(ds.costmap)
             % assign values to the heuristic cost layer, set as DS.cost_heuristic
             ds.calcHeuristic(ds.occgrid, ds.goal);
             % Additional cost layers are added by the user with the
@@ -317,7 +322,28 @@ classdef DstarMOO < Navigation
             ds.tie = 1; % first cost: cost_g
             
             ds.num_iterations = 0;
+            
+    biggest_path_so_far_ = 0;
+    num_cycles = 0;
+    tic
+    
             while true
+       
+    if rem( ds.num_iterations, 10 ) == 0
+        P = ds.path(start_);     % plan solution path start-goal, return path        
+        num_cycles = num_cycles + 1;
+        if size(P,1) > biggest_path_so_far_
+            biggest_path_so_far_ = size(P,1);
+            num_cycles = 0;
+            toc
+            display(size(P))
+            tic
+        end
+        if biggest_path_so_far_  > 0 && num_cycles > 10
+            break;
+        end
+    end;
+       
                 if ~ds.quiet && mod(ds.num_iterations, 20) == 0
                     ds.spinner();
                 end
@@ -570,11 +596,13 @@ classdef DstarMOO < Navigation
         function k_new = updateCosts(ds, a, back_pointer, obj)
             % NOTE: Only for costs that accumulate (i.e. sum) over the
             % path, and for dynamic costs.
-            % E.g. the heuristic parameter DS.cost_heuristic only needs updating
-            % when the goal state changes; it's values are stored for each
-            % cell.
+            %
+            % e.g. the heuristic parameter DS.cost_heuristic ("obj==0") only needs updating
+            % when the goal state changes; it's values are stored for each cell.
             %
             % Location moving from state back_pointer to a.
+            % 
+            %  ? Add uncertainty cost in as additional cost layer 3 which depends on the direction entering cell  ??
             if nargout > 0
                 k_new = ds.cost_g(back_pointer) + ds.traversal_cost(back_pointer,a);
                 return
@@ -614,7 +642,9 @@ classdef DstarMOO < Navigation
                 % % (no risk update needed)
                 
                 % base cost-map case:  cost_layer_3 cost + traversal cost 
-                ds.cost_03(a) = ds.cost_03(back_pointer) + ds.traversal_cost(back_pointer,a);
+                
+                %ds.cost_03(a) = ds.cost_03(back_pointer) + ds.traversal_cost(back_pointer,a);
+                
                 % (no heuristic update needed)
             end
         end
@@ -625,15 +655,18 @@ classdef DstarMOO < Navigation
             switch nargin
                 case 2
                     pt = [ds.cost_g(a);
-                          ds.cost_heuristic(a);
-                          ds.cost_01(a).*50;
+                          ds.cost_heuristic(a) + ds.world(a);
+                          %ds.cost_01(a).*50;    % hard-coded explicit weighting:  increase the influence of cost layer 1
+                          ds.cost_01(a);
                           ds.cost_02(a);
                           ds.cost_03(a);
                           ];
                 case 3
-                    pt = [ds.cost_g(back_pointer) + 0.5*ds.traversal_cost(a,back_pointer);
-                          ds.cost_heuristic(a);
-                          ds.cost_01(a).*50;
+                    %pt = [ds.cost_g(back_pointer) + 0.5*ds.traversal_cost(a,back_pointer);     % hard-coded explicit weighting: decrease the distance-to-goal cost: reduce the traversal cost
+                    pt = [ds.cost_g(back_pointer) + ds.traversal_cost(a,back_pointer);
+                          ds.cost_heuristic(a) + ds.world(a);
+                          %ds.cost_01(a).*50;    % hard-coded explicit weighting:  increase the influence of cost layer 1
+                          ds.cost_01(a);
                           ds.cost_02(a);
                           ds.cost_03(a);
                           ];
