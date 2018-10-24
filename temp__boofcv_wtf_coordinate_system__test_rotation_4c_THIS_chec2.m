@@ -202,7 +202,6 @@ draw_axes_direct_c(R2,[0;offs;0],'',0.9,'b:')
 quat = Quaternion(R2)
 f1=figure_named('target-to-sensor rotation_matrix'); hold on; grid on; hold on; xlabel('x'); ylabel('y'); zlabel('z') ;
 quat.plot
-quat.
 quat2 = quat.inv  %  
 hold on ; quat2.plot; axis equal
 draw_axes_direct(eye(3),[0;0;0],'',1)
