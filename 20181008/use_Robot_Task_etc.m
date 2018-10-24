@@ -43,12 +43,14 @@ pioneer2.task = pioneer2_task
     
     %%
     rosshutdown
-    pause(1)
+    pause(3)
     rosinit
-    pause(1)
+    pause(2)
     
     ros_tf_tree = rostf
     pause(1)
+    
+   %%
     
 %     robot_guiabot.name='Guiabot'
 %     robot_guiabot.tag_topics{1}='dum_c603_trans_rot_to_t50090_actual_b'
@@ -70,48 +72,127 @@ pioneer2.task = pioneer2_task
     robot_poses{1} = {} ; 
     robot_poses{2} = {} ; 
     
+    
+    pioneer1_base_pose_ground_truth_publisher = rospublisher('/base_pose_ground_truth_matlab', 'nav_msgs/Odometry')  ;
+    pioneer1_base_pose_ground_truth_msg = rosmessage(pioneer1_base_pose_ground_truth_publisher)  ;
+    
     while true  %  NOTE:  needs a few iterations for tf to start making the values available (?why?)
     for robot_ii_ = 1:size(robots,2)
-        display('Robots:')
-        robot_ = robots(robot_ii_)  
+        %display('Robots:')
+        robot_ = robots(robot_ii_)  ;
         for tag_ii_ = 1:size(robot_.tag_topics,2)           
-            display('Tags:')
-            tag_topic = robot_.tag_topics{tag_ii_} 
+            %display('Tags:')
+            tag_topic = robot_.tag_topics{tag_ii_} ;
+            should_send = false;
             try 
-                waitForTransform(ros_tf_tree, 'map', tag_topic, 0.2);
+                waitForTransform(ros_tf_tree, 'map', tag_topic, 0.5);
                 map_to_robot_tf = getTransform(ros_tf_tree, 'map', tag_topic)  ;
-                map_to_robot_tf.ChildFrameId  
-                map_to_robot_tf.Header.FrameId  
-                map_to_robot_tf.Transform.Translation  ;     % Vector3 
-                map_to_robot_tf.Transform.Rotation  ;          % Quaternion
-                display(sprintf('GOOD:  found robot %s tag %s',robot_.name,tag_topic))
-                robot_pose = robot_poses{robot_ii_}  ;
-                filter_length = 10 ;
-                if size(  robot_pose,2) > filter_length
-                    for rpii_ = 1:min(size(  robot_pose,2)-1, filter_length)
-                        robot_pose{rpii_} = robot_pose{rpii_+1} ;
-                    end
-                    robot_pose{end} = map_to_robot_tf  ;
-                    robot_poses{robot_ii_} = robot_pose  ;
-                    
-                    % average - run the filtering 
-                    sum_transl = zeros(3,1) ;
-                    quat = robot_poses{robot_ii_}{poseii_}.Transform.Rotation ;   % have to initialise to _something_ .
-                    running_interp = Quaternion(quat.W, [quat.X,quat.Y,quat.Z]) ;   % have to initialise to _something_ .
-                    for poseii_ = 1: size(robot_poses{robot_ii_},2)
-                        transl = robot_poses{robot_ii_}{poseii_}.Transform.Translation ;
-                        sum_transl = sum_transl + [transl.X;transl.Y;transl.Z] ;
-                        quat = robot_poses{robot_ii_}{poseii_}.Transform.Rotation ;
-                        q = Quaternion(quat.W, [quat.X,quat.Y,quat.Z]) ;  % <s , [v1 v2 v3] >
-                        running_interp = q.interp(running_interp,0.5) ;     %  should be a weighted interpolation
-                    end
-                    mean_transl = sum_transl./size(robot_poses{robot_ii_},2) ;
-                    running_interp
+                
+                now_time = rostime('Now')  ;
+                if now_time.Sec - map_to_robot_tf.Header.Stamp.Sec > 0 
+                    %display('TOO OLD  SECONDS  - skipping')
                 else
-                    robot_pose{end+1} = map_to_robot_tf  ;
-                    robot_poses{robot_ii_} = robot_pose  ;
+                    if now_time.Nsec - map_to_robot_tf.Header.Stamp.Nsec > 500000000
+                        %display('TOO OLD  NANOseconds - skipping')                        
+
+                        map_to_robot_tf.ChildFrameId  
+                        map_to_robot_tf.Header.FrameId  
+                        map_to_robot_tf.Transform.Translation  ;     % Vector3 
+                        map_to_robot_tf.Transform.Rotation  ;          % Quaternion
+                        display(sprintf('GOOD:  found robot %s tag %s',robot_.name,tag_topic))
+                        robot_pose = robot_poses{robot_ii_}  ;
+                        filter_length = 10 ;
+                        if size(  robot_pose,2) > filter_length
+                            for rpii_ = 1:min(size(  robot_pose,2)-1, filter_length)
+                                robot_pose{rpii_} = robot_pose{rpii_+1} ;
+                            end
+                            robot_pose{end} = map_to_robot_tf  ;
+                            robot_poses{robot_ii_} = robot_pose  ;
+
+                            % average - run the filtering 
+                            sum_transl = zeros(3,1) ;
+                            quat = robot_poses{robot_ii_}{poseii_}.Transform.Rotation ;   % have to initialise to _something_ .
+                            running_interp = Quaternion([quat.W, quat.X,quat.Y,quat.Z]) ;   % have to initialise to _something_ .
+                            %{
+                            for poseii_ = 1: size(robot_poses{robot_ii_},2)
+                                x_(poseii_) = robot_poses{robot_ii_}{poseii_}.Transform.Rotation.X
+                                y_(poseii_) = robot_poses{robot_ii_}{poseii_}.Transform.Rotation.Y
+                                z_(poseii_) = robot_poses{robot_ii_}{poseii_}.Transform.Rotation.Z
+                                w_(poseii_) = robot_poses{robot_ii_}{poseii_}.Transform.Rotation.W
+                            end
+                            figure; hold on; grid on; plot(x_); plot(y_); plot(z_); plot(w_); 
+                            %}
+                            for poseii_ = 1: size(robot_poses{robot_ii_},2)
+
+                                if now_time.Sec -  robot_poses{robot_ii_}{poseii_}.Header.Stamp.Sec > 0 
+                                    %display('TOO OLD  SECONDS  - skipping')
+                                else
+                                    if now_time.Nsec - robot_poses{robot_ii_}{poseii_}.Header.Stamp.Nsec > 500000000
+                                        %display('TOO OLD  NANOseconds - skipping')
+                                    else
+                                        should_send = true ;
+                                        display('GOOD FRESH DATA')
+                                         transl = robot_poses{robot_ii_}{poseii_}.Transform.Translation ;
+                                        sum_transl = sum_transl + [transl.X;transl.Y;transl.Z] ;
+                                        quat = robot_poses{robot_ii_}{poseii_}.Transform.Rotation ;
+                                        q = Quaternion([quat.W, quat.X,quat.Y,quat.Z]) ;  % <s , [v1 v2 v3] >
+                                        running_interp = q.interp(running_interp,0.5) ;     %  should be a weighted interpolation
+                                    end
+                                end
+
+                            end
+                            mean_transl = sum_transl./size(robot_poses{robot_ii_},2) ;
+
+                                        should_send = true ;
+                                        
+                            if 1 == robot_ii_  &&  should_send
+                                display('should_send')
+                                display('should_send')
+                                display('should_send')
+                                display('should_send')
+                                covariance = ...
+                                    [0.25, 0.0, 0.0, 0.0, 0.0, 0.0, ...
+                                    0.0, 0.25, 0.0, 0.0, 0.0, 0.0, ...
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, ...
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, ...
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, ...
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 1.0]'  ;
+                                pioneer1_base_pose_ground_truth_msg.Header.FrameId = 'map'  ;
+                                pioneer1_base_pose_ground_truth_msg.Header.Stamp = rostime('now')  ;
+                                % pioneer1_base_pose_ground_truth_msg.Pose.Pose.Position = mean_transl  ;
+                                pioneer1_base_pose_ground_truth_msg.Pose.Pose.Position.X = mean_transl(1)  ;
+                                pioneer1_base_pose_ground_truth_msg.Pose.Pose.Position.Y = mean_transl(2)  ;
+                                pioneer1_base_pose_ground_truth_msg.Pose.Pose.Position.Z = mean_transl(3)  ;
+                                % pioneer1_base_pose_ground_truth_msg.Pose.Pose.Orientation = running_interp  ; 
+                                pioneer1_base_pose_ground_truth_msg.Pose.Pose.Orientation.W = running_interp.s  ;
+                                pioneer1_base_pose_ground_truth_msg.Pose.Pose.Orientation.X = running_interp.v(1)  ;
+                                pioneer1_base_pose_ground_truth_msg.Pose.Pose.Orientation.Y = running_interp.v(2)  ;
+                                pioneer1_base_pose_ground_truth_msg.Pose.Pose.Orientation.Z = running_interp.v(3)  ;
+                                pioneer1_base_pose_ground_truth_msg.Pose.Covariance = covariance  ;
+                                pioneer1_base_pose_ground_truth_msg.Twist.Covariance = covariance  ;                        
+                                pioneer1_base_pose_ground_truth_msg.Twist.Twist.Linear.X = 0  ;
+                                pioneer1_base_pose_ground_truth_msg.Twist.Twist.Linear.Y = 0  ;
+                                pioneer1_base_pose_ground_truth_msg.Twist.Twist.Linear.Z = 0  ;
+                                pioneer1_base_pose_ground_truth_msg.Twist.Twist.Angular.X = 0  ;
+                                pioneer1_base_pose_ground_truth_msg.Twist.Twist.Angular.Y = 0  ;
+                                pioneer1_base_pose_ground_truth_msg.Twist.Twist.Angular.Z = 0  ;                        
+                                pioneer1_base_pose_ground_truth_msg
+                                pioneer1_base_pose_ground_truth_msg.Header.FrameId = strrep(tag_topic,'_b','') ;
+                                pioneer1_base_pose_ground_truth_msg.Pose.Pose.Position =  map_to_robot_tf.Transform.Translation  ;
+                                pioneer1_base_pose_ground_truth_msg.Pose.Pose.Orientation =  map_to_robot_tf.Transform.Rotation  ;
+                                pioneer1_base_pose_ground_truth_msg
+                                pioneer1_base_pose_ground_truth_publisher.send(pioneer1_base_pose_ground_truth_msg);
+                            end
+
+                        else
+                            robot_pose{end+1} = map_to_robot_tf  ;
+                            robot_poses{robot_ii_} = robot_pose  ;
+                        end
+                    end
                 end
-            catch
+            catch e %e is an MException struct     %   see  https://au.mathworks.com/matlabcentral/answers/325475-display-error-message-and-execute-catch
+        fprintf(1,'The identifier was:\n%s',e.identifier);
+        fprintf(1,'There was an error! The message was:\n%s',e.message);
                 display(sprintf('problem with robot %s tag %s',robot_.name,tag_topic))
             end             
         end
