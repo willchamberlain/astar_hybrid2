@@ -203,7 +203,7 @@ f_sum_info_gains_negcosts_stacked=figure;  surf( sum_info_gains_negcosts_stacked
 
 % OK, but is the dissimilarty in sensor/algorithm/angle not important ; if I stack 2 of the 3 cameras together, is their field of view really better than the
 % other?
-%  toy: 3 cameras, 1 point,  
+%  3 cameras
 world = zeros(101,101)  ;
 target = [  51,51 ]  ;
 camera_1 = [ 10, 51 ]  ;    % expect extra contribution between camera_1 and (camera_2 | camera_3)
