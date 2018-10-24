@@ -43,6 +43,15 @@ cam606sensor0_pose_from_getpose = cam606sensor0.getpose
 % cam606sensor0_pose = cam606sensor0.getpose  % wrong values?
 cam606sensor0_pose = cam606sensor0.getorient
 cam606sensor0_pose(1:3,4) = cam606sensor0.getpos'
+%%
+
+cam609sensor0 = vrep.camera('cam609sensor0')
+
+cam609sensor0_pose_from_getpose = cam609sensor0.getpose
+
+% cam609sensor0_pose = cam609sensor0.getpose  % wrong values?
+cam609sensor0_pose = cam609sensor0.getorient
+cam609sensor0_pose(1:3,4) = cam609sensor0.getpos'
 
 
 
