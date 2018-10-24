@@ -83,7 +83,7 @@
 
 classdef AstarMOO < Navigation
 
-    properties (SetAccess=private, GetAccess=private)
+    properties (SetAccess=private, GetAccess=public)
 
         % essential world info
         costmap   % world cost map: obstacle = Inf
@@ -121,6 +121,12 @@ classdef AstarMOO < Navigation
     end
     
     methods % start of public methods
+        
+        function openList_ = getOpenList(as)
+            openList_ = as.openlist;
+        end
+        
+        
         % AstarMOO class constructor:
         function as = AstarMOO(world, varargin)
             %AstarMOO.AstarMOO A*-MOO constructor
@@ -354,7 +360,11 @@ classdef AstarMOO < Navigation
                         as.b(Y) = X;
                         as.updateCosts(Y,X,as.N); % as.N = 2 -> base case w/ only distance cost parameters (g and h)
                         % project node's costs into objective space:
-                        objspace = as.projectCost(Y,X);
+%                         Y
+%                         X          
+                        objspace = as.projectCost(Y,X);              
+display(size(objspace));  % pause(1)
+%                         objspace
                         as.INSERT(Y, objspace, '');
                     end
                 end                
@@ -562,6 +572,7 @@ classdef AstarMOO < Navigation
         end
         
         % X is new node with costs in array pt
+        
 
         function INSERT(as, X, pt, where)
 
@@ -575,8 +586,36 @@ classdef AstarMOO < Navigation
             end
 
             if as.t(X) == as.NEW
+                
+                this_ = [X; pt];
+                that_ = as.openlist;
+                if isempty(that_) 
+                    display('--- AStarMoo : INSERT: inserting into empty array of size---')                    
+                    display(size(as.openlist))
+                end
+                if size(this_,1) ~= size(that_,1)
+                    display('--- AStarMoo : INSERT: inserting into different size empty array ---')                    
+                    display(size(this_)) ; display(size(that_));  display(class(that_))
+                    display(X) ; display(pt);  
+                    if isequal(size(that_),[3 0])
+                        as.openlist = double.empty(size(this_,1),0) ;
+                        display('--- AStarMoo : INSERT: FIXED size of empty array ---')                           
+                        that_ = as.openlist;
+                        display(size(this_)) ; display(size(that_));  display(class(that_))                    
+                    end
+                end
                 % add a new column to the open list
+warning('') % Clear last warning message
                 as.openlist = [as.openlist [X; pt]];
+[warnMsg, warnId] = lastwarn;
+if ~isempty(warnMsg)
+    display('--- AStarMoo : warning in INSERT: ---')
+    display(X)
+    display(pt)
+    display(size(as.openlist) )
+    display(size([X; pt]) )
+    display('--- end:  AStarMoo : warning in INSERT: ---')
+end
             elseif as.t(X) == as.OPEN
                 % L13: If a node with same position as successor is in the
                 % OPEN list & has a lower f than successor, then skip this
