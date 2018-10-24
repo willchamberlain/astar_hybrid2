@@ -94,16 +94,33 @@ classdef Sensor_model_as_object  <  handle
             if size(path_,1)>0
                 obj.robot_location = path_(1,:)  ;
                 status__ = Sensor_model_as_object.NOT_AT_GOAL;
-            else
-                display('obj.robot_location')
-                obj.robot_location
-                display('obj.goal')
-                obj.goal
                 temp_goal_to_compare = obj.goal;
                 if ~isequal( size(obj.robot_location) , size(obj.goal) )
                     temp_goal_to_compare = obj.goal';
                 end
-                if obj.robot_location == temp_goal_to_compare
+                %display: display('norm_2(temp_goal_to_compare - obj.robot_location , 2) ::  size(path_,1)>0')  ;
+                %display: display(  norm_2(temp_goal_to_compare - obj.robot_location , 2) )  ;
+                %display: isequal(obj.robot_location , temp_goal_to_compare)
+                %display: norm_2(temp_goal_to_compare - obj.robot_location , 2) < 2
+                if  isequal(obj.robot_location , temp_goal_to_compare) ...  
+                    ||   norm_2(temp_goal_to_compare - obj.robot_location , 2) < 2 %   edge case: robots alternating position: change at-goal to proximity rather than on top of  i.e. Euclidean distance < 2.
+                    display(sprintf('Robot %s at goal', obj.robot_id)) ;
+                    status__ = Sensor_model_as_object.AT_GOAL;                
+                end
+            else
+                %display: display('obj.robot_location')
+                %display: obj.robot_location
+                %display: display('obj.goal')
+                %display: obj.goal
+                temp_goal_to_compare = obj.goal;
+                if ~isequal( size(obj.robot_location) , size(obj.goal) )
+                    temp_goal_to_compare = obj.goal';
+                end
+                        %[y,i]=max(size( [45 12] - [-12 45] ))
+                %display: display('norm_2(temp_goal_to_compare - obj.robot_location , 2)')  ;
+                %display: display(  norm_2(temp_goal_to_compare - obj.robot_location , 1) )  ;
+                if  isequal(obj.robot_location , temp_goal_to_compare) ...  
+                    ||   norm_2(temp_goal_to_compare - obj.robot_location , 2) < 2 %   edge case: robots alternating position: change at-goal to proximity rather than on top of  i.e. Euclidean distance < 2.
                     display(sprintf('Robot %s at goal', obj.robot_id)) ;
                     status__ = Sensor_model_as_object.AT_GOAL;                
                 else
