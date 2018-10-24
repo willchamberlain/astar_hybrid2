@@ -311,7 +311,7 @@ classdef DstarMOO < Navigation
             % Setup cost layers DS.cost_g and DS.cost_heuristic.
             % assign values to the distance cost layer, set as DS.costmap
             ds.occgrid2costmap(ds.occgrid);
-            figure; idisp(ds.costmap)
+            %           figure; idisp(ds.costmap)
             % assign values to the heuristic cost layer, set as DS.cost_heuristic
             ds.calcHeuristic(ds.occgrid, ds.goal);
             % Additional cost layers are added by the user with the
