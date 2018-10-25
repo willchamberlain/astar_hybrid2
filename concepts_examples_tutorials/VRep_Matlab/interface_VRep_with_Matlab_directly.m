@@ -2,7 +2,10 @@
 
 % open connection to VRep - see  http://www.forum.coppeliarobotics.com/viewtopic.php?t=3325
 vrep=remApi('remoteApi'); % using the prototype file (remoteApiProto.m)
-clientID=vrep.simxStart('127.0.0.1',19997,true,true,5000,5);  % get a connection = start a connection != start sim
+%   [rtn] = simxStart(obj,server,port,waitUntilConnected,doNotReconnectOnceDisconnected,timeOutInMs,commThreadCycleInMs)
+%   clientID=vrep.simxStart('127.0.0.1',19997,true,true,5000,5);  % get a connection = start a connection != start sim
+getenv('ROS_MASTER_URI')
+clientID=vrep.simxStart('192.168.43.252',11311,true,true,5000,5);  % get a connection = start a connection != start sim
 clientID    % is -1 if the connection failed 
 % do stuff  -  see  http://www.forum.coppeliarobotics.com/viewtopic.php?t=1445
 [retVal,cam603_base_cuboid] = vrep.simxGetObjectHandle(clientID,'cam603_base_cuboid',vrep.simx_opmode_oneshot_wait)  % get a handle to the object by name 
