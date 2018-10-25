@@ -4,7 +4,9 @@ function [distance_uncertainty_costs, check_dist_map, check_angle_map] = sensor_
 %  camera_optical_axis_direction_unit unit vector in direction of the camera optical axis 
 %  camera_pose vector of camera pose with x as first element and y as second: other elements are not used
 %
-%  uncertainty_vs_distance = (0.714285714285714*0.0005*exp(dist))                                                   
+%  uncertainty_vs_distance = (0.714285714285714*0.0005*exp(dist))                                    
+%
+%  Refactored from /mnt/nixbig/ownCloud/project_code/plan_to_observe/sensor_model.m
 scale_up = scale_up_  ;  scale_down = 1/scale_up  ;
 distance_uncertainty_costs = zeros(  world_x_extent(2)*scale_up,world_y_extent(2)*scale_up  )  ;
 

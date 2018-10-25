@@ -2,7 +2,9 @@
 %       uncertainty vs. distance of feature to camera optical centre
 %       uncertainty vs. angle of robot feature to camera optical axis
 %%
+addpath('/mnt/nixbig/ownCloud/project_code/')
 addpath('/mnt/nixbig/ownCloud/project_code/plan_to_observe/')
+addpath('/mnt/nixbig/ownCloud/project_code/3rd_party/robotics-toolbox-matlab')
 %%
 
 % Visualise the error/uncertainty model 
@@ -20,7 +22,7 @@ plot(uncertainty_vs_angle);
 
 cla 
 
-%%  Camera position in the world
+%%  (1) Camera position in the world
 
 world_x_extent = [1 40]
 world_y_extent = [1 50]
@@ -79,7 +81,7 @@ camera_position_h = e2h(camera_pose(1:2))  ;
 FoV_left_lim = [ camera_position_h   FoV_left_dir+camera_position_h ]  ;
 plot2_rows_rotate_robot_to_diagram( FoV_left_lim , 'c')  ;
 
-%% Main section - add two more cameras, calculate information gain/uncertainty reduction 
+%% (1) Main section - add two more cameras, calculate information gain/uncertainty reduction 
 
 %  uncertainty_vs_distance = (0.714285714285714*0.0005*exp(dist))                                                   
 scale_up = 10  ;  scale_down = 1/scale_up  ;
@@ -123,6 +125,7 @@ end
 
 %------  Factor out the function 
 
+%  SET UP THE CAMERAS
 scale_up_ = 10  ;
 [distance_uncertainty_costs, check_dist_map, check_angle_map] ...
     = sensor_model_func(scale_up_, world_x_extent, world_y_extent, camera_optical_axis_direction_unit , camera_pose , FoV_angle)  ;
@@ -143,8 +146,9 @@ f_check_dist_map.Name='check_dist_map'  ;
 %-----  Second camera : same world parameters, camera-specific parameters
 
 FoV_angle_2 =62;
-camera_pose_2 = camera_pose+[0 ; -5 ; degtorad(30)]  ;
-rot_z = rotz(degtorad(30));  rot_z = rot_z(1:2,1:2)  ;
+camera_2_angle_yaw = 210;
+camera_pose_2 = camera_pose+[12 ; -2 ; degtorad(camera_2_angle_yaw)]  ;
+rot_z = rotz(degtorad(camera_2_angle_yaw));  rot_z = rot_z(1:2,1:2)  ;
 camera_optical_axis_direction_unit_2 = rot_z*camera_optical_axis_direction_unit  ;
 [distance_uncertainty_costs_2, check_dist_map_2, check_angle_map_2] ...
     = sensor_model_func(scale_up_, world_x_extent, world_y_extent, camera_optical_axis_direction_unit_2, camera_pose_2 , FoV_angle_2)  ;
@@ -168,8 +172,9 @@ f_camera_per_cell = figure; surf(squeeze(camera_per_cell) ); f_camera_per_cell.N
 %-----  Third camera : same world parameters, camera-specific intrinsic and extrinsic parameters
 
 FoV_angle_3 =62;
-camera_pose_3 = camera_pose+[0 ; -10 ; degtorad(45)]  ;
-rot_z = rotz(degtorad(30));  rot_z = rot_z(1:2,1:2)  ;
+camera_3_angle_yaw = 45
+camera_pose_3 = camera_pose+[0 ; -10 ; degtorad(camera_3_angle_yaw)]  ;
+rot_z = rotz(degtorad(camera_3_angle_yaw));  rot_z = rot_z(1:2,1:2)  ;
 camera_optical_axis_direction_unit_3 = rot_z*camera_optical_axis_direction_unit  ;
 [distance_uncertainty_costs_3, check_dist_map_3, check_angle_map_3] ...
     = sensor_model_func(scale_up_, world_x_extent, world_y_extent, camera_optical_axis_direction_unit_3, camera_pose_3 , FoV_angle_3)  ;
@@ -251,7 +256,7 @@ if angle_diff > 90 ; angle_diff = abs(angle_diff - 180)  ; end
 % approximate payoff as sin
 sin(degtorad(angle_diff))
 
-%%
+%% (2.1)
 %  order the payoffs by magnitude, use the first, then use the angular of the second to the first, then use the worst of third-to-second and third-to-first
 
 size( distance_uncertainty_costs_stacked )
@@ -269,7 +274,10 @@ payoffs_map_is_layer_1 = payoffs_map  ;
 bits_with_1_as_first =  index_order_of_sort(1,:,:)  ==1 ; size(bits_with_1_as_first);  class(bits_with_1_as_first)
 f_bits_with_1_as_first=figure; idisp(squeeze(bits_with_1_as_first))  ;  f_bits_with_1_as_first.Name='cells outside a field of view, by assignment to the default uncertainty/cost';
 
-%%  To combine two+ fields of view, handle this 'cost' as uncertainty at each point, as information gain at each point
+%%  (2.2)  To combine two+ fields of view, handle this 'cost' as uncertainty at each point, as information gain at each point
+% 1) set up cameras, above in two sections
+% 2) calculate the information gain above and here 
+% 3) run simulation in the 'reduced' section  "(3 - reduced)"
 %  Results:  need to show the difference between the two cost fields as a surf,  and the effecs on planned paths and allocations.
 %{
     Here treat information gain as observation from divergent angles to reduce the entropy of 
@@ -387,7 +395,7 @@ ylim( [ 0 max(max(map_1))*1.1] )
 %% for DStarMoo 
 addpath('/mnt/nixbig/ownCloud/project_code/3rd_party/robotics-toolbox-matlab/')
 addpath('/mnt/nixbig/ownCloud/project_code/')
-%% DStarMoo planning on separate cost fields with multi-objective (not Pareto) 
+%%  (3 - large)   DStarMoo planning on separate cost fields with multi-objective (not Pareto) 
 %{
 See   /mnt/nixbig/ownCloud/project_code/temp__AStar_DStar__Moo_PO__corridor.m   -  section "multi-objective and dynamic objective DStar"
 %}
@@ -519,7 +527,7 @@ f_payoffs_map.Name='payoffs_map';
             robot_in_play = robot_in_play_now;            
         end
         
-         %%  reduced map size
+         %%  (3 - reduced) reduced map size
 
          scaledown = 2;
 
@@ -589,6 +597,24 @@ hold on
 s=surf(payoffs_map(1:scaledown:end,1:scaledown:end,4));
 s.EdgeColor='none'
 f_payoffs_map.Name='payoffs_map';     
+%-- draw the walls
+Vz = max(max(payoffs_map(:,:,4))) ;
+ V = [209 215 Vz; 211 215 Vz; 211 260 Vz; 209 260 Vz];
+ V = V*[1/scaledown 0 0; 0 1/scaledown 0 ; 0 0 1]    ;
+ F = [1 2 3 4];
+ p___ = patch('Faces',F,'Vertices',V)        ;
+ V = [249 215 Vz; 251 215 Vz; 251 260 Vz; 249 260 Vz];
+ V = V*[1/scaledown 0 0; 0 1/scaledown 0 ; 0 0 1]    ;
+ F = [1 2 3 4];
+ p___ = patch('Faces',F,'Vertices',V)       ;
+x1=260;x2=260;
+y1=209;y2=251;
+ V = [ y1  x1  Vz; y2  x1  Vz; y2 x2  Vz; y1 x2  Vz];
+ V = V*[1/scaledown 0 0; 0 1/scaledown 0 ; 0 0 1]  ;
+ F = [1 2 3 4];
+ p___ = patch('Faces',F,'Vertices',V)       ;
+%-- draw the walls
+
 figure_named('plan and move')
 
          
