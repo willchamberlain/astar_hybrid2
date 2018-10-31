@@ -22,10 +22,12 @@ classdef Sensor_model_as_object  <  handle
         need_to_calc_costmap = true  ;
         
         as;
+        motion_cost = 1;
+        vel = 1;
         current_path;
     end
     methods
-        function obj = Sensor_model_as_object(robot_id_, floorplan_, payoffs_map_, start_, goal_, robot_size_)
+        function obj = Sensor_model_as_object(robot_id_, floorplan_, payoffs_map_, start_, goal_, robot_size_, varargin)
             obj.robot_id = robot_id_ ;
             obj.floorplan=floorplan_ ;
             obj.payoffs_map = payoffs_map_ ;
@@ -33,6 +35,14 @@ classdef Sensor_model_as_object  <  handle
             obj.robot_location = obj.start ;
             obj.goal = goal_;
             obj.robot_size = robot_size_ ;
+            if ~isempty(varargin) && size(varargin,2) > 0 
+                obj.motion_cost = varargin{1} ;
+                display(sprintf('motion_cost = %f',obj.motion_cost))
+            end
+            if ~isempty(varargin) && size(varargin,2) > 1 
+                obj.vel = varargin{2} ;
+                display(sprintf('vel = %f',obj.vel))
+            end
         end
         
         function path__ = planningStep(obj, new_start_location_)
@@ -63,9 +73,10 @@ classdef Sensor_model_as_object  <  handle
             if obj.need_to_calc_costmap
                 obj.need_to_calc_costmap = false  ;                
                 % map_1 is the base map passed to Navigation; remains zeros to avoid problems between Navigation and DStarMoo:  belongs to DStarMoo
-                map_1 = zeros(size(obj.payoffs_map,1),size(obj.payoffs_map,2))  ;  % no walls
-                inflated_flooplan = ismooth(obj.floorplan,obj.robot_size)  ;
-                obj.as = DstarMOO(map_1,inflated_flooplan)  ;                   
+                map_1 = obj.floorplan;   %  zeros(size(obj.payoffs_map,1),size(obj.payoffs_map,2))  ;  % no walls
+                %  inflated_flooplan = ismooth(obj.floorplan,obj.robot_size)  ;
+                inflated_flooplan = obj.floorplan;
+                obj.as = DstarMOO(map_1,inflated_flooplan, 'motion_cost', obj.motion_cost)  ;                   
                 for ii_ = 1:size(obj.payoffs_map,3)
                     costs_map = max(max(obj.payoffs_map(:,:,ii_))) - obj.payoffs_map(:,:,ii_) ;
                     costs_map = squeeze(costs_map ) ;
@@ -91,8 +102,8 @@ classdef Sensor_model_as_object  <  handle
         
         function status__ = moveAStep(obj)
             path_ = obj.planningStep(obj.robot_location)  ;
-            if size(path_,1)>0
-                obj.robot_location = path_(1,:)  ;
+            if size(path_,1)>=obj.vel
+                obj.robot_location = path_(obj.vel,:)  ;
                 status__ = Sensor_model_as_object.NOT_AT_GOAL;
                 temp_goal_to_compare = obj.goal;
                 if ~isequal( size(obj.robot_location) , size(obj.goal) )
