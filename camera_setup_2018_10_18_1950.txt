@@ -1,0 +1,66 @@
+NOTE: could probably do this as joint angles  -->  future implementation with robots holding the cameras
+-----------------------------------------
+
+cam609_base_cuboid
+    relative to world
+alpha:  +1.9511e-6
+beta:   +2.0793e-6
+gamma:  -1.2000e+2
+x: +8.0250e+0
+y: +7.1750e+0
+z: +1.9000e-2
+cam609sensor
+    relative to cam609_base_cuboid
+alpha:  +1.5665e+2
+beta:   +4.8340e+1
+gamma:  -4.9697e+1
+x:  0.0
+y:  0.0
+z:  +2.1900e+0 
+
+-----------------------------------------
+
+cam606_base_cuboid
+    relative to world
+alpha:  0.0
+beta:   0.0
+gamma:  0.0
+x: +1.30
+y: +6.30
+z: +0.01
+cam606sensor
+    relative to cam606_base_cuboid
+alpha:  +1.2599e+2
+beta:   0.0
+gamma:  0.0
+x: +0.0
+y: +0.0
+z: +2.1900e+0
+
+-----------------------------------------
+
+cam606_base_cuboid
+    relative to world
+alpha:  +0.0
+beta:   +0.0
+gamma:  +0.0
+x:  +3.0000e+0
+y:  +7.4500e+0
+z:  +1.9000e-2
+cam606sensor
+    relative to cam606_base_cuboid
+alpha:  +1.5665e+2
+beta:   +4.8340e+1
+gamma:  -6.4697e+1
+x: +0.0
+y: +0.0
+z: +2.1900e+0
+    
+
+
+
+
+
+
+
+
