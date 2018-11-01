@@ -97,6 +97,7 @@ classdef DstarMOO < Navigation
         tag_new_open_closed       % tag: NEW OPEN CLOSED
         
         world 
+        motion_cost = 1 ; 
         
         cost_g       % path distance summation
         cost_heuristic       % path heuristic (state to goal) cost
@@ -158,8 +159,11 @@ classdef DstarMOO < Navigation
 
             % options
             opt.quiet = false;
+            opt.motion_cost = 1;
             opt = tb_optparse(opt, varargin);
             ds.quiet = opt.quiet;
+            ds.motion_cost = opt.motion_cost  ;
+            % display(sprintf('motion_cost=%f',ds.motion_cost))
 
             ds.occgrid2costmap(ds.occgrid);
             
@@ -169,6 +173,10 @@ classdef DstarMOO < Navigation
                 ds.goal_change();
             end
             ds.changed = false;
+        end
+        
+        function world__ = get_world(obj) 
+            world__ = obj.world  ;
         end
 
         function reset(ds)
@@ -310,10 +318,12 @@ classdef DstarMOO < Navigation
 
             % Setup cost layers DS.cost_g and DS.cost_heuristic.
             % assign values to the distance cost layer, set as DS.costmap
-            ds.occgrid2costmap(ds.occgrid);
+            display('assign values to the distance cost layer, set as DS.costmap');  tic
+            ds.occgrid2costmap(ds.occgrid); toc
             %           figure; idisp(ds.costmap)
             % assign values to the heuristic cost layer, set as DS.cost_heuristic
-            ds.calcHeuristic(ds.occgrid, ds.goal);
+            display('assign values to the heuristic cost layer, set as DS.cost_heuristic');  tic
+            ds.calcHeuristic(ds.occgrid, ds.goal);  toc
             % Additional cost layers are added by the user with the
             % DS.addCost() method
             
@@ -325,24 +335,20 @@ classdef DstarMOO < Navigation
             
     biggest_path_so_far_ = 0;
     num_cycles = 0;
-    tic
     
-            while true
-       
-    if rem( ds.num_iterations, 10 ) == 0
-        P = ds.path(start_);     % plan solution path start-goal, return path        
-        num_cycles = num_cycles + 1;
-        if size(P,1) > biggest_path_so_far_
-            biggest_path_so_far_ = size(P,1);
-            num_cycles = 0;
-            toc
-            display(size(P))
-            tic
-        end
-        if biggest_path_so_far_  > 0 && num_cycles > 10
-            break;
-        end
-    end;
+            while true       
+                    if rem( ds.num_iterations, 10 ) == 0
+                        P = ds.path(start_);     % plan solution path start-goal, return path        
+                        num_cycles = num_cycles + 1;
+                        if size(P,1) > biggest_path_so_far_
+                            biggest_path_so_far_ = size(P,1);
+                            num_cycles = 0;
+                            %  display(size(P))
+                        end
+                        if biggest_path_so_far_  > 0 && num_cycles > 10
+                            break;
+                        end
+                    end;
        
                 if ~ds.quiet && mod(ds.num_iterations, 20) == 0
                     ds.spinner();
@@ -356,6 +362,7 @@ classdef DstarMOO < Navigation
                     disp(' ')
                 end
             end
+            % end while
             if ~ds.quiet
                 fprintf('\r');
             end
@@ -486,6 +493,7 @@ classdef DstarMOO < Navigation
             % as above.
         end
         
+        
     end % public methods
 
     
@@ -509,7 +517,7 @@ classdef DstarMOO < Navigation
             ds.cost_heuristic=zeros(size(grid));
             for ii=1:size(grid,1)
                 for jj=1:size(grid,2)
-                    ds.cost_heuristic(ii,jj)=sqrt((ii-goal(1))^2+(jj-goal(2))^2);
+                    ds.cost_heuristic(ii,jj)=sqrt((ii-goal(1))^2+(jj-goal(2))^2) .* ds.motion_cost ;
                 end
             end
         end
@@ -666,7 +674,9 @@ classdef DstarMOO < Navigation
                     pt = [ds.cost_g(back_pointer) + ds.traversal_cost(a,back_pointer);
                           ds.cost_heuristic(a) + ds.world(a);
                           %ds.cost_01(a).*50;    % hard-coded explicit weighting:  increase the influence of cost layer 1
-                          ds.cost_01(a);
+                          ds.cost_01(a);  % *abs(cos(divergence))  -  divergence between normal_to_ray_from_camera and vector ( back_pointer to a ) : parallel to the normal is best (1), parallel to the ray is worst (2)
+                            % qu:  where's the camera?
+                            % idea: precompute the normal angle at each point --> field per costmap 
                           ds.cost_02(a);
                           ds.cost_03(a);
                           ];
@@ -731,8 +741,9 @@ classdef DstarMOO < Navigation
             rotational_uncertainty_factor = 0.5 ;
             rotational_uncertainty = atan2(r(1)-c(1) , r(2)-c(2))  * rotational_uncertainty_factor  ;
             
-            dist = sqrt(sum(diff([r c]).^2));
-            dcost = (ds.costmap(X) + ds.costmap(Y))/2;
+            dist = sqrt(sum(diff([r c]).^2)) ;
+            dist = dist * ds.motion_cost ;
+            dcost = (ds.costmap(X) + ds.costmap(Y))/2  ;
 
             dist_times_dcost = dist * dcost;
             cost = dist_times_dcost  ; 
