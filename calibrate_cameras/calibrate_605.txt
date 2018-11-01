@@ -1,0 +1,42 @@
+cam 605
+
+
+Fails to save camera intrinsic parameters from file - ?YAML library?
+ --> Fails to load camera intrinsic parameters from file.
+
+From Android log at the end of the calibration process in the  org.boofcv.android.calib.CalibrationComputeActivity#pressedAccept  method.
+
+Read values:
+
+10-15 12:37:09.249 19496-19496/org.boofcv.android I/System.out: Shape 320 240
+10-15 12:37:09.249 19496-19496/org.boofcv.android I/System.out: center  158.00  122.73
+10-15 12:37:09.254 19496-19496/org.boofcv.android I/System.out: fx = 297.80371075244767
+10-15 12:37:09.254 19496-19496/org.boofcv.android I/System.out: fy = 277.0224437550528
+10-15 12:37:09.254 19496-19496/org.boofcv.android I/System.out: skew = 0.0
+10-15 12:37:09.254 19496-19496/org.boofcv.android I/System.out: radial[0] = 7.05e-02
+10-15 12:37:09.254 19496-19496/org.boofcv.android I/System.out: radial[1] = -1.99e-01
+
+Read plain file:
+
+10-15 12:54:32.801 1788-1788/org.boofcv.android D/DemoMain: --- Start reading file = cam0.txt ------------
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out: # (fx,fy) = focal length, (cx,cy) = principle point, (width,height) = image shape
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out: # radial = radial distortion, (t1,t2) = tangential distortion
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out: pinhole:
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out:   width: 320
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out:   height: 240
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out:   cx: 161.6704953165981
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out:   skew: 0.0
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out:   fy: 282.53705031536725
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out:   fx: 304.1538058563233
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out:   cy: 123.74816535626532
+10-15 12:54:32.808 1788-1788/org.boofcv.android I/System.out: radial_tangential:
+10-15 12:54:32.809 1788-1788/org.boofcv.android I/System.out:   t1: 0.0
+10-15 12:54:32.809 1788-1788/org.boofcv.android I/System.out:   t2: 0.0
+10-15 12:54:32.809 1788-1788/org.boofcv.android I/System.out:   radial:
+10-15 12:54:32.809 1788-1788/org.boofcv.android I/System.out:   - 0.17627372552088988
+10-15 12:54:32.809 1788-1788/org.boofcv.android I/System.out:   - -0.4826516821398836
+10-15 12:54:32.809 1788-1788/org.boofcv.android I/System.out: model: pinhole_radial_tangential
+10-15 12:54:32.809 1788-1788/org.boofcv.android I/System.out: null
+10-15 12:54:32.809 1788-1788/org.boofcv.android D/DemoMain: --- End reading file = cam0.txt ------------
+
+

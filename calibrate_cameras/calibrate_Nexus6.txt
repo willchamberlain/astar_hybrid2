@@ -1,0 +1,12 @@
+From Android log during startup after calibration process
+
+10-15 12:54:32.883 1788-1788/org.boofcv.android I/System.out: Camera prefereces intrinsic parameters set as - start -------------------------
+10-15 12:54:32.883 1788-1788/org.boofcv.android I/System.out: Shape 320 240
+10-15 12:54:32.884 1788-1788/org.boofcv.android I/System.out: center  161.67  123.75
+10-15 12:54:32.885 1788-1788/org.boofcv.android I/System.out: fx = 304.1538058563233
+10-15 12:54:32.885 1788-1788/org.boofcv.android I/System.out: fy = 282.53705031536725
+10-15 12:54:32.885 1788-1788/org.boofcv.android I/System.out: skew = 0.0
+10-15 12:54:32.886 1788-1788/org.boofcv.android I/System.out: radial[0] = 1.76e-01
+10-15 12:54:32.887 1788-1788/org.boofcv.android I/System.out: radial[1] = -4.83e-01
+10-15 12:54:32.887 1788-1788/org.boofcv.android I/System.out: No tangential
+10-15 12:54:32.887 1788-1788/org.boofcv.android I/System.out: Camera prefereces intrinsic parameters set as - end -------------------------
