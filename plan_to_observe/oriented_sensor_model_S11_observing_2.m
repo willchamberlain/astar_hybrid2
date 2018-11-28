@@ -28,6 +28,7 @@ f_floorplan_opened = figure; idisp(floorplan(1:scaledown:end,1:scaledown:end),'y
 
 %       xlim([1 304])
 %       ylim([1 201])
+
         
 %   Robot's original task 
 robot_start = [145;51].*scaledown  ;

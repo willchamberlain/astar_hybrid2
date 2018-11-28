@@ -268,7 +268,7 @@ f_payoffs_map_is_layer_1 = figure; s=surf(flip(payoffs_map_is_layer_1,1)); s.Edg
 %% for DStarMoo 
 addpath('/mnt/nixbig/ownCloud/project_code/3rd_party/robotics-toolbox-matlab/')
 addpath('/mnt/nixbig/ownCloud/project_code/')
-         %%  (3 - reduced) reduced map size
+        %%  (3 - reduced) reduced map size
 
         scaledown = 4;
 
@@ -277,9 +277,7 @@ addpath('/mnt/nixbig/ownCloud/project_code/')
         map_1 = zeros(base_size) ;  % no walls
         map_1=map_1(1:scaledown:end,1:scaledown:end) ;
 
-        payoffs_map_reduced=payoffs_map(1:scaledown:end,1:scaledown:end,:)  ; 
-
-        
+        payoffs_map_reduced=payoffs_map(1:scaledown:end,1:scaledown:end,:)  ;         
         %   start_1  = [265 ; 262]  ;
         %         start_1  = [73  ;  33].*cells_per_metre  ;
         %         start_1  = round(start_1 ./ scaledown) ;
@@ -290,92 +288,30 @@ addpath('/mnt/nixbig/ownCloud/project_code/')
         goal_1  = robot_goal  ;
         
         
-        % flooplan_ is the flooplan: it is the world model of static obstacles:  it belongs to the map owner
-        floorplan_ = zeros(base_size);        
-        
-        floorplan_=floorplan_(1:scaledown:end,1:scaledown:end) ;  
-        size(floorplan_)
-        floorplan_(round([215:260]./ scaledown),round([209:211]./ scaledown)) = 1000000 ;  % wall to mostly bisect the middle FoV
-        floorplan_(round([215:260]./ scaledown),round([249:251]./ scaledown)) = 1000000 ;  % wall 
-        %   floorplan_(rows,cols)
-        floorplan_( round([209:251]./ scaledown) , round([260:260]./ scaledown )) = 1000000 ;  % wall
-        floorplan_( round([260:260]./ scaledown) , round([209:251]./ scaledown )) = 1000000 ;  % wall
-        
-        wall__reduced_image = [    195, 85 ;
-                                                        195, 95 ]  ;
-        wall__data_full = wall__reduced_image.*scaledown  ;        
-        wall__data_reduced = round(wall__data_full ./ scaledown)  ;
-        floorplan_( wall__data_reduced(1,2):wall__data_reduced(2,2),wall__data_reduced(1,1)-1 : wall__data_reduced(2,1)+1) = 1000000 ;  
-        
-        
-        % as = DstarMOO(map_1,floorplan_);    % create Navigation object        
-        
-        %as = DstarMOO(map_1, (floorplan>0).*100000000000 );    % create Navigation object
-        
+        % flooplan_ is the flooplan: it is the world model of static obstacles:  it belongs to the map owner        
         floorplan_S11 = zeros(size(floorplan))  ;
         floorplan_S11(floorplan<1) = inf  ;        
         floorplan_S11(floorplan<1) = 1000000  ;        
         floorplan_S11 = floorplan_S11( 1:scaledown:end , 1:scaledown:end )  ;
-        %as = DstarMOO(map_1, floorplan_S11 );    % create Navigation object
-        
-        
-        
-        costs_map = max(max(payoffs_map(:,:,1))) - payoffs_map(:,:,1) ;
-        costs_map = squeeze(costs_map ) ;
-        %costs_map(floorplan<1) = 10*max(max(payoffs_map(:,:,1))) ;
-        costs_map = costs_map(1:scaledown:end,1:scaledown:end) ;
-        % payoffs_map_reduced(:,:,1) = costs_map  ;
-        normA = costs_map - min(min((costs_map)));
-        normA = normA ./ max(max(normA))  ;
-        %as.addCost(1,normA);        % add 1st add'l cost layer L
-        
-        costs_map = max(max(payoffs_map(:,:,2))) - payoffs_map(:,:,2) ;
-        costs_map = squeeze(costs_map ) ;
-        %costs_map(floorplan<1) = 10*max(max(payoffs_map(:,:,2))) ;
-        costs_map = costs_map(1:scaledown:end,1:scaledown:end) ;
-        % payoffs_map_reduced(:,:,2) = costs_map  ;
-        normA = costs_map - min(min((costs_map)));
-        normA = normA ./ max(max(normA))  ;
-        %as.addCost(2,normA);        % add 1st add'l cost layer L
-        
-        costs_map = max(max(payoffs_map(:,:,3))) - payoffs_map(:,:,3) ;
-        costs_map = squeeze(costs_map ) ;
-        %costs_map(floorplan<1) = 10*max(max(payoffs_map(:,:,3))) ;
-        costs_map = costs_map(1:scaledown:end,1:scaledown:end) ;
-        % payoffs_map_reduced(:,:,3) = costs_map  ;
-        normA = costs_map - min(min((costs_map)));
-        normA = normA ./ max(max(normA))  ;
-%         normA = zeros(size(normA )) ;
-        %as.addCost(3,normA);        % add 1st add'l cost layer L
          
-f_payoffs_map = figure; 
-s=surf(payoffs_map(1:scaledown:end,1:scaledown:end,1)); zlim([ 0 max(max(payoffs_map(:,:,4)))] ) % payoffs 1-3 are per-camera, #4 is the composite, not to be used here
-s.EdgeColor='none'
-hold on
-s=surf(payoffs_map(1:scaledown:end,1:scaledown:end,4));
-s.EdgeColor='none'
-f_payoffs_map.Name='payoffs_map(1:scaledown:end,1:scaledown:end,4)';     
+                    f_payoffs_map = figure; 
+                    s=surf(payoffs_map(1:scaledown:end,1:scaledown:end,1)); zlim([ 0 max(max(payoffs_map(:,:,4)))] ) % payoffs 1-3 are per-camera, #4 is the composite, not to be used here
+                    s.EdgeColor='none'
+                    hold on
+                    s=surf(payoffs_map(1:scaledown:end,1:scaledown:end,4));
+                    s.EdgeColor='none'
+                    f_payoffs_map.Name='payoffs_map(1:scaledown:end,1:scaledown:end,4)';     
  
-            size(floorplan)
+            size(floorplan_S11)
             size(payoffs_map) 
-            %  floorplan_display_as_surf = (1-floorplan).*Vz*0.75  ;
-            %  floorplan_display_as_surf = (1-floorplan).*Vz  ; 
-            % s=surf(  floorplan_display_as_surf(1:scaledown:end,1:scaledown:end,1)  ); 
-            % s.EdgeColor='None'
-            % s.FaceColor='k'
  
-%-- demo plan BETTER : use the same object as the robots : fixed goal, fixed starting point : test the time to plan
-        payoffs_map_costmap_layers = payoffs_map_reduced(:,:,1:3)  ;  % CHANGE THIS TO CHANGE THE ROBOT PLANNING
-        % floorplan_  %  MAKE SURE THAT THIS IS RIGHT        
-        start_1  = [73  ;  33].*cells_per_metre  ;  start_1  = round(start_1 ./ scaledown) ;
-        goal_1 = [83  ;  39].*cells_per_metre  ;    goal_1 = round(goal_1 ./ scaledown) ;
-        start_1 = [183;93] ;
+        payoffs_map_costmap_layers = payoffs_map_reduced(:,:,1:3)  ;  
         robot_start = [145;51]  ;
         robot_goal = [229;43]  ;
         start_1  = robot_start  ;
         goal_1  = robot_goal  ;
-        demo_start_location =  start_1  ;  %  MAKE SURE THAT THIS IS RIGHT
-        demo_goal_location =  goal_1  ;  %  MAKE SURE THAT THIS IS RIGHT
+        demo_start_location =  start_1  ;  
+        demo_goal_location =  goal_1  ;  
         % s_demo_plan = Sensor_model_as_object('s_demo_plan', floorplan_ , payoffs_map_costmap_layers , demo_start_location , demo_goal_location ,  1  ) ;
         motion_cost = 20 ;
         s_demo_plan = Sensor_model_as_object('s_demo_plan', floorplan_S11 , payoffs_map_costmap_layers , demo_start_location , demo_goal_location ,  1 , motion_cost  ) ;  
@@ -386,19 +322,61 @@ f_payoffs_map.Name='payoffs_map(1:scaledown:end,1:scaledown:end,4)';
         s_fastest_plan = Sensor_model_as_object('s_demo_plan', floorplan_S11 , zeros(size(payoffs_map_costmap_layers)) , demo_start_location , demo_goal_location ,  1 , motion_cost  ) ;                 
         s_fastest_plan__path =  s_fastest_plan.planningStep(demo_start_location)  ;
         
-            f_payoffs_map_costmap_layers = figure; f_payoffs_map_costmap_layers.Name='f_payoffs_map_costmap_layers'; 
-            hold on; s=surf(payoffs_map_costmap_layers(:,:,1)); s.EdgeColor='None'  ;
-            hold on; s=surf(payoffs_map_costmap_layers(:,:,2)); s.EdgeColor='None'  ;
-            hold on; s=surf(payoffs_map_costmap_layers(:,:,3)); s.EdgeColor='None'  ;       
-            %   hold on; s=surf(0.5*(floorplan_S11>0));  s.EdgeColor='None';  s.FaceAlpha=0.2  ;
-            hold on; s=surf(0.5 + (0.5*(floorplan_S11>0))) ;  s.EdgeColor='None' ;  s.FaceAlpha=0.7  ;  s.FaceColor='k'  ;
-            hold on; s=surf(0.5*(floorplan_S11>0)) ;  s.EdgeColor='None' ;  
-            plot3_rows( [  [ s_demo_plan__path]' ; ones(1,size(s_demo_plan__path,1)) ]  , 'rx' )  ;
+
+        costmaps_to_assess = [ ...
+            0 0 1
+            0 1 0
+            1 0 0       % is one target completely rubbish for this robot ?
+            0 1 1 
+            1 0 1
+            1 1 0       % is any combination of targets low-effort ?  -->  Geometry of combined cost-map + level-set ?? -->  observation region as target, rather than simple costmap of the target <-- but wouldn't that get taken care of in the general case with a single combined costmap? -->  who cares it's a theory <-- who else has done it --> who else has done it on information-theoretic for oriented sensor for mobile robots teams/collaboration?
+            1 1 1 ];
+        paths_found={};
+        for ii_ = 1:size(costmaps_to_assess,1)
+            display('--- start -------------------------------------------------------------------------------------------------------')
+            display(sprintf('iteration %i: costmaps_to_assess(ii_,:) =', ii_))
+            costmaps_to_assess(ii_,:)
+            num_layers = sum(costmaps_to_assess(ii_,:),2)  
+            payoff_costmap = zeros(size(payoffs_map_costmap_layers,1),size(payoffs_map_costmap_layers,2),num_layers)  ;
+            layers_used=0  ;
+             for jj_ = 1:size(costmaps_to_assess,2)
+                 [ii_,jj_]
+                if costmaps_to_assess(ii_,jj_) 
+                    [ii_,jj_]
+                    layers_used = layers_used + 1;
+                    payoff_costmap(:,:,layers_used)=payoffs_map_costmap_layers(:,:,jj_)  ;
+                end
+            end
+            size(payoff_costmap)
+            motion_cost = 5 ;
+            s_demo_plan = Sensor_model_as_object('s_demo_plan', floorplan_S11 , payoff_costmap , demo_start_location , demo_goal_location ,  1 , motion_cost  ) ;    
+            s_demo_plan__path =  s_demo_plan.planningStep(demo_start_location)  ;
+            s_demo_plan.as.plan(demo_start_location,scaledown,demo_goal_location);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic             
+            P = s_demo_plan.as.path(start_1);    % plan solution path star-goal, return path 
+            paths_found{ii_} = P  ;
+            display('--- end -------------------------------------------------------------------------------------------------------')
+         end
+         paths_found
+         
+         figure; hold on; grid on;
+         for ii_ = 1:size(paths_found,2)
+             plot3_rows( [ paths_found{ii_}' ; ii_*ones(size(paths_found{ii_},1))], 'r:')
+         end
+         
         
-            f_floorplan_S11= figure; s=surf(floorplan_S11);  s.EdgeColor='None' ;  hold on; f_floorplan_S11.Name='demo plan : floorplan_S11  plus  s_demo_plan__path' ;
-            plot3_rows( [  [ s_demo_plan__path]' ; max(max(floorplan_S11))*ones(1,size(s_demo_plan__path,1)) ]  , 'rx' )  ;
-        
-            figure(f_payoffs_map);  pause(1); hold on;                %plot3_rows( [ P 1.1*ones(size(P,1),1)]' , 'rx', 'LineWidth',2)  % plot flat         
+                f_payoffs_map_costmap_layers = figure; f_payoffs_map_costmap_layers.Name='f_payoffs_map_costmap_layers'; 
+                hold on; s=surf(payoffs_map_costmap_layers(:,:,1)); s.EdgeColor='None'  ;
+                hold on; s=surf(payoffs_map_costmap_layers(:,:,2)); s.EdgeColor='None'  ;
+                hold on; s=surf(payoffs_map_costmap_layers(:,:,3)); s.EdgeColor='None'  ;       
+                %   hold on; s=surf(0.5*(floorplan_S11>0));  s.EdgeColor='None';  s.FaceAlpha=0.2  ;
+                hold on; s=surf(0.5 + (0.5*(floorplan_S11>0))) ;  s.EdgeColor='None' ;  s.FaceAlpha=0.7  ;  s.FaceColor='k'  ;
+                hold on; s=surf(0.5*(floorplan_S11>0)) ;  s.EdgeColor='None' ;  
+                plot3_rows( [  [ s_demo_plan__path]' ; ones(1,size(s_demo_plan__path,1)) ]  , 'rx' )  ;
+
+                f_floorplan_S11= figure; s=surf(floorplan_S11);  s.EdgeColor='None' ;  hold on; f_floorplan_S11.Name='demo plan : floorplan_S11  plus  s_demo_plan__path' ;
+                plot3_rows( [  [ s_demo_plan__path]' ; max(max(floorplan_S11))*ones(1,size(s_demo_plan__path,1)) ]  , 'rx' )  ;
+
+                figure(f_payoffs_map);  pause(1); hold on;                %plot3_rows( [ P 1.1*ones(size(P,1),1)]' , 'rx', 'LineWidth',2)  % plot flat         
             tic
          s_demo_plan.as.plan(demo_start_location,scaledown,demo_goal_location);       % setup costmap for specified goal ;  N = number of cost layers to use, where 1=distance and 2=heuristic
             toc
@@ -408,22 +386,22 @@ f_payoffs_map.Name='payoffs_map(1:scaledown:end,1:scaledown:end,4)';
         P_fastest = s_fastest_plan.as.path(start_1);    % plan solution path star-goal, return path 
         size(P)
         path_plotpoints = [ P 1.1*ones(size(P,1),1)]  ;
-            figure_named('s_demo_plan.as.path(start_1)'); s=surf( payoffs_map_reduced(:,: , 4) ); s.EdgeColor='None'  ;  hold on ;
-            for ii_ = 1:size(P,1)
-                plot3( P(ii_,1),P(ii_,2),  payoffs_map_reduced(P(ii_,2),P(ii_,1),4)+0.01, 'rs', 'LineWidth',1)  ;  % plot across the surface
-            end 
+                figure_named('s_demo_plan.as.path(start_1)'); s=surf( payoffs_map_reduced(:,: , 4) ); s.EdgeColor='None'  ;  hold on ;
+                for ii_ = 1:size(P,1)
+                    plot3( P(ii_,1),P(ii_,2),  payoffs_map_reduced(P(ii_,2),P(ii_,1),4)+0.01, 'rs', 'LineWidth',1)  ;  % plot across the surface
+                end 
         
         size(payoffs_map_reduced)
         payoffs_map_costmap_layers = payoffs_map_reduced(:,:,1:3)  ;  % CHANGE THIS TO CHANGE THE ROBOT PLANNING
         
-            figure; hold on; grid on; plot_rows(P'); axis equal
+                figure; hold on; grid on; plot_rows(P'); axis equal
         
         %  integrate the payoffs: 
         maxed_payoffs_map_costmap_layers = max(payoffs_map_costmap_layers,[],3) ;
-        figure; hold on; s=surf(sum(payoffs_map_costmap_layers,3)); s.EdgeColor='None'; hold on;
+                figure; hold on; s=surf(sum(payoffs_map_costmap_layers,3)); s.EdgeColor='None'; hold on;
         payoff_achieved = 0;
         for ii_ = 1:size(P,1)
-            plot3( P(ii_,1),P(ii_,2),  maxed_payoffs_map_costmap_layers(P(ii_,2),P(ii_,1)), 'rs', 'LineWidth',1)  ;  
+                plot3( P(ii_,1),P(ii_,2),  maxed_payoffs_map_costmap_layers(P(ii_,2),P(ii_,1)), 'rs', 'LineWidth',1)  ;  
             payoff_achieved = payoff_achieved + maxed_payoffs_map_costmap_layers(P(ii_,2),P(ii_,1)) ;
         end
         payoff_achieved
@@ -432,7 +410,7 @@ f_payoffs_map.Name='payoffs_map(1:scaledown:end,1:scaledown:end,4)';
             distance_cost_achieved = 0;
             ii_ = 1  ;
             for ii_ = 1:size(P_fastest,1)
-                plot3( P_fastest(ii_,1),P_fastest(ii_,2),  maxed_payoffs_map_costmap_layers(P(ii_,2),P(ii_,1)), 'mo', 'LineWidth',1)  ;  
+                    plot3( P_fastest(ii_,1),P_fastest(ii_,2),  maxed_payoffs_map_costmap_layers(P(ii_,2),P(ii_,1)), 'mo', 'LineWidth',1)  ;  
                 distance_cost_achieved = distance_cost_achieved +   norm_2( P(ii_,:)-P_fastest(ii_,:) ,2)  ;
             end      
             for jj_ = ii_:size(P)
@@ -441,6 +419,7 @@ f_payoffs_map.Name='payoffs_map(1:scaledown:end,1:scaledown:end,4)';
             distance_cost_achieved
             % integrate the time costs :
             time_cost = size(P,1) - size(P_fastest,1)  ;  
+            time_cost
         
 %         for layer_num_ = 1:3
 %             c2=payoffs_map_costmap_layers(:,:,layer_num_);

@@ -1,0 +1,138 @@
+/*
+g++ opencv_get_from_camera.cpp -I/usr/include/opencv2 -L/usr/local/lib -lopencv_highgui -lopencv_core -lopencv_imgproc
+
+https://docs.opencv.org/2.4/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=videocapture#videocapture
+*/
+
+#if WIN32
+  #include <windows.h>
+#else
+  #include <X11/Xlib.h>
+#endif
+
+#include <iostream>
+#include <memory>
+
+#include "opencv2/opencv.hpp"
+
+int camera_num = 1;
+
+void getScreenResolution(int &screen_width, int &screen_height) {
+#if WIN32
+    screen_width  = (int) GetSystemMetrics(SM_CXSCREEN);
+    screen_height = (int) GetSystemMetrics(SM_CYSCREEN);
+#else
+    Display* disp = XOpenDisplay(NULL);
+    Screen*  scrn = DefaultScreenOfDisplay(disp);
+    screen_width  = scrn->width;
+    screen_height = scrn->height;
+#endif
+}
+
+
+void mouseCallback(int event, int x, int y, int flags, void* userdata) {
+    user_data* user_data_ptr = (user_data*)userdata;
+    std::shared_ptr<CvPoint> sp = user_data_ptr->sp ;
+    // std::cout << "sp->x == " <<sp->x << std::endl;
+    if(event == CV_EVENT_LBUTTONDOWN) {
+        // std::cout << "LEFT DOWN: " << x << "," << y << " : [" << flags << "]" << std::endl << std::endl;
+        sp->x = x;  sp->y = y;
+    } else if(event == CV_EVENT_LBUTTONUP) {
+        // std::cout << "LEFT UP: " << x << "," << y << " : [" << flags << "]" << std::endl << std::endl;
+        sp->x = x;  sp->y = y;
+    } else if(event == CV_EVENT_RBUTTONDOWN) {
+        // std::cout << "RIGHT DOWN: " << x << "," << y << " : [" << flags << "]" << std::endl << std::endl;
+    } else if(event == CV_EVENT_RBUTTONUP) {
+        // std::cout << "RIGHT UP: " << x << "," << y << " : [" << flags << "]" << std::endl << std::endl;
+    } else {
+        if(flags == 1) {
+            // std::cout << "NOT click but left is held down: " << x << "," << y << " : [" << flags << "]" << std::endl << std::endl;
+        } else if(flags == 2) {
+            // std::cout << "NOT click but right is held down: " << x << "," << y << " : [" << flags << "]" << std::endl << std::endl;
+        } else {
+            // std::cout << "NOT left: " << x << "," << y << " : [" << flags << "]" << std::endl << std::endl;
+        }
+    } 
+}
+
+
+struct user_data {
+    std::shared_ptr<CvPoint> sp;
+};
+
+
+int main(int argc, char const *argv[])
+{
+    cv::VideoCapture cap(camera_num);
+    if(!cap.isOpened())  // check if we succeeded
+    {
+        std::cout << "could not open camera " << camera_num << std::endl;
+        return -1;
+    } else {
+        std::cout << "DID open camera " << camera_num << std::endl;
+    }
+    cv::Mat edges;
+    cv::namedWindow("edges",CV_WINDOW_NORMAL);
+    int screen_width=0, screen_height=0;
+    getScreenResolution(screen_width, screen_height);
+    float win_aspect_width_to_height = 600.0f/800.0f;
+    float win_aspect_height_to_width = 1.0f/win_aspect_width_to_height;
+    int win_width = screen_width/2;
+    int win_height = ((float)win_width)*win_aspect_width_to_height;
+    std::cout << "win_width, win_height=" << win_width << "," << win_height << std::endl;
+    cv::moveWindow("edges", (screen_width-win_width)/2, (screen_height-win_height)/2);
+    cv::resizeWindow("edges", win_width, win_height);
+
+    CvPoint point;  point.x=-5; point.y=73;
+    CvPoint point2; point2.x=point.x; point2.y=point.y;
+    auto point_shared_pointer = std::make_shared<CvPoint>(point);
+    auto point_shared_pointer_via_make_shared_empty = std::make_shared<CvPoint>();
+    point_shared_pointer_via_make_shared_empty->x;
+    std::shared_ptr<CvPoint> point_shared_pointer_via_initialiser(new CvPoint);
+    point_shared_pointer_via_initialiser->x;
+    auto sp2 = point_shared_pointer;
+    user_data user_data_; user_data_.sp = point_shared_pointer;
+    // cv::setMouseCallback("edges", mouseCallback, &point_shared_pointer);
+    cv::setMouseCallback("edges", mouseCallback, &user_data_);
+    std::shared_ptr<CvPoint> sp3 = point_shared_pointer;
+
+    
+
+    int Canny_threshold_1_base = 30, Canny_threshold_1 = Canny_threshold_1_base;
+    for(int ii_=0;ii_<1;) {
+        cv::Mat frame;
+        cap >> frame;
+        cv::cvtColor(frame,edges, CV_BGR2GRAY);
+        cv::GaussianBlur(edges, edges, cv::Size(7,7) , 1.5, 1.5 );
+        cv::Canny(edges, edges, 0, Canny_threshold_1, 3);
+        cv::imshow("edges",edges);
+        if(cv::waitKey(1) >= 0 ) {
+            std::cout << "Breaking the loop" << std::endl;
+            break;                
+        }
+        if(point2.x!= sp3->x || point2.y!=sp3->y) {
+            std::cout << "point_shared_pointer-> ==(" <<point_shared_pointer->x<<","<<point_shared_pointer->y<<")" << std::endl;        
+            std::cout << "sp2-> ==(" <<sp2->x<<","<<sp3->y<<")" << std::endl;        
+            std::cout << "sp3-> ==(" <<sp3->x<<","<<sp3->y<<")" << std::endl;        
+            std::cout << "point==(" <<point.x<<","<<point.y<<")" << std::endl;
+            std::cout << "changed: was "<< point2.x <<","<< point2.y <<" : is now "<< point.x <<","<< point.y <<" " << std::endl;
+            int diff = point2.y - sp3->y;
+            diff = (int)(  (10.0f*(float)diff/(float)win_height) - 5.0f ); 
+
+            int win_pos_y = (screen_height-win_height)/2;
+            float how_far_up = (3.0f/2.0f)*(float)sp3->y / (float)win_height;
+            std::cout << (float)win_width << "," << (float)win_height << "  :  (3.0f/2.0f)*(float)sp3->y / (float)win_height = " << how_far_up << std::endl;
+
+            (3.0f/2.0f)*(float)sp3->y / (float)win_height;
+
+            Canny_threshold_1 = (int)((2.0f*how_far_up)*(float)Canny_threshold_1_base) ;
+            point2.x=sp3->x; point2.y=sp3->y;
+
+            std::cout << "Canny_threshold_1=" << Canny_threshold_1 << std::endl;
+
+        }
+    }
+
+
+    return 0;
+}

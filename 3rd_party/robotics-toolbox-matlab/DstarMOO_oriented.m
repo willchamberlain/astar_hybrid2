@@ -711,6 +711,8 @@ classdef DstarMOO_oriented < Navigation
                           if ds.cost_01(a) < 0.999
                             ang_diff = atan2(vec(1),vec(2)) - ds.normals_01(a); if ang_diff > pi; ang_diff = ang_diff - 2*pi; end; if ang_diff < -pi; ang_diff = ang_diff + 2*pi; end; 
                             dir_cost_factor_1 = 2 - abs( cos(    ang_diff    )  )  ;
+                                dir_cost_factor_1 = abs( sin(    ang_diff    )  )  ; if abs(dir_cost_factor_1) > pi/2 ;  dir_cost_factor_1 = -dir_cost_factor_1;  end; 
+                                dir_cost_factor_1 = 2 - dir_cost_factor_1 ;
                             cell_cost_01 = ds.cost_01(a).*dir_cost_factor_1;                           
                           else
                               cell_cost_01 = ds.cost_01(a); 
@@ -718,6 +720,8 @@ classdef DstarMOO_oriented < Navigation
                           if ds.cost_02(a) < 0.999
                             ang_diff = atan2(vec(1),vec(2)) - ds.normals_02(a); if ang_diff > pi; ang_diff = ang_diff - 2*pi; end;  if ang_diff < -pi; ang_diff = ang_diff + 2*pi; end; 
                             dir_cost_factor_2 = 2 - abs( cos(    ang_diff   )  )  ;
+                                    dir_cost_factor_2 =  abs( sin(    ang_diff   )  )  ; if abs(dir_cost_factor_2) > pi/2 ;  dir_cost_factor_2 = -dir_cost_factor_2;  end; 
+                                    dir_cost_factor_2 = 2-dir_cost_factor_2 ;
                             cell_cost_02 = ds.cost_02(a).*dir_cost_factor_2;                           
                           else
                               cell_cost_02 = ds.cost_02(a); 
@@ -725,6 +729,8 @@ classdef DstarMOO_oriented < Navigation
                           if ds.cost_03(a) < 0.999
                               ang_diff = atan2(vec(1),vec(2)) - ds.normals_03(a); if ang_diff > pi; ang_diff = ang_diff - 2*pi; end;  if ang_diff < -pi; ang_diff = ang_diff + 2*pi; end; 
                               dir_cost_factor_3 = 2 - abs( cos(    ang_diff    )  )  ;
+                                      dir_cost_factor_3 = abs( sin(    ang_diff    )  )  ;  if abs(dir_cost_factor_3) > pi/2 ;  dir_cost_factor_3 = -dir_cost_factor_3;  end; 
+                                      dir_cost_factor_3 = 2 - dir_cost_factor_3 ;
                               cell_cost_03 = ds.cost_03(a).*dir_cost_factor_3;                           
                           else
                               cell_cost_03 = ds.cost_03(a); 

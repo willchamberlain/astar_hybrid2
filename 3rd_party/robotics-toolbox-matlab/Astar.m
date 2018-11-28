@@ -114,6 +114,10 @@ classdef Astar < Navigation
     
     
     methods  % start of public methods
+        
+        function b__ = get_b(obj)
+            b__ = obj.b;
+        end
 
         function as = Astar(world, varargin)
             %Astar.Astar A* constructor
@@ -221,6 +225,9 @@ classdef Astar < Navigation
             plot@Navigation(as, 'distance', as.costmap(:,:,3), varargin{:});
         end
 
+        function occ__ = get_occgrid(obj)
+            occ__ = obj.occgrid;
+        end
         
         function n = next(as, current)
             % Invoked by Navigation.step
@@ -233,10 +240,12 @@ classdef Astar < Navigation
             % Set X as the backpointer of X
             X = as.b(X);
             if X == 0
+                display(sprintf('Astar: next: at (%i,%i) Goal (no further backpointer)',current(1),current(2)))
                 % Goal (no further backpointer)
                 n = [];
             else
                 [r,c] = ind2sub(size(as.occgrid), X);
+                display(sprintf('Astar: next: at (%i,%i) got next step (%i,%i)',current(1),current(2),c,r))
                 n = [c;r];
             end
         end        
@@ -272,9 +281,9 @@ classdef Astar < Navigation
             as.openlist = zeros(as.L+1,0);
             
             % Initialize cost layers
-            for a = 2:as.L
-                as.costmap(:,:,a) = zeros(size(as.occgrid));
-            end
+             for a = 2:3
+                 as.costmap(:,:,a) = zeros(size(as.occgrid));
+             end
             
             % Cost priority/tiebreaker: layer 2 (distance to node)
             as.tie = 2;
@@ -474,6 +483,8 @@ classdef Astar < Navigation
         % Inputs
         %   values: normalized matrix the size of the environment
             [i,j,k] = size(as.costmap);
+            display('size(as.occgrid)=');
+            display(size(as.occgrid))
             
             if [i,j]~=size(as.occgrid)
                 error('layer size does not match the environment')
@@ -481,8 +492,11 @@ classdef Astar < Navigation
             if max(max(values))~=1 || min(min(values))~=0
                 error('layer values are not normalized [0,1]')
             end
-            
+            display('size(as.costmap)=')
+            display(size(as.costmap))
             as.costmap(:,:,k+1) = values;
+            display('size(as.costmap)=')
+            display(size(as.costmap))
         end
         
         
@@ -596,8 +610,14 @@ classdef Astar < Navigation
                 % the OPEN/CLOSED list & has a lower f than successor, 
                 % then skip this successor.
             else
+                display( 'size(as.openlist)=' )
+                display( size(as.openlist) )
+                display('size(pt(:))=')
+                display(size(pt(:)))
                 % Add a new column to the open list for this node
                 as.openlist = [as.openlist [X; pt(:)]];
+                display( 'size(as.openlist)=' )
+                display( size(as.openlist) )
             end
             
             % Keep track of the max length of the openlist
