@@ -1,0 +1,41 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "/mnt/nixbig/downloads/opengl__ogldev-source"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"cctype": "cpp",
+			"cmath": "cpp",
+			"cstdarg": "cpp",
+			"cstddef": "cpp",
+			"cstdio": "cpp",
+			"cstdlib": "cpp",
+			"cstring": "cpp",
+			"ctime": "cpp",
+			"cwchar": "cpp",
+			"strstream": "cpp",
+			"iosfwd": "cpp",
+			"cfenv": "cpp",
+			"cstdint": "cpp",
+			"typeindex": "cpp",
+			"*.tcc": "cpp",
+			"clocale": "cpp",
+			"cwctype": "cpp",
+			"exception": "cpp",
+			"initializer_list": "cpp",
+			"iostream": "cpp",
+			"istream": "cpp",
+			"limits": "cpp",
+			"new": "cpp",
+			"ostream": "cpp",
+			"streambuf": "cpp",
+			"type_traits": "cpp",
+			"typeinfo": "cpp"
+		}
+	}
+}
